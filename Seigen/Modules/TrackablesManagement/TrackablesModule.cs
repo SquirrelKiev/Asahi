@@ -1,4 +1,5 @@
-﻿using Seigen.Database;
+﻿using System.Text;
+using Seigen.Database;
 using Seigen.Database.Models;
 using Seigen.Modules.Autocompletes;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,8 @@ using Seigen.Modules.RoleManagement;
 namespace Seigen.Modules.TrackablesManagement;
 
 [Group("trackables", "Commands relating to managing trackables and their users.")]
+[RequireUserPermission(GuildPermission.ManageGuild, Group = ModulePrefixes.PERMISSION_GROUP)]
+[HasOverride(Group = ModulePrefixes.PERMISSION_GROUP)]
 public class TrackablesModule(DbService dbService, RoleManagementService roleManagement) : BotModule
 {
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";
@@ -59,15 +62,15 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
         trackable ??= new Trackable();
 
-        if(assignableGuildId != 0)
+        if (assignableGuildId != 0)
             trackable.AssignableGuild = assignableGuildId;
-        if(assignableRoleId != 0)
+        if (assignableRoleId != 0)
             trackable.AssignableRole = assignableRoleId;
-        if(monitoredGuildId != 0)
+        if (monitoredGuildId != 0)
             trackable.MonitoredGuild = monitoredGuildId;
-        if(monitoredRoleId != 0)
+        if (monitoredRoleId != 0)
             trackable.MonitoredRole = monitoredRoleId;
-        if(limit.HasValue)
+        if (limit.HasValue)
             trackable.Limit = limit.Value;
 
         return trackable;
@@ -122,7 +125,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
     {
         await DeferAsync();
 
-        if(!uint.TryParse(idStr, out uint id))
+        if (!uint.TryParse(idStr, out uint id))
         {
             await FollowupAsync(
                 new MessageContents(
@@ -190,7 +193,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
         var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
 
-        if(trackable == null)
+        if (trackable == null)
         {
             await FollowupAsync(
                 new MessageContents(
@@ -231,9 +234,9 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
             var guild = await Context.Client.GetGuildAsync(trackable.MonitoredGuild);
 
-            var desc = 
+            var desc =
                 $"**Monitored Guild:** {guild?.Name} ({trackable.MonitoredGuild})\n" +
-                $"**Monitored Role:** {guild?.GetRole(trackable.MonitoredRole)?.Name} ({trackable.MonitoredRole})\n" + 
+                $"**Monitored Role:** {guild?.GetRole(trackable.MonitoredRole)?.Name} ({trackable.MonitoredRole})\n" +
                 $"**Assignable Guild:** {guild?.Name} ({trackable.AssignableGuild})\n" +
                 $"**Assignable Role:** {guild?.GetRole(trackable.AssignableRole)?.Name} ({trackable.AssignableRole})\n" +
                 $"**Limit**: {trackable.Limit}";
@@ -244,6 +247,166 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         if (!wasTrackables)
         {
             embed.WithDescription("No trackables!");
+        }
+
+        await FollowupAsync(new MessageContents(embed));
+    }
+
+    [SlashCommand("track-user", "Force adds a user to the specified trackable.")]
+    public async Task TrackUser([Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr, IUser user)
+    {
+        await DeferAsync();
+
+        if (!uint.TryParse(idStr, out uint id))
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("ID is not valid.")));
+
+        await using var context = dbService.GetDbContext();
+
+        var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
+
+        if (trackable == null)
+        {
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("Trackable not found.")));
+            return;
+        }
+
+        var isValid = await GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
+        if (isValid != null)
+        {
+            await FollowupAsync(isValid.Value);
+            return;
+        }
+
+        var alreadyTracked = (await context.TrackedUsers.FirstOrDefaultAsync(x => x.UserId == user.Id && x.Trackable.Id == x.TrackableId)) != null;
+        if (alreadyTracked)
+        {
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("User already tracked!")));
+            return;
+        }
+
+        var guild = await Context.Client.GetGuildAsync(trackable.AssignableGuild);
+        var guildUser = await guild.GetUserAsync(user.Id);
+
+        if (!guildUser.RoleIds.Contains(trackable.AssignableRole))
+            await guildUser.AddRoleAsync(trackable.AssignableRole);
+
+        context.TrackedUsers.Add(new TrackedUser()
+        {
+            Trackable = trackable,
+            UserId = user.Id
+        });
+
+        await context.SaveChangesAsync();
+
+        await FollowupAsync(
+            new MessageContents(
+                new EmbedBuilder().WithDescription("Tracking user.")));
+    }
+
+    [SlashCommand("untrack-user", "Force adds a user to the specified trackable.")]
+    public async Task UntrackUser([Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr, IUser user)
+    {
+        await DeferAsync();
+
+        if (!uint.TryParse(idStr, out uint id))
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("ID is not valid.")));
+
+        await using var context = dbService.GetDbContext();
+
+        var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
+
+        if (trackable == null)
+        {
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("Trackable not found.")));
+            return;
+        }
+
+        var isValid = await GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
+        if (isValid != null)
+        {
+            await FollowupAsync(isValid.Value);
+            return;
+        }
+
+        var trackedUser = await context.TrackedUsers.FirstOrDefaultAsync(x => x.UserId == user.Id && x.Trackable.Id == x.TrackableId);
+        if (trackedUser == null)
+        {
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("User isn't tracked already!")));
+            return;
+        }
+
+        var guild = await Context.Client.GetGuildAsync(trackable.AssignableGuild);
+        var guildUser = await guild.GetUserAsync(user.Id);
+
+        if (guildUser.RoleIds.Contains(trackable.AssignableRole))
+            await guildUser.RemoveRoleAsync(trackable.AssignableRole);
+
+        context.TrackedUsers.Remove(trackedUser);
+
+        await context.SaveChangesAsync();
+
+        await FollowupAsync(
+            new MessageContents(
+                new EmbedBuilder().WithDescription("Stopped tracking user.")));
+    }
+
+    [SlashCommand("list-users", "Lists all the users for the current trackable.")]
+    public async Task ListUsers([Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr)
+    {
+        await DeferAsync();
+
+        if (!uint.TryParse(idStr, out uint id))
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("ID is not valid.")));
+
+        await using var context = dbService.GetDbContext();
+
+        var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
+
+        if (trackable == null)
+        {
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("Trackable not found.")));
+            return;
+        }
+
+        var embed = new EmbedBuilder();
+
+        var wasUsers = false;
+        var desc = new StringBuilder();
+        foreach (var trackedUser in await context.TrackedUsers.Where(x => x.Trackable.Id == trackable.Id).ToArrayAsync())
+        {
+            wasUsers = true;
+
+            var user = await Context.Client.GetUserAsync(trackedUser.UserId);
+
+            desc.Append(user.Username);
+            if (user.Discriminator != "0000")
+                desc.Append('#')
+                    .Append(user.Discriminator);
+
+            desc.AppendLine();
+        }
+
+        embed.WithDescription(desc.ToString());
+
+        if (!wasUsers)
+        {
+            embed.WithDescription("No users!");
         }
 
         await FollowupAsync(new MessageContents(embed));
