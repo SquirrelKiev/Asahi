@@ -3,12 +3,9 @@ using BotBase.Database;
 using BotBase.Modules.About;
 using BotBase.Modules.ConfigCommand;
 using BotBase.Modules.Help;
-using DibariBot.Modules.ConfigCommand;
 using Discord.Commands;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 using Seigen.Database;
-using Seigen.Modules.ConfigCommand.Pages;
 using Seigen.Modules.RoleManagement;
 using Serilog.Events;
 
@@ -59,6 +56,7 @@ public class Bot
                 .AddSingleton<BotConfigBase>(Config)
                 .AddSingleton(Config)
                 .AddSingleton(Client)
+                .AddSingleton<IDiscordClient>(Client)
                 .AddSingleton(InteractionService)
                 .AddSingleton(CommandService)
                 .AddSingleton<DbService>()
@@ -70,8 +68,8 @@ public class Bot
                 // about command
                 .AddSingleton<AboutService>()
                 // config command
-                .AddSingleton<ConfigCommandService>()
-                .AddSingleton(x => (ConfigCommandServiceBase<ConfigPage.Page>)x.GetService<ConfigCommandService>()!);
+                //.AddSingleton<ConfigCommandService>()
+                //.AddSingleton(x => (ConfigCommandServiceBase<ConfigPage.Page>)x.GetService<ConfigCommandService>()!);
         ;
 
         collection.Scan(scan => scan.FromAssemblyOf<Bot>()
@@ -90,11 +88,11 @@ public class Bot
             .WithTransientLifetime()
         );
 
-        collection.Scan(scan => scan.FromAssemblyOf<Bot>()
-            .AddClasses(classes => classes.AssignableTo<ConfigPage>())
-            .As<ConfigPage>()
-            .As<ConfigPageBase<ConfigPage.Page>>()
-            .WithTransientLifetime());
+        //collection.Scan(scan => scan.FromAssemblyOf<Bot>()
+        //    .AddClasses(classes => classes.AssignableTo<ConfigPage>())
+        //    .As<ConfigPage>()
+        //    .As<ConfigPageBase<ConfigPage.Page>>()
+        //    .WithTransientLifetime());
 
         return collection.BuildServiceProvider();
     }
@@ -170,5 +168,7 @@ public class Bot
         Log.Information("Logged in as {user}#{discriminator} ({id})", Client.CurrentUser?.Username, Client.CurrentUser?.Discriminator, Client.CurrentUser?.Id);
 
         await services.GetRequiredService<CommandHandler>().OnReady(Assembly.GetExecutingAssembly());
+
+        await Client.SetCustomStatusAsync("oh boy");
     }
 }

@@ -1,8 +1,6 @@
-﻿using BotBase.Database;
+﻿namespace Seigen.Database.Models;
 
-namespace Seigen.Database.Models;
-
-public class CachedUserRole : DbModel
+public class CachedUserRole
 {
     public required ulong UserId { get; set; }
     public required ulong RoleId { get; set; }

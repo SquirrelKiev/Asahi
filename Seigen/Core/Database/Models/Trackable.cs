@@ -5,18 +5,17 @@ namespace Seigen.Database.Models;
 
 public class Trackable : DbModel
 {
-    public required ulong GuildToMonitor { get; set; }
+    public required ulong MonitoredGuild { get; set; }
 
-    public required ulong GuildToAssignIn { get; set; }
+    public required ulong MonitoredRole { get; set; }
 
-    public required ulong RoleToMonitor { get; set; }
+    public required ulong AssignableGuild { get; set; }
 
-    public required ulong RoleToAssign { get; set; }
+    public required ulong AssignableRole { get; set; }
 
     /// <remarks>0 == No limit</remarks>
     public required uint Limit { get; set; }
 
-    // :tomfoolery: (the required is there to make DbModel happy)
     [SetsRequiredMembers]
     public Trackable()
     { }

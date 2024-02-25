@@ -18,7 +18,7 @@ public class BotConfig : BotConfigBase
     public override string SeqApiKey { get; set; } = "";
     public override string DefaultPrefix { get; set; } = "]";
     public override string AboutPageTitle { get; set; } = "About {{botUsername}}";
-    public override string AboutPageDescription { get; set; } = "An example to-do list bot.";
+    public override string AboutPageDescription { get; set; } = "A Discord bot designed to encourage users to boost emote servers, by providing role rewards in the main server.";
 
     public override AboutField[] AboutPageFields { get; set; } = 
     {
@@ -26,6 +26,16 @@ public class BotConfig : BotConfigBase
         {
             Name = "Servers",
             Value = "{{guilds}}"
+        },
+        new()
+        {
+            Name = "Credits:",
+            Value = "Bot by [enonibobble](https://github.com/SquirrelKiev)"
+        },
+        new()
+        {
+            Name = "Source Code:",
+            Value = "https://github.com/SquirrelKiev/Seigen"
         }
     };
 }
