@@ -20,14 +20,11 @@ public abstract class BotDbContext : BotDbContextBase
             .HasIndex(x => new { x.TrackableId, x.UserId })
             .IsUnique();
 
-        modelBuilder.Entity<CachedUserRole>().HasNoKey();
+        modelBuilder.Entity<CachedUserRole>()
+            .HasKey(x => new { x.RoleId, x.UserId });
 
         modelBuilder.Entity<CachedUserRole>()
             .HasIndex(x => x.RoleId);
-
-        modelBuilder.Entity<CachedUserRole>()
-            .HasIndex(x => new { x.RoleId, x.UserId })
-            .IsUnique();
 
         modelBuilder.Entity<Trackable>()
             .HasIndex(x => new { x.AssignableRole, x.MonitoredRole })

@@ -2,11 +2,12 @@
 using Seigen.Database.Models;
 using Seigen.Modules.Autocompletes;
 using Microsoft.EntityFrameworkCore;
+using Seigen.Modules.RoleManagement;
 
 namespace Seigen.Modules.TrackablesManagement;
 
 [Group("trackables", "Commands relating to managing trackables and their users.")]
-public class TrackablesModule(DbService dbService) : BotModule
+public class TrackablesModule(DbService dbService, RoleManagementService roleManagement) : BotModule
 {
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";
     public const string ASSIGNABLE_GUILD_PARAM_NAME = "assignable-guild";
@@ -41,9 +42,9 @@ public class TrackablesModule(DbService dbService) : BotModule
 
         await context.SaveChangesAsync();
 
+        await roleManagement.CacheAndResolve();
+
         await FollowupAsync(new MessageContents(new EmbedBuilder().WithDescription("Added trackable!")));
-
-
     }
 
     private Trackable? GetTrackable(string monitoredGuild, string monitoredRole, string assignableGuild, string assignableRole, uint? limit, Trackable? trackable = null)
@@ -122,9 +123,12 @@ public class TrackablesModule(DbService dbService) : BotModule
         await DeferAsync();
 
         if(!uint.TryParse(idStr, out uint id))
+        {
             await FollowupAsync(
                 new MessageContents(
                     new EmbedBuilder().WithDescription("ID is not valid.")));
+            return;
+        }
 
         await using var context = dbService.GetDbContext();
 
@@ -172,9 +176,41 @@ public class TrackablesModule(DbService dbService) : BotModule
     }
 
     [SlashCommand("remove", "Remove an existing trackable.")]
-    public async Task RemoveTrackable([Autocomplete(typeof(TrackableAutocompleteHandler))] uint id)
+    public async Task RemoveTrackable(
+        [Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr)
     {
-        throw new NotImplementedException();
+        await DeferAsync();
+
+        if (!uint.TryParse(idStr, out uint id))
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("ID is not valid.")));
+
+        await using var context = dbService.GetDbContext();
+
+        var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
+
+        if(trackable == null)
+        {
+            await FollowupAsync(
+                new MessageContents(
+                    new EmbedBuilder().WithDescription("Trackable not found.")));
+            return;
+        }
+
+        var isValid = await GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
+        if (isValid != null)
+        {
+            await FollowupAsync(isValid.Value);
+            return;
+        }
+
+        context.Trackables.Remove(trackable);
+        await context.SaveChangesAsync();
+
+        await FollowupAsync(
+            new MessageContents(
+                new EmbedBuilder().WithDescription("Removed trackable.")));
     }
 
     [SlashCommand("list", "Lists all the trackables related to the current guild.")]

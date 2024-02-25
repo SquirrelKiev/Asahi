@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using BotBase.Database;
 using BotBase.Modules.About;
-using BotBase.Modules.ConfigCommand;
 using BotBase.Modules.Help;
 using Discord.Commands;
 using Discord.WebSocket;
@@ -170,5 +169,9 @@ public class Bot
         await services.GetRequiredService<CommandHandler>().OnReady(Assembly.GetExecutingAssembly());
 
         await Client.SetCustomStatusAsync("oh boy");
+
+        var roleManagement = services.GetRequiredService<RoleManagementService>();
+
+        await roleManagement.CacheAndResolve();
     }
 }
