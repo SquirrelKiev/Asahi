@@ -132,6 +132,9 @@ public class Bot
 
     private async Task Client_GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser user)
     {
+        if (!cacheable.HasValue)
+            return;
+
         if (!user.Roles.SequenceEqual(cacheable.Value.Roles))
         {
             await services.GetService<RoleManagementService>()!.OnUserRolesUpdated(cacheable, user);

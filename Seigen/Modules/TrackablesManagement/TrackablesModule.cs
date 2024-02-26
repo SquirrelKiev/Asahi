@@ -10,7 +10,7 @@ namespace Seigen.Modules.TrackablesManagement;
 [Group("trackables", "Commands relating to managing trackables and their users.")]
 [RequireUserPermission(GuildPermission.ManageGuild, Group = ModulePrefixes.PERMISSION_GROUP)]
 [HasOverride(Group = ModulePrefixes.PERMISSION_GROUP)]
-public class TrackablesModule(DbService dbService, RoleManagementService roleManagement) : BotModule
+public class TrackablesModule(DbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";
     public const string ASSIGNABLE_GUILD_PARAM_NAME = "assignable-guild";
@@ -50,7 +50,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         await FollowupAsync(new MessageContents(new EmbedBuilder().WithDescription("Added trackable!")));
     }
 
-    private Trackable? GetTrackable(string monitoredGuild, string monitoredRole, string assignableGuild, string assignableRole, uint? limit, Trackable? trackable = null)
+    private static Trackable? GetTrackable(string monitoredGuild, string monitoredRole, string assignableGuild, string assignableRole, uint? limit, Trackable? trackable = null)
     {
         if (!ulong.TryParse(monitoredGuild, out ulong monitoredGuildId) ||
             !ulong.TryParse(monitoredRole, out ulong monitoredRoleId) ||
@@ -81,8 +81,8 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         var monitoredGuildInstance = await Context.Client.GetGuildAsync(monitoredGuild);
         var assignedGuildInstance = await Context.Client.GetGuildAsync(assignableGuild);
 
-        if (!await TrackablesUtility.IsGuildValid(monitoredGuildInstance, Context.User.Id) ||
-            !await TrackablesUtility.IsGuildValid(assignedGuildInstance, Context.User.Id))
+        if (!await trackablesUtility.IsGuildValid(monitoredGuildInstance, Context.User.Id) ||
+            !await trackablesUtility.IsGuildValid(assignedGuildInstance, Context.User.Id))
         {
             return new MessageContents(new EmbedBuilder().WithDescription("One of the specified guilds could not be found or is not allowed."));
         }
@@ -104,8 +104,8 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         var monitoredGuildInstance = await Context.Client.GetGuildAsync(monitoredGuild);
         var assignedGuildInstance = await Context.Client.GetGuildAsync(assignableGuild);
 
-        if ((!await TrackablesUtility.IsGuildValidPermissionCheckOnly(monitoredGuildInstance, Context.User.Id) ||
-             !await TrackablesUtility.IsGuildValidPermissionCheckOnly(assignedGuildInstance, Context.User.Id))
+        if ((!await trackablesUtility.IsGuildValidPermissionCheckOnly(monitoredGuildInstance, Context.User.Id) ||
+             !await trackablesUtility.IsGuildValidPermissionCheckOnly(assignedGuildInstance, Context.User.Id))
             && monitoredGuildInstance != null && assignedGuildInstance != null)
         {
             return new MessageContents(new EmbedBuilder().WithDescription("One of the specified guilds is not allowed."));

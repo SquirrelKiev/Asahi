@@ -5,9 +5,10 @@ using Seigen.Modules.TrackablesManagement;
 
 namespace Seigen.Modules.Autocompletes;
 
-public static class CommonRoleAutocomplete
+[Inject(ServiceLifetime.Singleton)]
+public class CommonAutocompleteService(OverrideTrackerService overrideTracker)
 {
-    public static async Task<IEnumerable<AutocompleteResult>> GetAutoCompleteOptions(IInteractionContext context, ulong guildId, ulong userId)
+    public async Task<IEnumerable<AutocompleteResult>> GetAutoCompleteOptions(IInteractionContext context, ulong guildId, ulong userId)
     {
         var guild = await context.Client.GetGuildAsync(guildId);
 
@@ -16,13 +17,13 @@ public static class CommonRoleAutocomplete
 
         var user = await guild.GetUserAsync(userId);
 
-        if(!user.GuildPermissions.Has(GuildPermission.ManageGuild))
+        if(!user.GuildPermissions.Has(GuildPermission.ManageGuild) && !await overrideTracker.HasOverride(userId))
             return Enumerable.Empty<AutocompleteResult>();
 
         return guild.Roles.Select(x => new AutocompleteResult($"{x.Name} ({x.Id})", x.Id.ToString()));
     }
 
-    public static async Task<AutocompletionResult> GenerateSuggestionsCommonAsync(
+    public async Task<AutocompletionResult> GenerateSuggestionsCommonAsync(
         IInteractionContext context,
         IAutocompleteInteraction autocompleteInteraction,
         IParameterInfo parameter,

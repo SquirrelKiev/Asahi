@@ -116,7 +116,6 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
 
             if (trackedUser == null)
             {
-                // hmm they probably should have been tracked
                 Log.Information("User {user} was not tracked, yet received a role removal request. (trackable {trackableId})", user.Id, trackable.Id);
                 return;
             }
@@ -301,10 +300,13 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
             var currentSlotUsage = scopedTrackedUsers.Count(users => usersRemoved.All(removed => removed.Id != users.UserId));
             var availableSlots = trackable.Limit - currentSlotUsage;
 
-            if (availableSlots > 0)
+            if (trackable.Limit == 0 || availableSlots > 0)
             {
                 var usersToAdd = usersAdded
-                    .OrderBy(user => user.PremiumSince ?? DateTimeOffset.MaxValue).Take((int)availableSlots);
+                    .OrderBy(user => user.PremiumSince ?? DateTimeOffset.MaxValue).AsEnumerable();
+
+                if (trackable.Limit != 0)
+                    usersToAdd = usersToAdd.Take((int)availableSlots);
 
                 foreach (var user in usersToAdd)
                 {

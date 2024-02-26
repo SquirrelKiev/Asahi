@@ -10,7 +10,8 @@ public class MonitoredRoleAutocompleteHandler : AutocompleteHandler
         IParameterInfo parameter,
         IServiceProvider services)
     {
-        return CommonRoleAutocomplete.GenerateSuggestionsCommonAsync(
+        var commonAutocompleteService = services.GetRequiredService<CommonAutocompleteService>();
+        return commonAutocompleteService.GenerateSuggestionsCommonAsync(
             context,
             autocompleteInteraction,
             parameter,

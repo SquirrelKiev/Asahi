@@ -1,4 +1,5 @@
-﻿using Seigen.Modules.TrackablesManagement;
+﻿using Discord;
+using Seigen.Modules.TrackablesManagement;
 
 namespace Seigen.Modules.Autocompletes;
 
@@ -8,10 +9,11 @@ public class GuildAutocompleteHandler : AutocompleteHandler
         IParameterInfo parameter, IServiceProvider services)
     {
         var autocompletes = new List<AutocompleteResult>();
+        var trackablesUtility = services.GetRequiredService<TrackablesUtility>();
 
         foreach (var guild in await context.Client.GetGuildsAsync())
         {
-            if(!await TrackablesUtility.IsGuildValid(guild, context.User.Id))
+            if(!await trackablesUtility.IsGuildValid(guild, context.User.Id))
                 continue;
 
             autocompletes.Add(new AutocompleteResult($"{guild.Name} ({guild.Id})", guild.Id.ToString()));
