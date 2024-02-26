@@ -8,7 +8,7 @@ using Seigen.Modules.RoleManagement;
 namespace Seigen.Modules.TrackablesManagement;
 
 [Group("trackables", "Commands relating to managing trackables and their users.")]
-[RequireUserPermission(GuildPermission.ManageGuild, Group = ModulePrefixes.PERMISSION_GROUP)]
+[RequireUserPermission(GuildPermission.ManageRoles, Group = ModulePrefixes.PERMISSION_GROUP)]
 [HasOverride(Group = ModulePrefixes.PERMISSION_GROUP)]
 public class TrackablesModule(DbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {

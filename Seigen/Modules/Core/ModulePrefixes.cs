@@ -2,7 +2,7 @@
 
 public static class ModulePrefixes
 {
-    public const string PERMISSION_GROUP = "'User has Manage Guild'";
+    public const string PERMISSION_GROUP = "'User has Manage Roles'";
 
     #region Config - Trackables
 

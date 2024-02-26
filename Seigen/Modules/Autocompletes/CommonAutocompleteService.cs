@@ -17,7 +17,7 @@ public class CommonAutocompleteService(OverrideTrackerService overrideTracker)
 
         var user = await guild.GetUserAsync(userId);
 
-        if(!user.GuildPermissions.Has(GuildPermission.ManageGuild) && !await overrideTracker.HasOverride(userId))
+        if(!user.GuildPermissions.Has(GuildPermission.ManageRoles) && !await overrideTracker.HasOverride(userId))
             return Enumerable.Empty<AutocompleteResult>();
 
         return guild.Roles.Select(x => new AutocompleteResult($"{x.Name} ({x.Id})", x.Id.ToString()));
