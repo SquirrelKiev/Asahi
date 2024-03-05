@@ -23,11 +23,13 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))] string monitoredRole,
         [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(ASSIGNABLE_GUILD_PARAM_NAME)] string assignableGuild,
         [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))] string assignableRole,
-        uint limit = 0)
+        ITextChannel? logsChannel = null,
+        uint limit = 0,
+        bool includeExistingMembers = true)
     {
         await DeferAsync();
 
-        var trackable = GetTrackable(monitoredGuild, monitoredRole, assignableGuild, assignableRole, limit);
+        var trackable = GetTrackable(monitoredGuild, monitoredRole, assignableGuild, assignableRole, limit, logsChannel);
 
         if (trackable == null)
         {
@@ -37,7 +39,10 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
         var isValid = await GetIsValid(trackable.MonitoredGuild, trackable.MonitoredRole, trackable.AssignableGuild, trackable.AssignableRole);
         if (isValid != null)
+        {
             await FollowupAsync(isValid.Value);
+            return;
+        }
 
         await using var context = dbService.GetDbContext();
 
@@ -45,12 +50,16 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
         await context.SaveChangesAsync();
 
-        await roleManagement.CacheAndResolve();
+        if (includeExistingMembers)
+            await roleManagement.CacheAndResolve();
+        else
+            await roleManagement.CacheUsers();
 
         await FollowupAsync(new MessageContents(new EmbedBuilder().WithDescription("Added trackable!")));
     }
 
-    private static Trackable? GetTrackable(string monitoredGuild, string monitoredRole, string assignableGuild, string assignableRole, uint? limit, Trackable? trackable = null)
+    private static Trackable? GetTrackable(string monitoredGuild, string monitoredRole, string assignableGuild,
+        string assignableRole, uint? limit, ITextChannel? loggingChannel = null, Trackable? trackable = null)
     {
         if (!ulong.TryParse(monitoredGuild, out ulong monitoredGuildId) ||
             !ulong.TryParse(monitoredRole, out ulong monitoredRoleId) ||
@@ -72,6 +81,8 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
             trackable.MonitoredRole = monitoredRoleId;
         if (limit.HasValue)
             trackable.Limit = limit.Value;
+        if (loggingChannel != null)
+            trackable.LoggingChannel = loggingChannel.Id;
 
         return trackable;
     }
@@ -121,6 +132,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))] string monitoredRole = "0",
         [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(ASSIGNABLE_GUILD_PARAM_NAME)] string assignableGuild = "0",
         [Autocomplete(typeof(AssignableRoleAutocompleteHandler))] string assignableRole = "0",
+        ITextChannel? logsChannel = null,
         int limit = -1)
     {
         await DeferAsync();
@@ -157,7 +169,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
         // is the trackable we're about to push to the database valid?
         uint? uintLimit = limit >= 0 ? (uint)limit : null;
-        var trackable = GetTrackable(monitoredGuild, monitoredRole, assignableGuild, assignableRole, uintLimit, entry);
+        var trackable = GetTrackable(monitoredGuild, monitoredRole, assignableGuild, assignableRole, uintLimit, logsChannel, entry);
 
         if (trackable == null)
         {
@@ -232,14 +244,10 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         {
             wasTrackables = true;
 
-            var guild = await Context.Client.GetGuildAsync(trackable.MonitoredGuild);
+            var monitoredGuild = await Context.Client.GetGuildAsync(trackable.MonitoredGuild);
+            var assignableGuild = await Context.Client.GetGuildAsync(trackable.AssignableGuild);
 
-            var desc =
-                $"**Monitored Guild:** {guild?.Name} ({trackable.MonitoredGuild})\n" +
-                $"**Monitored Role:** {guild?.GetRole(trackable.MonitoredRole)?.Name} ({trackable.MonitoredRole})\n" +
-                $"**Assignable Guild:** {guild?.Name} ({trackable.AssignableGuild})\n" +
-                $"**Assignable Role:** {guild?.GetRole(trackable.AssignableRole)?.Name} ({trackable.AssignableRole})\n" +
-                $"**Limit**: {trackable.Limit}";
+            var desc = trackable.ToDisplayableString(monitoredGuild, assignableGuild);
 
             embed.AddField(trackable.Id.ToString(), desc);
         }
@@ -290,17 +298,13 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
             return;
         }
 
-        var guild = await Context.Client.GetGuildAsync(trackable.AssignableGuild);
-        var guildUser = await guild.GetUserAsync(user.Id);
-
-        if (!guildUser.RoleIds.Contains(trackable.AssignableRole))
-            await guildUser.AddRoleAsync(trackable.AssignableRole);
-
-        context.TrackedUsers.Add(new TrackedUser()
+        var newTrackedUser = new TrackedUser()
         {
             Trackable = trackable,
             UserId = user.Id
-        });
+        };
+
+        await roleManagement.TrackUser(context, newTrackedUser, trackable);
 
         await context.SaveChangesAsync();
 
@@ -348,12 +352,8 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         }
 
         var guild = await Context.Client.GetGuildAsync(trackable.AssignableGuild);
-        var guildUser = await guild.GetUserAsync(user.Id);
 
-        if (guildUser.RoleIds.Contains(trackable.AssignableRole))
-            await guildUser.RemoveRoleAsync(trackable.AssignableRole);
-
-        context.TrackedUsers.Remove(trackedUser);
+        await roleManagement.UntrackUser(context, trackedUser, trackable);
 
         await context.SaveChangesAsync();
 

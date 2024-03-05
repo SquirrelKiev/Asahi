@@ -9,10 +9,7 @@ public class BotConfig : BotConfigBase
     public override DatabaseType Database { get; set; } = DatabaseType.Sqlite;
     public override string DatabaseConnectionString { get; set; } = "Data Source=data/BotDb.db";
     public override string ErrorEmote { get; set; } = "\u2753";
-    public override HashSet<ulong> ManagerUserIds { get; set; } = new()
-    {
-        0ul
-    };
+    public override HashSet<ulong> ManagerUserIds { get; set; } = [0ul];
 
     public override string SeqUrl { get; set; } = "";
     public override string SeqApiKey { get; set; } = "";
@@ -20,22 +17,22 @@ public class BotConfig : BotConfigBase
     public override string AboutPageTitle { get; set; } = "About {{botUsername}}";
     public override string AboutPageDescription { get; set; } = "A Discord bot designed to encourage users to boost emote servers, by providing role rewards in the main server.";
 
-    public override AboutField[] AboutPageFields { get; set; } = 
-    {
-        new()
+    public override AboutField[] AboutPageFields { get; set; } =
+    [
+        new AboutField
         {
             Name = "Servers",
             Value = "{{guilds}}"
         },
-        new()
+        new AboutField
         {
             Name = "Credits:",
             Value = "Bot by [enonibobble](https://github.com/SquirrelKiev)"
         },
-        new()
+        new AboutField
         {
             Name = "Source Code:",
             Value = "https://github.com/SquirrelKiev/Seigen"
         }
-    };
+    ];
 }

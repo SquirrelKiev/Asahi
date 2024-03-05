@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Seigen.Database;
 using Seigen.Database.Models;
+using Serilog.Context;
 
 namespace Seigen.Modules.RoleManagement;
 
@@ -27,125 +28,43 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
 
         foreach (var role in rolesAdded)
         {
-            Log.Debug("role {role} added to {user}", role.Name, user.Username);
-            await OnRoleAdded(role, user);
+            Log.Debug("Role {role} added to {user}", role.Name, user.Username);
+            //await OnRoleAdded(role, user);
+
+            await using var context = dbService.GetDbContext();
+
+            if (!await IsRoleTracked(context, role))
+            {
+                Log.Debug("No trackables for {roleName} ({roleId}).", role.Name, role.Id);
+                continue;
+            }
+
+            await ResolveConflicts(role.Id, [], [user]);
         }
 
         foreach (var role in rolesRemoved)
         {
-            Log.Debug("role {role} removed", role.Name);
-            await OnRoleRemoved(role, user);
+            Log.Debug("Role {role} removed from {user}", role.Name, user.Username);
+            //await OnRoleRemoved(role, user);
+
+            await using var context = dbService.GetDbContext();
+
+            if (!await IsRoleTracked(context, role))
+            {
+                Log.Debug("No trackables for {roleName} ({roleId}).", role.Name, role.Id);
+                continue;
+            }
+
+            await ResolveConflicts(role.Id, [user], []);
         }
     }
 
-    public async Task OnRoleAdded(SocketRole role, SocketGuildUser user)
+    private async Task<bool> IsRoleTracked(BotDbContext context, IRole role)
     {
-        await using var context = dbService.GetDbContext();
-
         var trackablesQ = context.Trackables.Where(trackable => trackable.MonitoredRole == role.Id);
         var trackables = await trackablesQ.ToArrayAsync();
 
-        if (trackables.Length == 0)
-        {
-            Log.Debug("No trackables for {roleName} ({roleId}).", role.Name, role.Id);
-            return;
-        }
-
-        foreach (var trackable in trackables)
-        {
-            var totalTrackedUsers = await context.TrackedUsers.CountAsync(trackedUser => trackedUser.Trackable.Id == trackable.Id);
-            var remainingSlots = Math.Max(0, trackable.Limit - totalTrackedUsers);
-
-            if (trackable.Limit != 0 && remainingSlots <= 0)
-            {
-                Log.Information("Slots for trackable {trackableId} full. Aborting. " +
-                                "({remainingSlots}/{limit}, {trackedUserCount} tracked users.)",
-                    trackable.Id, remainingSlots, trackable.Limit, totalTrackedUsers);
-                continue;
-            }
-
-            Log.Information("Slot open for trackable {trackableId}! " +
-                            "({remainingSlots}/{limit}, {trackedUserCount} tracked users.)",
-                trackable.Id, remainingSlots, trackable.Limit, totalTrackedUsers);
-
-            var trackedUser = new TrackedUser()
-            {
-                Trackable = trackable,
-                UserId = user.Id
-            };
-
-            var assignableGuild = await client.GetGuildAsync(trackable.AssignableGuild);
-
-            if (assignableGuild == null)
-            {
-                Log.Information("Guild {guildId} not found. Skipping.", trackable.AssignableGuild);
-                continue;
-            }
-
-            var assignableRole = assignableGuild.GetRole(trackable.AssignableRole);
-
-            if (!user.Roles.Contains(assignableRole))
-                await user.AddRoleAsync(assignableRole);
-
-            context.TrackedUsers.Add(trackedUser);
-        }
-
-        await context.SaveChangesAsync();
-
-        await CacheUsers();
-    }
-
-    public async Task OnRoleRemoved(SocketRole role, SocketGuildUser user)
-    {
-        await using var context = dbService.GetDbContext();
-
-        var trackablesQ = context.Trackables.Where(trackable => trackable.MonitoredRole == role.Id);
-        var trackables = await trackablesQ.ToArrayAsync();
-
-        if (trackables.Length == 0)
-        {
-            Log.Debug("No trackables for {roleName} ({roleId}).", role.Name, role.Id);
-            return;
-        }
-
-        foreach (var trackable in trackables)
-        {
-            // TODO: make sure we dont remove the role if another trackable thinks we should still keep it (loop through tracked users and recheck roles?)
-            var trackedUser =
-                await context.TrackedUsers.FirstOrDefaultAsync(x => x.Trackable.Id == trackable.Id && x.UserId == user.Id);
-
-            if (trackedUser == null)
-            {
-                Log.Information("User {user} was not tracked, yet received a role removal request. (trackable {trackableId})", user.Id, trackable.Id);
-                return;
-            }
-
-            var assignableGuild = await client.GetGuildAsync(trackable.AssignableGuild);
-
-            if (assignableGuild == null)
-            {
-                Log.Information("Guild {guildId} not found. Skipping.", trackable.AssignableGuild);
-                continue;
-            }
-
-            var assignableRole = assignableGuild.GetRole(trackable.AssignableRole);
-
-            if (user.Roles.Contains(assignableRole))
-                await user.RemoveRoleAsync(assignableRole);
-
-            context.TrackedUsers.Remove(trackedUser);
-        }
-
-        await context.SaveChangesAsync();
-
-        await CacheUsers();
-    }
-
-    public async Task<IEnumerable<IGuildUser>> GetUsersWithRole(IGuild guild, ulong roleId)
-    {
-        var users = await guild.GetUsersAsync();
-
-        return GetUsersWithRole(roleId, users);
+        return trackables.Length != 0;
     }
 
     public static IEnumerable<IGuildUser> GetUsersWithRole(ulong roleId, IReadOnlyCollection<IGuildUser> users)
@@ -232,12 +151,12 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
 
             if (!oldCache.TryGetValue(roleAndGuild, out var oldUserIds))
             {
-                oldUserIds = Enumerable.Empty<ulong>();
+                oldUserIds = [];
             }
 
             if (!newCache.TryGetValue(roleAndGuild, out var newUserIds))
             {
-                newUserIds = Enumerable.Empty<ulong>();
+                newUserIds = [];
             }
 
             var oldUsers = new List<IGuildUser>();
@@ -285,29 +204,25 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
         foreach (var trackable in trackables)
         {
             var scopedTrackedUsers = await context.TrackedUsers.Where(x => x.Trackable.Id == trackable.Id).ToArrayAsync();
-            var guild = await client.GetGuildAsync(trackable.AssignableGuild);
 
             foreach (var trackedUser in scopedTrackedUsers)
             {
                 if (usersRemoved.All(x => x.Id != trackedUser.UserId)) continue;
 
-                context.TrackedUsers.Remove(trackedUser);
-                await (await guild.GetUserAsync(trackedUser.UserId)).RemoveRoleAsync(trackedUser.Trackable.AssignableRole);
-
-                Log.Debug("{userId} removed from {trackableId} (2)", trackedUser.Id, trackable.Id);
+                await UntrackUser(context, trackedUser, trackable);
             }
 
-            var currentSlotUsage = scopedTrackedUsers.Count(users => usersRemoved.All(removed => removed.Id != users.UserId));
+            var currentSlotUsage = await GetTakenSlots(context, trackable);
             var availableSlots = trackable.Limit - currentSlotUsage;
+
+            var usersToAdd = usersAdded
+                .OrderBy(user => user.PremiumSince ?? DateTimeOffset.MaxValue).AsEnumerable();
+
+            if (trackable.Limit != 0 && availableSlots > 0)
+                usersToAdd = usersToAdd.Take((int)availableSlots).ToArray();
 
             if (trackable.Limit == 0 || availableSlots > 0)
             {
-                var usersToAdd = usersAdded
-                    .OrderBy(user => user.PremiumSince ?? DateTimeOffset.MaxValue).AsEnumerable();
-
-                if (trackable.Limit != 0)
-                    usersToAdd = usersToAdd.Take((int)availableSlots);
-
                 foreach (var user in usersToAdd)
                 {
                     var newTrackedUser = new TrackedUser
@@ -316,14 +231,137 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
                         UserId = user.Id
                     };
 
-                    context.TrackedUsers.Add(newTrackedUser);
-                    await (await guild.GetUserAsync(newTrackedUser.UserId)).AddRoleAsync(newTrackedUser.Trackable.AssignableRole);
+                    await TrackUser(context, newTrackedUser, trackable);
+                }
+            }
 
-                    Log.Debug("{userId} added to {trackableId} (2)", user.Id, trackable.Id);
+            if (trackable.Limit != 0)
+            {
+                var skipped = usersAdded.Length - availableSlots;
+                if (skipped > 0)
+                {
+                    Log.Debug("Skipped {skippedCount} user.", skipped);
+                    await TryLogToChannel(trackable.LoggingChannel, async () =>
+                    {
+                        var takenSlots = await GetTakenSlots(context, trackable);
+
+                        var embed = new EmbedBuilder().WithDescription(
+                            $"Skipped adding {skipped} users to trackable {trackable.Id} due to slots being full. ({takenSlots}/{trackable.Limit})")
+                            .WithColor(0xFF8C00); // DarkOrange
+
+                        return new MessageContents(embed);
+                    });
                 }
             }
         }
 
         await context.SaveChangesAsync();
+    }
+
+    public async Task<long> GetTakenSlots(BotDbContext context, Trackable trackable)
+    {
+        var scopedTrackedUsers = await context.TrackedUsers.Where(x => x.Trackable.Id == trackable.Id).ToArrayAsync();
+
+        var currentSlotUsage = scopedTrackedUsers.Length;
+
+        return currentSlotUsage;
+    }
+
+    public async Task<bool> TrackUser(BotDbContext context, TrackedUser newTrackedUser, Trackable trackable)
+    {
+        using var disposable = LogContext.PushProperty("Trackable ID", trackable.Id);
+
+        var assignableGuild = await client.GetGuildAsync(trackable.AssignableGuild);
+
+        var loggingChannelId = trackable.LoggingChannel;
+
+        if (assignableGuild == null)
+        {
+            Log.Information("Attempted to track user {UserId} but Assignable Guild {guildId} was not found.", newTrackedUser.UserId, trackable.AssignableGuild);
+            await TryLogToChannel(loggingChannelId,
+                () => Task.FromResult(new MessageContents($"Attempted to track user <@{newTrackedUser.UserId}> but could not find Guild {trackable.AssignableGuild}.")));
+
+            return false;
+        }
+
+        var user = await assignableGuild.GetUserAsync(newTrackedUser.UserId);
+
+        if (user == null)
+        {
+            Log.Information("Attempted to track user {userId} but they could not found.", newTrackedUser.UserId);
+            await TryLogToChannel(loggingChannelId,
+                () => Task.FromResult(new MessageContents($"Attempted to track user <@{newTrackedUser.UserId}>, but could not be found within Guild {trackable.AssignableGuild}.")));
+
+            return false;
+        }
+
+        context.TrackedUsers.Add(newTrackedUser);
+        await user.AddRoleAsync(newTrackedUser.Trackable.AssignableRole);
+
+        // not happy about running this here but im not sure how to get it to include the local cache in queries
+        await context.SaveChangesAsync();
+
+        var currentSlotUsage = await GetTakenSlots(context, trackable);
+
+        Log.Debug("{userId} added to trackable {trackableId}. ({currentSlotUsage}/{slotLimit})",
+            newTrackedUser.UserId, trackable.Id, currentSlotUsage, trackable.Limit);
+
+        await TryLogToChannel(loggingChannelId, async () =>
+        {
+            var embed = new EmbedBuilder()
+                .WithDescription($"Added <@{newTrackedUser.UserId}> to trackable {trackable.Id}. ({currentSlotUsage}/{trackable.Limit})")
+                .WithColor(0x2E8B57) // SeaGreen
+                .WithAuthor(user);
+
+            return new MessageContents(embed);
+        });
+
+        return true;
+    }
+
+    public async Task UntrackUser(BotDbContext context, TrackedUser trackedUser, Trackable trackable)
+    {
+        using var disposable = LogContext.PushProperty("Trackable ID", trackable.Id);
+
+        var assignableGuild = await client.GetGuildAsync(trackable.AssignableGuild);
+
+        var loggingChannelId = trackable.LoggingChannel;
+
+        context.TrackedUsers.Remove(trackedUser);
+        var user = await assignableGuild.GetUserAsync(trackedUser.UserId);
+        if (user != null)
+            await user.RemoveRoleAsync(trackedUser.Trackable.AssignableRole);
+
+        // see comment in TrackUser
+        await context.SaveChangesAsync();
+
+        var currentSlotUsage = await GetTakenSlots(context, trackable);
+
+        Log.Debug("{userId} removed from trackable {trackableId}. ({currentSlotUsage}/{slotLimit})",
+            trackedUser.UserId, trackable.Id, currentSlotUsage, trackable.Limit);
+
+        await TryLogToChannel(loggingChannelId, () =>
+        {
+            var embed = new EmbedBuilder()
+                .WithDescription($"Removed <@{trackedUser.UserId}> from trackable {trackable.Id}. ({currentSlotUsage}/{trackable.Limit})")
+                .WithColor(0xDC143C) // Crimson
+                .WithAuthor(user);
+
+            return Task.FromResult(new MessageContents(embed));
+        });
+    }
+
+    private async Task TryLogToChannel(ulong loggingChannelId, Func<Task<MessageContents>> contents)
+    {
+        if (loggingChannelId != 0)
+        {
+            if (await client.GetChannelAsync(loggingChannelId) is ITextChannel loggingChannel)
+            {
+                var actualContents = await contents();
+
+                // TODO: should be an extension method on ITextChannel really
+                await loggingChannel.SendMessageAsync(actualContents.body, embeds: actualContents.embeds);
+            }
+        }
     }
 }

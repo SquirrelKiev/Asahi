@@ -2,27 +2,16 @@
 
 namespace Seigen.Database;
 
-public class DbService : DbServiceBase<BotDbContext>
+public class DbService(BotConfigBase botConfig) : DbServiceBase<BotDbContext>(botConfig)
 {
-    public DbService(BotConfigBase botConfig) : base(botConfig)
-    {
-    }
-
     public override BotDbContext GetDbContext()
     {
-        BotDbContext context;
-
-        switch (botConfig.Database)
+        BotDbContext context = botConfig.Database switch
         {
-            case BotConfig.DatabaseType.Postgresql:
-                context = new PostgresqlContext(botConfig.DatabaseConnectionString);
-                break;
-            case BotConfig.DatabaseType.Sqlite:
-                context = new SqliteContext(botConfig.DatabaseConnectionString);
-                break;
-            default:
-                throw new NotSupportedException(botConfig.Database.ToString());
-        }
+            BotConfig.DatabaseType.Postgresql => new PostgresqlContext(botConfig.DatabaseConnectionString),
+            BotConfig.DatabaseType.Sqlite => new SqliteContext(botConfig.DatabaseConnectionString),
+            _ => throw new NotSupportedException(botConfig.Database.ToString())
+        };
 
         return context;
     }
