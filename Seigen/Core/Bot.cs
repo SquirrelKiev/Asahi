@@ -66,9 +66,9 @@ public class Bot
                 .AddSingleton<HelpService>()
                 // about command
                 .AddSingleton<AboutService>()
-                // config command
-                //.AddSingleton<ConfigCommandService>()
-                //.AddSingleton(x => (ConfigCommandServiceBase<ConfigPage.Page>)x.GetService<ConfigCommandService>()!);
+        // config command
+        //.AddSingleton<ConfigCommandService>()
+        //.AddSingleton(x => (ConfigCommandServiceBase<ConfigPage.Page>)x.GetService<ConfigCommandService>()!);
         ;
 
         collection.Scan(scan => scan.FromAssemblyOf<Bot>()
@@ -125,10 +125,16 @@ public class Bot
         Client.Ready += Client_Ready;
 
         Client.GuildMemberUpdated += Client_GuildMemberUpdated;
+        Client.UserLeft += Client_UserLeft;
+        Client.UserJoined += Client_UserJoined;
 
         await Client.LoginAsync(TokenType.Bot, Config.BotToken);
         await Client.StartAsync();
     }
+
+    private Task Client_UserLeft(SocketGuild guild, SocketUser user) => services.GetRequiredService<RoleManagementService>().OnUserLeft(guild, user);
+
+    private Task Client_UserJoined(SocketGuildUser user) => services.GetRequiredService<RoleManagementService>().OnUserJoined(user);
 
     private async Task Client_GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser user)
     {
@@ -137,7 +143,7 @@ public class Bot
 
         if (!user.Roles.SequenceEqual(cacheable.Value.Roles))
         {
-            await services.GetService<RoleManagementService>()!.OnUserRolesUpdated(cacheable, user);
+            await services.GetRequiredService<RoleManagementService>().OnUserRolesUpdated(cacheable, user);
         }
     }
 
