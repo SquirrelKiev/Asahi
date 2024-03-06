@@ -279,7 +279,8 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
         {
             Log.Information("Attempted to track user {UserId} but Assignable Guild {guildId} was not found.", newTrackedUser.UserId, trackable.AssignableGuild);
             await TryLogToChannel(loggingChannelId,
-                () => Task.FromResult(new MessageContents($"Attempted to track user <@{newTrackedUser.UserId}> but could not find Guild {trackable.AssignableGuild}.")));
+                () => Task.FromResult(new MessageContents(new EmbedBuilder()
+                    .WithDescription($"Attempted to track user <@{newTrackedUser.UserId}> but could not find Guild {trackable.AssignableGuild}."))));
 
             return false;
         }
@@ -290,8 +291,19 @@ public class RoleManagementService(DbService dbService, IDiscordClient client)
         {
             Log.Information("Attempted to track user {userId} but they could not found.", newTrackedUser.UserId);
             await TryLogToChannel(loggingChannelId,
-                () => Task.FromResult(new MessageContents($"Attempted to track user <@{newTrackedUser.UserId}>, but could not be found within Guild {trackable.AssignableGuild}.")));
+                () => Task.FromResult(new MessageContents(new EmbedBuilder()
+                    .WithDescription($"Attempted to track user <@{newTrackedUser.UserId}>, but could not be found within Guild {trackable.AssignableGuild}."))));
 
+            return false;
+        }
+
+        if (assignableGuild.GetRole(newTrackedUser.Trackable.AssignableRole) == null)
+        {
+            Log.Information("Attempted to track user {userId} but the assignable role {roleId} could not be found.", 
+                newTrackedUser.UserId, newTrackedUser.Trackable.AssignableRole);
+            await TryLogToChannel(loggingChannelId,
+                () => Task.FromResult(new MessageContents(new EmbedBuilder()
+                    .WithDescription($"Attempted to track user <@{newTrackedUser.UserId}>, but could not find assignable role {trackable.AssignableRole}."))));
             return false;
         }
 

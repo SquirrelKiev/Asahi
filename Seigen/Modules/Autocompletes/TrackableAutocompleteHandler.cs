@@ -18,13 +18,13 @@ public class TrackableAutocompleteHandler : AutocompleteHandler
 
         foreach (var trackable in trackables)
         {
-            var monitoredGuild = await context.Client.GetGuildAsync(trackable.MonitoredGuild);
-            var monitoredRole = monitoredGuild.GetRole(trackable.MonitoredRole);
-            var assignableGuild = await context.Client.GetGuildAsync(trackable.AssignableGuild);
-            var assignableRole = monitoredGuild.GetRole(trackable.AssignableRole);
+            IGuild? monitoredGuild = await context.Client.GetGuildAsync(trackable.MonitoredGuild);
+            IRole? monitoredRole = monitoredGuild.GetRole(trackable.MonitoredRole);
+            IGuild? assignableGuild = await context.Client.GetGuildAsync(trackable.AssignableGuild);
+            IRole? assignableRole = assignableGuild.GetRole(trackable.AssignableRole);
 
             autocompletes.Add(new AutocompleteResult(
-                $"{trackable.Id}: Monitoring {monitoredRole.Name} in {monitoredGuild.Name}. Assign {assignableRole.Name} in {assignableGuild.Name}. {trackable.Limit} slot limit.", trackable.Id.ToString()));
+                $"{trackable.Id}: Monitoring {monitoredRole?.Name} in {monitoredGuild?.Name}. Assign {assignableRole?.Name} in {assignableGuild?.Name}. {trackable.Limit} slot limit.", trackable.Id.ToString()));
         }
 
         return AutocompletionResult.FromSuccess(autocompletes.Where(x =>

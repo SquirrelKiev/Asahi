@@ -22,7 +22,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(MONITORED_GUILD_PARAM_NAME)] string monitoredGuild,
         [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))] string monitoredRole,
         [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(ASSIGNABLE_GUILD_PARAM_NAME)] string assignableGuild,
-        [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))] string assignableRole,
+        [Autocomplete(typeof(AssignableRoleAutocompleteHandler))] string assignableRole,
         ITextChannel? logsChannel = null,
         uint limit = 0,
         bool includeExistingMembers = true)
@@ -99,7 +99,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         }
 
         var monitoredRoleInstance = monitoredGuildInstance.GetRole(monitoredRole);
-        var assignableRoleInstance = monitoredGuildInstance.GetRole(assignableRole);
+        var assignableRoleInstance = assignedGuildInstance.GetRole(assignableRole);
 
         if (monitoredRoleInstance == null || assignableRoleInstance == null)
         {
