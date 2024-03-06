@@ -171,8 +171,6 @@ public class Bot
 
         await services.GetRequiredService<CommandHandler>().OnReady(Assembly.GetExecutingAssembly());
 
-        await Client.SetCustomStatusAsync("oh boy");
-
         var roleManagement = services.GetRequiredService<RoleManagementService>();
 
         await roleManagement.CacheAndResolve();
