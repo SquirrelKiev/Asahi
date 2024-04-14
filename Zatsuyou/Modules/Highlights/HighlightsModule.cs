@@ -10,11 +10,13 @@ using Zatsuyou.Database.Models;
 namespace Zatsuyou.Modules.Highlights;
 
 [Group("highlights", "Commands relating to the highlights system.")]
+[InteractionsModCommand]
 public partial class HighlightsModule(DbService dbService, InteractiveService interactiveService) : BotModule
 {
     [SlashCommand("create", "Creates a new highlight board.")]
     public async Task CreateSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")] [MaxLength(HighlightBoard.MaxNameLength)]
+        [Summary(description: "The name/ID of the board. Case insensitive.")] 
+        [MaxLength(HighlightBoard.MaxNameLength)] 
         string name,
         [Summary(description: "The channel to log highlights to. Can be changed later.")]
         ITextChannel channel)
@@ -51,7 +53,9 @@ public partial class HighlightsModule(DbService dbService, InteractiveService in
 
     [SlashCommand("remove", "Removes a highlight board.")]
     public async Task RemoveSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")] [MaxLength(HighlightBoard.MaxNameLength)]
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name)
     {
         name = name.ToLowerInvariant();
@@ -82,7 +86,9 @@ public partial class HighlightsModule(DbService dbService, InteractiveService in
 
     [SlashCommand("threshold", "Sets the minimum required reactions needed to put that message in the starboard.")]
     public async Task ThresholdSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")] [MaxLength(HighlightBoard.MaxNameLength)]
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The minimum required reactions.")]
         uint threshold)
@@ -115,8 +121,10 @@ public partial class HighlightsModule(DbService dbService, InteractiveService in
 
     [SlashCommand("max-message-age",
         "The maximum age (in seconds) a message is allowed to be to be added as a highlight. 0 = any age.")]
-    public async Task SetMessageAgeSlash([Summary(description: "The name/ID of the board. Case insensitive.")]
+    public async Task SetMessageAgeSlash(
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The maximum age of a message, in seconds. 0 = any age.")]
         uint maxAge)
@@ -152,6 +160,7 @@ public partial class HighlightsModule(DbService dbService, InteractiveService in
     public async Task AddFilterChannelSlash(
         [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         ITextChannel channel)
     {
@@ -192,6 +201,7 @@ public partial class HighlightsModule(DbService dbService, InteractiveService in
     public async Task RemoveFilterChannelSlash(
         [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         ITextChannel channel)
     {
@@ -238,6 +248,7 @@ public partial class HighlightsModule(DbService dbService, InteractiveService in
     public async Task SetFilterChannelTypeSlash(
         [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The filter type.")]
         AllowBlockList filterType)
