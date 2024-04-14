@@ -1,0 +1,132 @@
+﻿using System.Text;
+using BotBase.Database;
+using BotBase.Modules.About;
+using BotBase.Modules.Help;
+using Discord.Commands;
+using Discord.Interactions;
+using Discord.WebSocket;
+using Fergun.Interactive;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
+using Zatsuyou.Database;
+
+namespace Zatsuyou;
+
+public static class Startup
+{
+    public static async Task Main(string[] args)
+    {
+        Console.OutputEncoding = Encoding.UTF8;
+        Log.Logger = new LoggerConfiguration().WriteTo.Console(outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}").CreateLogger();
+
+        if (!new BotConfigFactory<BotConfig>().GetConfig(out var botConfig))
+        {
+            Environment.Exit(1);
+        }
+        if (!botConfig.IsValid())
+        {
+            Environment.Exit(1);
+        }
+
+        var builder = new HostApplicationBuilder();
+
+        var logLevel =
+#if DEBUG
+            LogEventLevel.Verbose;
+#else
+            LogEventLevel.Information;
+#endif
+
+
+        var logConfig = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .Enrich.FromLogContext()
+                .WriteTo.Console(
+                    logLevel,
+                    theme: AnsiConsoleTheme.Literate)
+            ;
+
+        if (!string.IsNullOrWhiteSpace(botConfig.SeqUrl))
+        {
+            logConfig.WriteTo.Seq(botConfig.SeqUrl, apiKey: botConfig.SeqApiKey);
+        }
+
+        builder.Logging.ClearProviders();
+        var logger = logConfig.CreateLogger();
+
+        builder.Logging.AddSerilog(logger);
+
+        builder.Services.AddBotServices(botConfig);
+
+        builder.Services.AddHostedService<BotService>();
+
+        var app = builder.Build();
+
+        await app.RunAsync();
+    }
+
+    private static IServiceCollection AddBotServices(this IServiceCollection serviceCollection, BotConfig config)
+    {
+        serviceCollection
+                .AddSingleton<BotConfigBase>(config)
+                .AddCache(config)
+                .AddSingleton(config)
+                .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
+                {
+                    GatewayIntents = GatewayIntents.Guilds |
+                                     GatewayIntents.MessageContent |
+                                     GatewayIntents.GuildMessageReactions |
+                                     GatewayIntents.GuildMessages |
+                                     GatewayIntents.DirectMessages |
+                                     GatewayIntents.GuildMembers,
+                    LogLevel = LogSeverity.Verbose,
+                    AlwaysDownloadUsers = true
+                }))
+                .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>(), new InteractionServiceConfig()
+                {
+                    LogLevel = LogSeverity.Verbose,
+                    DefaultRunMode = Discord.Interactions.RunMode.Async
+                }))
+                .AddSingleton(new CommandService(new CommandServiceConfig
+                {
+                    LogLevel = LogSeverity.Verbose,
+                    DefaultRunMode = Discord.Commands.RunMode.Async
+                }))
+                .AddSingleton<CommandHandler>()
+                .AddSingleton<DbService>()
+                .AddSingleton(x => (DbServiceBase<BotDbContext>)x.GetService<DbService>()!)
+                .AddSingleton<InteractiveService>()
+                // for help command
+                .AddSingleton<OverrideTrackerService>()
+                .AddSingleton<HelpService>()
+                // about command
+                .AddSingleton<AboutService>()
+            ;
+
+        serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
+            .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
+                x.ServiceLifetime == ServiceLifetime.Singleton)
+            )
+            .AsSelf()
+            .WithSingletonLifetime()
+        );
+
+        serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
+            .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
+                x.ServiceLifetime == ServiceLifetime.Transient)
+            )
+            .AsSelf()
+            .WithTransientLifetime()
+        );
+
+        //collection.Scan(scan => scan.FromAssemblyOf<Bot>()
+        //    .AddClasses(classes => classes.AssignableTo<ConfigPage>())
+        //    .As<ConfigPage>()
+        //    .As<ConfigPageBase<ConfigPage.Page>>()
+        //    .WithTransientLifetime());
+
+        return serviceCollection;
+    }
+}
