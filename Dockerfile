@@ -4,17 +4,17 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 as build-env
 
 WORKDIR /source
 
-COPY Zatsuyou/*.csproj Zatsuyou/
+COPY Asahi/*.csproj Asahi/
 
 ARG TARGETARCH
 
-RUN dotnet restore Zatsuyou/ -a $TARGETARCH
+RUN dotnet restore Asahi/ -a $TARGETARCH
 
 COPY . .
 
 RUN set -xe; \
 dotnet publish -c Release -a $TARGETARCH -o /app; \
-chmod +x /app/Zatsuyou
+chmod +x /app/Asahi
 
 FROM mcr.microsoft.com/dotnet/runtime:8.0 as runtime
 
@@ -26,4 +26,4 @@ VOLUME [ "/data" ]
 
 ENV BOT_CONFIG_LOCATION /data/botconfig.yaml
 
-CMD dotnet Zatsuyou.dll
+CMD dotnet Asahi.dll
