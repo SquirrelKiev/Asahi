@@ -8,6 +8,7 @@ public class CachedHighlightedMessage : DbModel
 
     //public required ulong ChannelId { get; set; }
 
+    public required ulong OriginalMessageChannelId { get; set; }
     public required ulong OriginalMessageId { get; set; }
 
     public required List<ulong> HighlightMessageIds { get; set; }

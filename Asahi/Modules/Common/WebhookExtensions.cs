@@ -6,7 +6,9 @@ public static class WebhookExtensions
     {
         var webhooks = await channel.GetWebhooksAsync();
 
-        var webhook = webhooks.FirstOrDefault(x => (userFilter == null || x.Creator.Id == userFilter.Id) && x.Name == name);
+        var webhook = webhooks.FirstOrDefault(x => 
+            //(userFilter == null || x.Creator.Id == userFilter.Id) && 
+            x.Name == name);
 
         if (webhook != null)
             return webhook;

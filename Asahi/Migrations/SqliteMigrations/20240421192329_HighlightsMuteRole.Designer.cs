@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -9,9 +10,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Asahi.Migrations.SqliteMigrations
 {
     [DbContext(typeof(SqliteContext))]
-    partial class SqliteContextModelSnapshot : ModelSnapshot
+    [Migration("20240421192329_HighlightsMuteRole")]
+    partial class HighlightsMuteRole
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.4");
@@ -32,9 +35,6 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.Property<string>("HighlightMessageIds")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<ulong>("OriginalMessageChannelId")
-                        .HasColumnType("INTEGER");
 
                     b.Property<ulong>("OriginalMessageId")
                         .HasColumnType("INTEGER");

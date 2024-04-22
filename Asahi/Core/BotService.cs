@@ -46,6 +46,7 @@ public class BotService(
         client.UserLeft += Client_UserLeft;
         client.UserJoined += Client_UserJoined;
         client.ReactionAdded += Client_ReactionAdded;
+        client.ReactionRemoved += Client_ReactionRemoved;
         client.MessageReceived += Client_MessageReceived;
 
         await client.LoginAsync(TokenType.Bot, config.BotToken);
@@ -88,10 +89,29 @@ public class BotService(
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
             return;
 
+        if (reaction.Channel is not SocketTextChannel channel)
+            return;
+
         var highlightsService = services.GetRequiredService<HighlightsTrackingService>();
 
         await highlightsService.safetySemaphore.WaitAsync();
-        _ = Task.Run(() => highlightsService.CheckMessageForHighlights(cachedMessage, reaction));
+        _ = Task.Run(() => highlightsService.CheckMessageForHighlights(cachedMessage, channel, true));
+    }
+
+    private async Task Client_ReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
+    {
+        logger.LogTrace("Reaction removed");
+
+        if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
+            return;
+
+        if (reaction.Channel is not SocketTextChannel channel)
+            return;
+
+        var highlightsService = services.GetRequiredService<HighlightsTrackingService>();
+
+        await highlightsService.safetySemaphore.WaitAsync();
+        _ = Task.Run(() => highlightsService.CheckMessageForHighlights(cachedMessage, channel, false));
     }
 
     private Task Client_MessageReceived(SocketMessage msg)

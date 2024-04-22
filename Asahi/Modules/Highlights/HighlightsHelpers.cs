@@ -2,13 +2,12 @@
 using Asahi.Database.Models;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Asahi.Modules.Highlights;
 
 public static class HighlightsHelpers
 {
-    public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, Microsoft.Extensions.Logging.ILogger logger,
+    public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
         bool webhookMode, bool spoilerAll = false)
     {
         var constantUrl = CatboxQts.GetRandomQtUrl();
@@ -22,8 +21,16 @@ public static class HighlightsHelpers
             channelName += $" • #{threadChannel.ParentChannel.Name}";
         }
 
+        var messageContent = message.Content;
+
+        if (spoilerAll)
+        {
+            messageContent = $"||{messageContent.Replace("|", "\\|")}||";
+        }
+
+        var link = message.GetJumpUrl();
         var firstEmbed = new EmbedBuilder()
-            .WithDescription(message.Content)
+            .WithDescription(messageContent)
             .WithFooter(channelName)
             .WithTimestamp(message.Timestamp)
             .WithOptionalColor(embedColor)
@@ -101,9 +108,17 @@ public static class HighlightsHelpers
             }
             else if (attachment.ContentType.StartsWith("video"))
             {
-                logger.LogTrace("attachment is video, sending as queued message");
 
-                queuedMessages.Add(new MessageContents(attachment.Url, embed: null));
+                if (spoilerAll || attachment.IsSpoiler())
+                {
+                    logger.LogTrace("attachment is spoiler video");
+                    firstEmbed.Description += $"\n[[Spoiler Video]]({attachment.Url})";
+                }
+                else
+                {
+                    logger.LogTrace("attachment is video, sending as queued message");
+                    queuedMessages.Add(new MessageContents(attachment.Url, embed: null));
+                }
             }
 
             i++;
@@ -125,14 +140,10 @@ public static class HighlightsHelpers
 
         if (string.IsNullOrWhiteSpace(embeds[0].Description) && string.IsNullOrWhiteSpace(embeds[0].ImageUrl))
         {
-            embeds[0].WithDescription("*No content.*");
+            firstEmbed.WithDescription("*No content.*");
         }
 
-        var link = message.GetJumpUrl();
-        if (webhookMode)
-        {
-            queuedMessages.Add(new MessageContents(link));
-        }
+        firstEmbed.AddField("Source", $"[Jump]({link})", true);
 
         queuedMessages.Insert(0, new MessageContents(
             webhookMode ? "" : link, embeds.Take(10).Select(x => x.Build()).ToArray(), null));

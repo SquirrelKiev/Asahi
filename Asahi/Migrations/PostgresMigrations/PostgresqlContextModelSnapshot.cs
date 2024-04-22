@@ -40,6 +40,9 @@ namespace Asahi.Migrations.PostgresMigrations
                         .IsRequired()
                         .HasColumnType("numeric(20,0)[]");
 
+                    b.Property<decimal>("OriginalMessageChannelId")
+                        .HasColumnType("numeric(20,0)");
+
                     b.Property<decimal>("OriginalMessageId")
                         .HasColumnType("numeric(20,0)");
 
@@ -179,6 +182,9 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.Property<bool>("FilteredChannelsIsBlockList")
                         .HasColumnType("boolean");
+
+                    b.Property<decimal>("HighlightsMuteRole")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<decimal>("LoggingChannelId")
                         .HasColumnType("numeric(20,0)");

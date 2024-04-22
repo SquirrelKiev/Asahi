@@ -44,10 +44,12 @@ public class HighlightBoard
     public required ulong LoggingChannelId { get; set; }
 
     public bool RequireSendMessagePermissionInChannel { get; set; } = true;
-    public bool FilterSelfReactions { get; set; } = true;
+    public bool FilterSelfReactions { get; set; } = false;
 
     public bool FilteredChannelsIsBlockList { get; set; } = true;
     public List<ulong> FilteredChannels { get; set; } = [];
+
+    public ulong HighlightsMuteRole { get; set; } = 0ul;
 
     // linq2db wasn't happy with something key related with CachedHighlightedMessage and wouldn't let me do anything so no timespans. this will do
     public int MaxMessageAgeSeconds { get; set; } = 0;

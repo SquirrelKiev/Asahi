@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 bot_config*.yaml
+/Asahi/Properties/launchSettings.json

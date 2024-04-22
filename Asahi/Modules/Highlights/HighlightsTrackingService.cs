@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Text;
 using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Webhook;
@@ -57,7 +58,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     }
 
     /// <remarks>Wait on <see cref="safetySemaphore"/> before doing anything!</remarks>
-    public async Task CheckMessageForHighlights(Cacheable<IUserMessage, ulong> cachedMessage, SocketReaction reaction)
+    public async Task CheckMessageForHighlights(Cacheable<IUserMessage, ulong> cachedMessage, SocketTextChannel originalChannel, bool shouldAddNewHighlight)
     {
         bool freedSemaphore = false;
         var msgId = cachedMessage.Id;
@@ -92,12 +93,12 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         try
         {
-            await CheckMessageForHighlights_Impl(cachedMessage, reaction);
+            await CheckMessageForHighlights_Impl(cachedMessage, originalChannel, shouldAddNewHighlight);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Tried to process message {message} in channel {channel} but failed, exception below",
-                msgId, reaction.Channel.Id);
+                msgId, originalChannel.Id);
         }
         finally
         {
@@ -112,24 +113,132 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         }
     }
 
+    private const string ReactionsFieldName = "Reactions";
+    public struct ReactionInfo(IEmote emote, int totalReactions)
+    {
+        public IEmote emote = emote;
+        public int totalReactions = totalReactions;
+    }
+
     // god I love linq
-    private async Task CheckMessageForHighlights_Impl(Cacheable<IUserMessage, ulong> cachedMessage, SocketReaction reaction)
+    private async Task CheckMessageForHighlights_Impl(Cacheable<IUserMessage, ulong> cachedMessage, SocketTextChannel channel, bool shouldAddNewHighlight)
     {
         logger.LogTrace("Checking message");
 
         await using var context = dbService.GetDbContext();
 
-        if (reaction.Channel is not SocketTextChannel channel)
-            return;
-
         var channelId = channel is SocketThreadChannel threadChannel ? threadChannel.ParentChannel.Id : channel.Id;
 
-        // could probably be merged into one request
-        if (await context.HighlightBoards.AllAsync(x => x.GuildId != channel.Guild.Id) ||
-            await context.HighlightBoards.AnyAsync(x => x.LoggingChannelId == channelId))
+        // could probably be merged into one request?
+        if (await context.HighlightBoards.AllAsync(x => x.GuildId != channel.Guild.Id))
+            return;
+
+        #region Handling new reactions to already highlighted messages
+
+        var boardsWithMarkedHighlight = await context.HighlightBoards
+            .Include(x => x.HighlightedMessages)
+            .Where(x =>
+                x.GuildId == channel.Guild.Id && x.HighlightedMessages
+                    .Any(y => y.OriginalMessageId == cachedMessage.Id || y.HighlightMessageIds.Contains(cachedMessage.Id)))
+            .ToArrayAsync();
+
+        if (boardsWithMarkedHighlight.Length != 0)
+        {
+            foreach (var board in boardsWithMarkedHighlight)
+            {
+                var cachedHighlightedMessage = board.HighlightedMessages
+                    .FirstOrDefault(x =>
+                        x.OriginalMessageId == cachedMessage.Id || x.HighlightMessageIds.Contains(cachedMessage.Id));
+
+                if (cachedHighlightedMessage == null)
+                    continue;
+
+                var originalMessage = await channel.Guild
+                    .GetTextChannel(cachedHighlightedMessage.OriginalMessageChannelId)
+                    .GetMessageAsync(cachedHighlightedMessage.OriginalMessageId);
+
+                if (originalMessage == null)
+                    continue;
+
+                var firstMessageId = cachedHighlightedMessage.HighlightMessageIds[0];
+                var lastMessageId = cachedHighlightedMessage.HighlightMessageIds[^1];
+
+                var loggingChannel = channel.Guild.GetTextChannel(board.LoggingChannelId);
+
+                var firstMessage = await loggingChannel.GetMessageAsync(firstMessageId);
+                if (firstMessage == null)
+                    continue;
+
+                var lastMessage = firstMessageId == lastMessageId ? firstMessage : await loggingChannel.GetMessageAsync(lastMessageId);
+                if (lastMessage == null)
+                    continue;
+
+                Dictionary<IEmote, HashSet<SocketGuildUser>> uniqueHighlightReactions = [];
+
+                // tried for quite a while to get this all within one linq statement, but seemed too much of a pain unfortunately, so three foreach instead.
+                // no linq one-liners today :pensive:
+                foreach (var thing in originalMessage.Reactions
+                                   .Select(x => new Tuple<IMessage, IEmote>(originalMessage, x.Key))
+                                   .Concat(lastMessage.Reactions
+                                       .Select(x => new Tuple<IMessage, IEmote>(lastMessage, x.Key))))
+                {
+                    await foreach (var userCollection in thing.Item1.GetReactionUsersAsync(thing.Item2, int.MaxValue))
+                    {
+                        foreach (var user in userCollection.Select(genericUser => channel.Guild.GetUser(genericUser.Id))
+                                     .Where(user => user != null && !user.IsBot))
+                        {
+                            if (!uniqueHighlightReactions.TryGetValue(thing.Item2, out var hashSet))
+                            {
+                                hashSet = [];
+                                uniqueHighlightReactions.Add(thing.Item2, hashSet);
+                            }
+
+                            hashSet.Add(user);
+                        }
+                    }
+                }
+
+                var reactions =
+                    uniqueHighlightReactions
+                        .Select(x => new ReactionInfo
+                            (
+                                x.Key,
+                                x.Value.Count
+                            )
+                    );
+
+                var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName, client.CurrentUser);
+                var webhookClient = new DiscordWebhookClient(webhook);
+
+                await webhookClient.ModifyMessageAsync(firstMessageId, messageProperties =>
+                {
+                    var embeds = firstMessage.Embeds.Select(x => x.ToEmbedBuilder()).ToArray();
+
+                    var eb = embeds[0];
+
+                    AddReactionsFieldToQuote(eb, reactions);
+
+                    messageProperties.Embeds = embeds.Select(x => x.Build()).ToArray();
+                });
+            }
+
+            return;
+        }
+
+        #endregion
+
+        if (!shouldAddNewHighlight)
+            return;
+
+        logger.LogTrace("at the highlight testing code");
+
+        if (await context.HighlightBoards.AnyAsync(x => x.LoggingChannelId == channelId))
             return;
 
         var msg = await cachedMessage.GetOrDownloadAsync();
+
+        if (msg.Author is not SocketGuildUser guildUser)
+            return;
 
         var nonUniqueReactions = msg.Reactions.Sum(x => x.Value.ReactionCount);
 
@@ -138,7 +247,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var boardsQuery = context.HighlightBoards.Where(x =>
             x.GuildId == channel.Guild.Id
             && (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds)
-            && x.HighlightedMessages.All(y => y.OriginalMessageId != msg.Id)
             && (x.FilteredChannelsIsBlockList
                 ? x.FilteredChannels.All(y => y != channelId)
                 : x.FilteredChannels.Any(y => y == channelId))
@@ -150,13 +258,14 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
             boardsQuery = boardsQuery.Where(x => x.FilteredChannelsIsBlockList
                 ? x.FilteredChannels.All(y => y != threadId)
-                : x.FilteredChannels.Any(y => y == threadId));
+                        : x.FilteredChannels.Any(y => y == threadId));
         }
 
-        var boards = await boardsQuery
+        var boards = (await boardsQuery
             .Include(x => x.EmoteAliases)
             .Include(x => x.Thresholds)
-            .ToArrayAsync();
+            .ToArrayAsync()).Where(x => guildUser.Roles.All(y => y.Id != x.HighlightsMuteRole))
+            .ToArray();
 
         logger.LogTrace("Total non unique reactions is {nur}, found {bl} boards", nonUniqueReactions, boards.Length);
 
@@ -167,8 +276,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         HashSet<SocketGuildUser> uniqueReactionUsers = [];
 
         await foreach (var userCollection in msg.Reactions.ToAsyncEnumerable()
-                           .SelectMany(reactionMetadata =>
-                               msg.GetReactionUsersAsync(reactionMetadata.Key, int.MaxValue)))
+                                   .SelectMany(reactionMetadata =>
+                                       msg.GetReactionUsersAsync(reactionMetadata.Key, int.MaxValue)))
         {
             foreach (var user in userCollection.Select(genericUser => channel.Guild.GetUser(genericUser.Id)).Where(user => user != null))
             {
@@ -236,6 +345,33 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         await context.SaveChangesAsync();
     }
 
+    private static void AddReactionsFieldToQuote(EmbedBuilder embedBuilder, IEnumerable<ReactionInfo> reactions)
+    {
+        var reactionsField = embedBuilder.Fields.FirstOrDefault(x => x.Name == ReactionsFieldName);
+        if (reactionsField == null)
+        {
+            reactionsField = new EmbedFieldBuilder().WithName(ReactionsFieldName)
+                .WithIsInline(true);
+            embedBuilder.AddField(reactionsField);
+        }
+
+        var sb = new StringBuilder();
+        bool addedReaction = false;
+        foreach (var reaction in reactions)
+        {
+            addedReaction = true;
+            sb.Append(reaction.emote).Append(" **")
+                .Append(reaction.totalReactions).Append("** ");
+        }
+
+        if (!addedReaction)
+        {
+            sb.Append("**None?**");
+        }
+
+        reactionsField.WithValue(sb.ToString());
+    }
+
     private async Task SendAndTrackHighlightMessage(HighlightBoard board, IMessage message, IReadOnlyDictionary<IEmote, ReactionMetadata> reactions)
     {
         logger.LogTrace("Sending highlight message to {channel}", board.LoggingChannelId);
@@ -249,6 +385,16 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var queuedMessages = HighlightsHelpers.QuoteMessage(message, embedColor, logger, true);
 
+        var eb = queuedMessages[0].embeds?[0].ToEmbedBuilder();
+        if (eb != null)
+        {
+            AddReactionsFieldToQuote(eb, message.Reactions.Select(x => new ReactionInfo
+            (
+                x.Key,
+                x.Value.ReactionCount
+            )));
+            queuedMessages[0].embeds![0] = eb.Build();
+        }
 
         var webhook = await textChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName, client.CurrentUser);
         var webhookClient = new DiscordWebhookClient(webhook);
@@ -261,7 +407,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             highlightMessages.Add(
                 await webhookClient.SendMessageAsync(
                     queuedMessage.body.Truncate(2000), embeds: queuedMessage.embeds, components: queuedMessage.components,
-                    username: username, avatarUrl: avatar));
+                    username: username, avatarUrl: avatar, allowedMentions: AllowedMentions.None));
         }
 
         if (board.AutoReactMaxAttempts != 0)
@@ -273,6 +419,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         board.HighlightedMessages.Add(new CachedHighlightedMessage()
         {
             HighlightMessageIds = highlightMessages,
+            OriginalMessageChannelId = message.Channel.Id,
             OriginalMessageId = message.Id
         });
 
