@@ -43,7 +43,6 @@ public class HighlightBoard
 
     public required ulong LoggingChannelId { get; set; }
 
-    public bool RequireSendMessagePermissionInChannel { get; set; } = true;
     public bool FilterSelfReactions { get; set; } = false;
 
     public bool FilteredChannelsIsBlockList { get; set; } = true;

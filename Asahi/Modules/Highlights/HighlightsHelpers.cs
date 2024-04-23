@@ -247,38 +247,54 @@ public static class HighlightsHelpers
         return builder;
     }
 
-    public static float CalculateThreshold(
-        HighlightThreshold thresholdConfig,
+    public static int CalculateThreshold(HighlightThreshold thresholdConfig,
         IReadOnlyCollection<HighlightsTrackingService.CachedMessage> messages,
-        DateTimeOffset messageSentAt, ILogger logger)
+        DateTimeOffset messageSentAt,
+        out string debugInfo)
     {
-        logger.LogTrace("total messages is {uniqueUsers}", messages.Count);
+        Dictionary<ulong, double> userWeights = [];
 
-        logger.LogTrace("sent at {sentAt}. only considering messages from after {minAge}",
-            messageSentAt, messageSentAt + TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds));
+        var orderedMessages = messages
+            .OrderByDescending(x => x.timestamp)
+            .ToArray();
 
-        foreach (var message in messages)
+        var userWeightMessages = orderedMessages.Where(x => x.timestamp <= messageSentAt &&
+                                                             x.timestamp >= messageSentAt - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds))
+            .ToArray();
+
+        foreach (var message in userWeightMessages)
         {
-            logger.LogTrace("cached message {id} was sent at {timestamp}. will it be included? {passes}",
-                message.messageId, message.timestamp, message.timestamp <= messageSentAt &&
-                                                      message.timestamp >= messageSentAt - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds));
+            var userId = message.authorId;
+            if (userWeights.ContainsKey(userId))
+                continue;
+
+            var timeSinceLastMessage = messageSentAt - message.timestamp;
+            double weight = 1f;
+
+            if (!(timeSinceLastMessage.TotalSeconds <= thresholdConfig.UniqueUserDecayDelaySeconds))
+            {
+                weight = 1 - (timeSinceLastMessage.TotalSeconds - thresholdConfig.UniqueUserDecayDelaySeconds) /
+                    (thresholdConfig.UniqueUserMessageMaxAgeSeconds - thresholdConfig.UniqueUserDecayDelaySeconds);
+            }
+
+            userWeights.TryAdd(userId, weight);
         }
 
-        HashSet<ulong> uniqueUsers = [];
-        foreach (var message in messages
-                     .Where(x => x.timestamp <= messageSentAt &&
-                                 x.timestamp >= messageSentAt - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds)))
-        {
-            uniqueUsers.Add(message.authorId);
-        }
+        var highActivity = orderedMessages.Length >= thresholdConfig.HighActivityMessageLookBack && 
+                                           (messageSentAt - orderedMessages[thresholdConfig.HighActivityMessageLookBack - 1].timestamp)
+                                           .TotalSeconds < thresholdConfig.HighActivityMessageMaxAgeSeconds;
 
-        var totalUniqueUsers = uniqueUsers.Count;
+        var weightedUserCount = userWeights.Sum(kvp => kvp.Value);
 
-        logger.LogTrace("total unique users for threshold is {uniqueUsers}", totalUniqueUsers);
+        var highActivityMultiplier = highActivity ? thresholdConfig.HighActivityMultiplier : 1f;
 
-        var threshold = MathF.Min(thresholdConfig.MaxThreshold, thresholdConfig.BaseThreshold + totalUniqueUsers * thresholdConfig.UniqueUserMultiplier);
+        var threshold = Math.Min(thresholdConfig.MaxThreshold, 
+            (thresholdConfig.BaseThreshold + weightedUserCount * thresholdConfig.UniqueUserMultiplier) * highActivityMultiplier);
 
-        // temp
-        return threshold;
+        debugInfo = $"Threshold is `{threshold}`. weighted users is `{weightedUserCount}`, unweighted users is `{userWeights.Count}`. " +
+                    $"{(highActivity ? "`Channel is high activity!` " : "`Normal activity levels.` ")}" + 
+                    $"Total of `{orderedMessages.Length}` messages cached, `{userWeightMessages.Length}` of which are being considered for unique user count.";
+
+        return (int)Math.Ceiling(threshold);
     }
 }

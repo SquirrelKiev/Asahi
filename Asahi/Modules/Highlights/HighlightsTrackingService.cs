@@ -37,7 +37,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     private readonly ConcurrentDictionary<ulong, SemaphoreSlim> messageToBeProcessedSemaphores = [];
 
     private readonly ConcurrentDictionary<ulong, ConcurrentQueue<CachedMessage>> messageCaches = [];
-    private readonly MemoryCache MessageThresholds = new(new MemoryCacheOptions());
+    private readonly MemoryCache messageThresholds = new(new MemoryCacheOptions());
 
     /// <remarks>Not thread-safe.</remarks>
     public void AddMessageToCache(SocketMessage msg)
@@ -123,11 +123,19 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     // god I love linq
     private async Task CheckMessageForHighlights_Impl(Cacheable<IUserMessage, ulong> cachedMessage, SocketTextChannel channel, bool shouldAddNewHighlight)
     {
+        var everyoneChannelPermissions = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole);
+        var everyoneCategoryPermissions = channel.Category?.GetPermissionOverwrite(channel.Guild.EveryoneRole);
+        if (everyoneChannelPermissions is { SendMessages: PermValue.Deny } || everyoneCategoryPermissions is { SendMessages: PermValue.Deny })
+        {
+            logger.LogTrace("channel is locked, skipping.");
+            return;
+        }
+
         logger.LogTrace("Checking message");
 
         await using var context = dbService.GetDbContext();
 
-        var channelId = channel is SocketThreadChannel threadChannel ? threadChannel.ParentChannel.Id : channel.Id;
+        var parentChannelId = channel is SocketThreadChannel threadChannel ? threadChannel.ParentChannel.Id : channel.Id;
 
         // could probably be merged into one request?
         if (await context.HighlightBoards.AllAsync(x => x.GuildId != channel.Guild.Id))
@@ -232,7 +240,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         logger.LogTrace("at the highlight testing code");
 
-        if (await context.HighlightBoards.AnyAsync(x => x.LoggingChannelId == channelId))
+        if (await context.HighlightBoards.AnyAsync(x => x.LoggingChannelId == parentChannelId))
             return;
 
         var msg = await cachedMessage.GetOrDownloadAsync();
@@ -248,9 +256,10 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             x.GuildId == channel.Guild.Id
             && (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds)
             && (x.FilteredChannelsIsBlockList
-                ? x.FilteredChannels.All(y => y != channelId)
-                : x.FilteredChannels.Any(y => y == channelId))
-        );
+                ? x.FilteredChannels.All(y => y != parentChannelId)
+                : x.FilteredChannels.Any(y => y == parentChannelId)
+            && (!x.FilteredChannelsIsBlockList || x.FilteredChannels.All(y => y != channel.Id))
+        ));
 
         if (channel is SocketThreadChannel)
         {
@@ -294,9 +303,11 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             // in the loop so in the case that all the boards for this guild are satisfied, we don't have to waste time processing unnecessary reactions.
             foreach (var board in boards.Where(x => !completedBoards.Contains(x)).Where(board =>
             {
-                var threshold = MessageThresholds.GetOrCreate($"{board.GuildId}-{board.Name}-{msg.Id}", entry =>
+                var threshold = messageThresholds.GetOrCreate($"{board.GuildId}-{board.Name}-{msg.Id}", entry =>
                 {
-                    var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channelId);
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
+
+                    var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
                     threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
                     threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
 
@@ -307,10 +318,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                         return 3;
                     }
 
-                    messageCaches.TryGetValue(channelId, out var queue);
-                    IReadOnlyCollection<CachedMessage> messages = queue ?? [];
+                    var messages = GetCachedMessages(channel.Id);
 
-                    var requiredReactions = HighlightsHelpers.CalculateThreshold(threshold, messages, msg.CreatedAt, logger);
+                    var requiredReactions = HighlightsHelpers.CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
 
                     logger.LogTrace("threshold is {threshold}", requiredReactions);
 
@@ -321,14 +331,11 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                     .Count(y =>
                     {
                         logger.LogTrace(
-                            "user {user}: require send msg: {rsm}, has perms: {hp}. filter self react: {fsr}, is self react: {isr}",
-                            y.Id, board.RequireSendMessagePermissionInChannel,
-                            y.GetPermissions(channel).SendMessages,
+                            "user {user}: filter self react: {fsr}, is self react: {isr}",
+                            y.Id,
                             board.FilterSelfReactions, y.Id == msg.Author.Id);
 
-                        return (board.RequireSendMessagePermissionInChannel == false ||
-                                y.GetPermissions(channel).SendMessages) &&
-                               (board.FilterSelfReactions == false || y.Id != msg.Author.Id);
+                        return board.FilterSelfReactions == false || y.Id != msg.Author.Id;
                     });
 
             }))
@@ -343,6 +350,13 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         }
 
         await context.SaveChangesAsync();
+    }
+
+    public IReadOnlyCollection<CachedMessage> GetCachedMessages(ulong channelId)
+    {
+        messageCaches.TryGetValue(channelId, out var queue);
+        IReadOnlyCollection<CachedMessage> messages = queue ?? [];
+        return messages;
     }
 
     private static void AddReactionsFieldToQuote(EmbedBuilder embedBuilder, IEnumerable<ReactionInfo> reactions)

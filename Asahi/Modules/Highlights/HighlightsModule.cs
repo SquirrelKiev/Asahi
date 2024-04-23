@@ -5,13 +5,14 @@ using Discord.Interactions;
 using Discord.WebSocket;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Asahi.Modules.Highlights;
 
 [Group("highlights", "Commands relating to the highlights system.")]
 [InteractionsModCommand]
-public class HighlightsModule(DbService dbService) : HighlightsSubmodule(dbService)
+public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger) : HighlightsSubmodule(dbService)
 {
     #region Create/Remove board
 
@@ -71,7 +72,7 @@ public class HighlightsModule(DbService dbService) : HighlightsSubmodule(dbServi
     #region Threshold
 
     [Group("threshold", "Commands relating to thresholds.")]
-    public class HighlightsThresholdSubmodule(DbService dbService) : HighlightsSubmodule(dbService)
+    public class HighlightsThresholdSubmodule(DbService dbService, HighlightsTrackingService hts) : HighlightsSubmodule(dbService)
     {
         [SlashCommand("add", "Adds a new threshold override for the specified channel.")]
         public Task ThresholdAddOverrideSlash(
@@ -235,6 +236,95 @@ public class HighlightsModule(DbService dbService) : HighlightsSubmodule(dbServi
                     $"Set the unique user multiplier to {uniqueUserMultiplier}."));
             });
         }
+
+        [SlashCommand("set-unique-decay",
+            "A user's contribution to the threshold will decay once their latest message is this old.")]
+        public Task ThresholdSetUniqueUserAgeDecaySlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            [Summary(description: "The threshold to edit.")]
+            [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
+            [MaxLength(20)]
+            string overrideId,
+            [Summary(description: "The delay (in seconds) to wait before decaying the user.")] [MinValue(0)]
+            int decayDelaySeconds)
+        {
+            return CommonThresholdConfig(name, overrideId, (options, threshold) =>
+            {
+                threshold.UniqueUserDecayDelaySeconds = decayDelaySeconds;
+                return Task.FromResult(new ConfigChangeResult(true,
+                    $"Set the decay delay to {decayDelaySeconds}."));
+            });
+        }
+
+        [SlashCommand("set-active-lookback",
+            "Which message to check the age of for checking high activity. (e.g. 50th message)")]
+        public Task ThresholdSetHighActivityLookbackSlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            [Summary(description: "The threshold to edit.")]
+            [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
+            [MaxLength(20)]
+            string overrideId,
+            [Summary(description: "The index of the message to look at.")] [MinValue(1)]
+            int lookbackIndex)
+        {
+            return CommonThresholdConfig(name, overrideId, (options, threshold) =>
+            {
+                threshold.HighActivityMessageLookBack = lookbackIndex;
+                return Task.FromResult(new ConfigChangeResult(true,
+                    $"Set the look-back index to {lookbackIndex}."));
+            });
+        }
+
+        [SlashCommand("set-active-max-age",
+            "If the look-back message is this old or less, we deem the channel as \"high activity\".")]
+        public Task ThresholdSetHighActivityMaxAgeSlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            [Summary(description: "The threshold to edit.")]
+            [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
+            [MaxLength(20)]
+            string overrideId,
+            [Summary(description: "The maximum age of the message, in seconds.")] [MinValue(0)]
+            int maxAgeSeconds)
+        {
+            return CommonThresholdConfig(name, overrideId, (options, threshold) =>
+            {
+                threshold.HighActivityMessageMaxAgeSeconds = maxAgeSeconds;
+                return Task.FromResult(new ConfigChangeResult(true,
+                    $"Set the maximum look-back message age to {maxAgeSeconds}."));
+            });
+        }
+
+        [SlashCommand("set-active-mult",
+            "If the channel is deemed high activity, threshold will be multiplied by this.")]
+        public Task ThresholdSetHighActivityMultiplierSlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            [Summary(description: "The threshold to edit.")]
+            [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
+            [MaxLength(20)]
+            string overrideId,
+            [Summary(description: "If the channel is deemed high activity, threshold will be multiplied by this.")] [MinValue(0)]
+            float highActivityMultiplier)
+        {
+            return CommonThresholdConfig(name, overrideId, (options, threshold) =>
+            {
+                threshold.HighActivityMultiplier = highActivityMultiplier;
+                return Task.FromResult(new ConfigChangeResult(true,
+                    $"Set the high activity multiplier to {highActivityMultiplier}."));
+            });
+        }
+
     }
 
     #endregion
@@ -438,26 +528,6 @@ public class HighlightsModule(DbService dbService) : HighlightsSubmodule(dbServi
                 shouldFilter
                     ? "Self-reactions will now no longer count towards the total unique reactions."
                     : "Self-reactions will now count towards the total unique reactions."));
-        });
-    }
-
-    [SlashCommand("filter-no-send-message",
-        "Changes whether reactions from users without send message permissions will be filtered or not.")]
-    public Task LockedChannelToggleSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
-        [MaxLength(HighlightBoard.MaxNameLength)]
-        [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string name,
-        [Summary(description: "Whether to filter users who don't have send message permissions or not.")]
-        bool shouldFilter)
-    {
-        return CommonBoardConfig(name, options =>
-        {
-            options.board.RequireSendMessagePermissionInChannel = shouldFilter;
-            return Task.FromResult(new ConfigChangeResult(true,
-                shouldFilter
-                    ? "Messages from people without send message permissions will no longer count."
-                    : "Messages from people without send message permissions will now count."));
         });
     }
 
@@ -784,7 +854,58 @@ public class HighlightsModule(DbService dbService) : HighlightsSubmodule(dbServi
         }
     }
 
+    [SlashCommand("get-current", "Gets the current calculated threshold for a channel.")]
+    public Task GetCurrentChannelsThresholdSlash(
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
+        string name,
+        [Summary(description: "The channel to check the threshold of.")]
+        ITextChannel channel)
+    {
+        return CommonBoardConfig(name, options =>
+        {
+            var threshold = options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
+            threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
+            threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
+
+            if (threshold == null)
+                return Task.FromResult(new ConfigChangeResult(false, "Couldn't find a threshold for that channel! " +
+                                                                     "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev."));
+
+            HighlightsHelpers.CalculateThreshold(threshold, hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out var message);
+
+            return Task.FromResult(new ConfigChangeResult(true, message));
+        }, boards => boards.Include(x => x.Thresholds));
+    }
+
+    #endregion
+
+    #region Debug Commands
+
 #if DEBUG
+
+    [SlashCommand("debug-log-threshold", "[DEBUG] Logs the current channel's threshold in console eternally.")]
+    public async Task DebugLogThresholdSlash(
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
+        string name)
+    {
+        await RespondAsync("away we go");
+
+        var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        while (await timer.WaitForNextTickAsync())
+        {
+            await using var context = dbService.GetDbContext();
+
+            var board = await context.HighlightBoards.Where(x => x.GuildId == Context.Guild.Id && x.Name == name)
+                .Include(highlightBoard => highlightBoard.Thresholds).FirstAsync();
+
+            HighlightsHelpers.CalculateThreshold(board.Thresholds.First(), hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out _);
+        }
+    }
+
     [SlashCommand("debug-clear-highlights", "[DEBUG] Clear all cached highlighted messages from db.")]
     public async Task DebugClearHighlights()
     {
@@ -796,6 +917,7 @@ public class HighlightsModule(DbService dbService) : HighlightsSubmodule(dbServi
 
         await FollowupAsync("done'd");
     }
+
 #endif
 
     #endregion

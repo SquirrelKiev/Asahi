@@ -192,9 +192,6 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.Property<int>("MaxMessageAgeSeconds")
                         .HasColumnType("integer");
 
-                    b.Property<bool>("RequireSendMessagePermissionInChannel")
-                        .HasColumnType("boolean");
-
                     b.HasKey("GuildId", "Name");
 
                     b.ToTable("HighlightBoards");
@@ -214,7 +211,19 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.Property<int>("BaseThreshold")
                         .HasColumnType("integer");
 
+                    b.Property<int>("HighActivityMessageLookBack")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("HighActivityMessageMaxAgeSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("HighActivityMultiplier")
+                        .HasColumnType("real");
+
                     b.Property<int>("MaxThreshold")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UniqueUserDecayDelaySeconds")
                         .HasColumnType("integer");
 
                     b.Property<int>("UniqueUserMessageMaxAgeSeconds")
