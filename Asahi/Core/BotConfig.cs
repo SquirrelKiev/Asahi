@@ -1,4 +1,6 @@
-﻿namespace Asahi;
+﻿using Serilog.Events;
+
+namespace Asahi;
 
 public class BotConfig : BotConfigBase
 {
@@ -11,6 +13,9 @@ public class BotConfig : BotConfigBase
 
     public override string SeqUrl { get; set; } = "";
     public override string SeqApiKey { get; set; } = "";
+
+    public LogEventLevel LogEventLevel { get; set; } = LogEventLevel.Verbose;
+
     public override string DefaultPrefix { get; set; } = "]";
     public override string AboutPageTitle { get; set; } = "About {{botUsername}}";
     public override string AboutPageDescription { get; set; } = "Various miscellaneous tools. " +

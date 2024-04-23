@@ -33,13 +33,7 @@ public static class Startup
 
         var builder = new HostApplicationBuilder();
 
-        var logLevel =
-#if DEBUG
-            LogEventLevel.Verbose;
-#else
-            LogEventLevel.Information;
-#endif
-
+        var logLevel = botConfig.LogEventLevel;
 
         var logConfig = new LoggerConfiguration()
                 .MinimumLevel.Is(logLevel)
