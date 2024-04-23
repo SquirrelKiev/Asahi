@@ -873,7 +873,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                 return Task.FromResult(new ConfigChangeResult(false, "Couldn't find a threshold for that channel! " +
                                                                      "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev."));
 
-            HighlightsHelpers.CalculateThreshold(threshold, hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out var message);
+            HighlightsHelpers.CalculateThreshold(threshold, hts.GetCachedMessages(channel.Id), DateTimeOffset.UtcNow, out var message);
 
             return Task.FromResult(new ConfigChangeResult(true, message));
         }, boards => boards.Include(x => x.Thresholds));
