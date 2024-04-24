@@ -38,6 +38,8 @@ public static class Startup
         var logConfig = new LoggerConfiguration()
                 .MinimumLevel.Is(logLevel)
                 .Enrich.FromLogContext()
+                .Enrich.WithThreadId()
+                .Enrich.WithThreadName()
                 .WriteTo.Console(theme: AnsiConsoleTheme.Literate)
             ;
 

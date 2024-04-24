@@ -8,7 +8,7 @@ public class DbService(BotConfigBase botConfig) : DbServiceBase<BotDbContext>(bo
     {
         BotDbContext context = botConfig.Database switch
         {
-            BotConfig.DatabaseType.Postgresql => new PostgresqlContext(botConfig.DatabaseConnectionString),
+            BotConfig.DatabaseType.Postgresql => new PostgresContext(botConfig.DatabaseConnectionString),
             BotConfig.DatabaseType.Sqlite => new SqliteContext(botConfig.DatabaseConnectionString),
             _ => throw new NotSupportedException(botConfig.Database.ToString())
         };

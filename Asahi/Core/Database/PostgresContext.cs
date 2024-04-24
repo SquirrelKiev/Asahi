@@ -2,9 +2,9 @@
 
 namespace Asahi.Database;
 
-public class PostgresqlContext : BotDbContext
+public class PostgresContext : BotDbContext
 {
-    public PostgresqlContext(string connStr = "Host=127.0.0.1;Username=postgres;Password=;Database=botdb") : base(connStr)
+    public PostgresContext(string connStr = "Host=127.0.0.1;Username=postgres;Password=;Database=botdb") : base(connStr)
     {
     }
 

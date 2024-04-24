@@ -14,7 +14,8 @@ public class BotService(
     DbService dbService,
     ILogger<BotService> logger,
     CommandHandler commandHandler,
-    IServiceProvider services) : BackgroundService
+    IServiceProvider services,
+    HighlightsTrackingService hts) : BackgroundService
 {
     public const string WebhookDefaultName = "Asahi Webhook";
 
@@ -92,10 +93,8 @@ public class BotService(
         if (reaction.Channel is not SocketTextChannel channel)
             return;
 
-        var highlightsService = services.GetRequiredService<HighlightsTrackingService>();
-
-        await highlightsService.safetySemaphore.WaitAsync();
-        _ = Task.Run(() => highlightsService.CheckMessageForHighlights(cachedMessage, channel, true));
+        await hts.safetySemaphore.WaitAsync();
+        _ = Task.Run(() => hts.CheckMessageForHighlights(cachedMessage, channel, true));
     }
 
     private async Task Client_ReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
@@ -108,10 +107,8 @@ public class BotService(
         if (reaction.Channel is not SocketTextChannel channel)
             return;
 
-        var highlightsService = services.GetRequiredService<HighlightsTrackingService>();
-
-        await highlightsService.safetySemaphore.WaitAsync();
-        _ = Task.Run(() => highlightsService.CheckMessageForHighlights(cachedMessage, channel, false));
+        await hts.safetySemaphore.WaitAsync();
+        _ = Task.Run(() => hts.CheckMessageForHighlights(cachedMessage, channel, false));
     }
 
     private Task Client_MessageReceived(SocketMessage msg)

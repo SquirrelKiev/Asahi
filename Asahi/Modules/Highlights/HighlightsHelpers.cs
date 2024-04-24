@@ -7,6 +7,8 @@ namespace Asahi.Modules.Highlights;
 
 public static class HighlightsHelpers
 {
+    public const string ReactionsFieldName = "Reacts";
+
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
         bool webhookMode, bool spoilerAll = false)
     {
@@ -143,7 +145,7 @@ public static class HighlightsHelpers
             firstEmbed.WithDescription("*No content.*");
         }
 
-        firstEmbed.AddField("Source", $"[Jump]({link})", true);
+        queuedMessages.Add(new MessageContents(link));
 
         queuedMessages.Insert(0, new MessageContents(
             webhookMode ? "" : link, embeds.Take(10).Select(x => x.Build()).ToArray(), null));
@@ -183,7 +185,9 @@ public static class HighlightsHelpers
         switch (colorSource)
         {
             case EmbedColorSource.UsersRoleColor:
-                embedColor = embedAuthor?.RoleIds.Select(x => embedAuthor.Guild.GetRole(x)).FirstOrDefault(x => x.Color != Color.Default)?.Color ?? embedColor;
+                embedColor = embedAuthor?.RoleIds.Select(x => embedAuthor.Guild.GetRole(x))
+                    .OrderByDescending(x => x.Position)
+                    .FirstOrDefault(x => x.Color != Color.Default)?.Color ?? embedColor;
                 break;
             case EmbedColorSource.UsersBannerColor:
                 if (embedAuthor != null)
@@ -280,7 +284,7 @@ public static class HighlightsHelpers
             userWeights.TryAdd(userId, weight);
         }
 
-        var highActivity = orderedMessages.Length >= thresholdConfig.HighActivityMessageLookBack && 
+        var highActivity = orderedMessages.Length >= thresholdConfig.HighActivityMessageLookBack &&
                                            (messageSentAt - orderedMessages[thresholdConfig.HighActivityMessageLookBack - 1].timestamp)
                                            .TotalSeconds < thresholdConfig.HighActivityMessageMaxAgeSeconds;
 
@@ -288,13 +292,17 @@ public static class HighlightsHelpers
 
         var highActivityMultiplier = highActivity ? thresholdConfig.HighActivityMultiplier : 1f;
 
-        var threshold = Math.Min(thresholdConfig.MaxThreshold, 
-            (thresholdConfig.BaseThreshold + weightedUserCount * thresholdConfig.UniqueUserMultiplier) * highActivityMultiplier);
+        var rawThreshold = (thresholdConfig.BaseThreshold + weightedUserCount * thresholdConfig.UniqueUserMultiplier) * highActivityMultiplier;
 
-        debugInfo = $"Threshold is `{threshold}`. weighted users is `{weightedUserCount}`, unweighted users is `{userWeights.Count}`. " +
-                    $"{(highActivity ? "`Channel is high activity!` " : "`Normal activity levels.` ")}" + 
+        var thresholdDecimal = rawThreshold % 1;
+        var roundedThreshold = Math.Min(thresholdConfig.MaxThreshold, 
+            thresholdDecimal < thresholdConfig.RoundingThreshold ? Math.Floor(rawThreshold) : Math.Ceiling(rawThreshold));
+
+        debugInfo = $"Current threshold is {roundedThreshold}. Raw threshold is `{rawThreshold}`. " +
+                    $"weighted users is `{weightedUserCount}`, unweighted users is `{userWeights.Count}`. " +
+                    $"{(highActivity ? "`Channel is high activity!` " : "`Normal activity levels.` ")}" +
                     $"Total of `{orderedMessages.Length}` messages cached, `{userWeightMessages.Length}` of which are being considered for unique user count.";
 
-        return (int)Math.Ceiling(threshold);
+        return (int)roundedThreshold;
     }
 }

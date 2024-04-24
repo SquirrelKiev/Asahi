@@ -72,7 +72,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
     #region Threshold
 
     [Group("threshold", "Commands relating to thresholds.")]
-    public class HighlightsThresholdSubmodule(DbService dbService, HighlightsTrackingService hts) : HighlightsSubmodule(dbService)
+    public class HighlightsThresholdSubmodule(DbService dbService) : HighlightsSubmodule(dbService)
     {
         [SlashCommand("add", "Adds a new threshold override for the specified channel.")]
         public Task ThresholdAddOverrideSlash(
@@ -172,7 +172,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             });
         }
 
-        [SlashCommand("set-max", "Sets the base threshold.")]
+        [SlashCommand("set-max", "Sets the max threshold.")]
         public Task ThresholdSetMaxSlash(
             [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
@@ -190,6 +190,27 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                 threshold.MaxThreshold = maxThreshold;
                 return Task.FromResult(
                     new ConfigChangeResult(true, $"Set max threshold to {maxThreshold}."));
+            });
+        }
+
+        [SlashCommand("set-rounding", "If the threshold goes higher than this, it's rounded up instead of down.")]
+        public Task ThresholdSetRoundingSlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            [Summary(description: "The threshold to edit.")]
+            [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
+            [MaxLength(20)]
+            string overrideId,
+            [Summary(description: "If the threshold goes higher than this, it's rounded up instead of down.")] [MinValue(0),MaxValue(1)]
+            float roundingThreshold)
+        {
+            return CommonThresholdConfig(name, overrideId, (options, threshold) =>
+            {
+                threshold.RoundingThreshold = roundingThreshold;
+                return Task.FromResult(
+                    new ConfigChangeResult(true, $"Set rounding threshold to {roundingThreshold}."));
             });
         }
 
@@ -861,12 +882,16 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The channel to check the threshold of.")]
-        ITextChannel channel)
+        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        IGuildChannel channel)
     {
         return CommonBoardConfig(name, options =>
         {
             var threshold = options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
-            threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
+            if(channel is SocketThreadChannel threadChannel)
+                threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == threadChannel.ParentChannel.Id);
+            if(channel is ITextChannel textChannel)
+                threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == textChannel.CategoryId);
             threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
 
             if (threshold == null)
@@ -885,13 +910,20 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
 #if DEBUG
 
+    private static bool loggingShouldStop = false;
+
     [SlashCommand("debug-log-threshold", "[DEBUG] Logs the current channel's threshold in console eternally.")]
     public async Task DebugLogThresholdSlash(
         [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string name)
+        string name, 
+        [Summary(description: "The channel to check the threshold of.")]
+        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        IGuildChannel channel, bool stopLogging = false)
     {
+        loggingShouldStop = stopLogging;
+
         await RespondAsync("away we go");
 
         var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
@@ -902,7 +934,18 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             var board = await context.HighlightBoards.Where(x => x.GuildId == Context.Guild.Id && x.Name == name)
                 .Include(highlightBoard => highlightBoard.Thresholds).FirstAsync();
 
-            HighlightsHelpers.CalculateThreshold(board.Thresholds.First(), hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out _);
+            var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
+            if (channel is SocketThreadChannel threadChannel)
+                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == threadChannel.ParentChannel.Id);
+            if (channel is ITextChannel textChannel)
+                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == textChannel.CategoryId);
+            threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
+
+            if (threshold == null || loggingShouldStop)
+                return;
+
+            HighlightsHelpers.CalculateThreshold(board.Thresholds.First(), hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out var threshDebugInfo);
+            logger.LogTrace("info is {info}", threshDebugInfo);
         }
     }
 

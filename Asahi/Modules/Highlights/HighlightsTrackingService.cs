@@ -31,7 +31,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
     // safetySemaphore here is to prevent weird multithreading issues with the locks stuff.
     // had some issues where two messages would process at the same time when the reactions were sent quick enough if I didn't do this
-    public readonly SemaphoreSlim safetySemaphore = new(1);
+    public readonly SemaphoreSlim safetySemaphore = new(1, 1);
 
     private readonly ConcurrentDictionary<ulong, SemaphoreSlim> messageProcessingSemaphores = [];
     private readonly ConcurrentDictionary<ulong, SemaphoreSlim> messageToBeProcessedSemaphores = [];
@@ -78,11 +78,11 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
             queued = true;
             logger.LogTrace("waiting for message to be processed");
-            freedSemaphore = true;
 
             // this is just a fancy yield right so this will mean it'll acquire the lock etc. before we free the safety semaphore (I think)
             var waitTask = processingSemaphore.WaitAsync();
             safetySemaphore.Release();
+            freedSemaphore = true;
             await waitTask;
         }
 
@@ -106,14 +106,13 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             messageProcessingSemaphores.TryRemove(msgId, out _);
             if (queued)
             {
-                var messageToBeProcessedSemaphore = messageToBeProcessedSemaphores.GetOrAdd(msgId, _ => new SemaphoreSlim(1, 1));
-                messageToBeProcessedSemaphore.Release();
+                if(messageToBeProcessedSemaphores.TryGetValue(msgId, out var messageToBeProcessedSemaphore))
+                    messageToBeProcessedSemaphore.Release();
                 messageToBeProcessedSemaphores.TryRemove(msgId, out _);
             }
         }
     }
 
-    private const string ReactionsFieldName = "Reactions";
     public struct ReactionInfo(IEmote emote, int totalReactions)
     {
         public IEmote emote = emote;
@@ -308,6 +307,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                     entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
 
                     var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
+                    threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannelId);
                     threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
                     threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
 
@@ -359,28 +359,32 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         return messages;
     }
 
-    private static void AddReactionsFieldToQuote(EmbedBuilder embedBuilder, IEnumerable<ReactionInfo> reactions)
+    private void AddReactionsFieldToQuote(EmbedBuilder embedBuilder, IEnumerable<ReactionInfo> reactions)
     {
-        var reactionsField = embedBuilder.Fields.FirstOrDefault(x => x.Name == ReactionsFieldName);
+        var reactionsField = embedBuilder.Fields.FirstOrDefault(x => x.Name == HighlightsHelpers.ReactionsFieldName);
         if (reactionsField == null)
         {
-            reactionsField = new EmbedFieldBuilder().WithName(ReactionsFieldName)
+            reactionsField = new EmbedFieldBuilder().WithName(HighlightsHelpers.ReactionsFieldName)
                 .WithIsInline(true);
             embedBuilder.AddField(reactionsField);
         }
 
         var sb = new StringBuilder();
-        bool addedReaction = false;
+        var addedReaction = false;
         foreach (var reaction in reactions)
         {
             addedReaction = true;
-            sb.Append(reaction.emote).Append(" **")
-                .Append(reaction.totalReactions).Append("** ");
+            sb
+                .Append("**")
+                .Append(reaction.totalReactions)
+                .Append("** ")
+                .Append(reaction.emote)
+                .Append(' ');
         }
 
         if (!addedReaction)
         {
-            sb.Append("**None?**");
+            sb.Append("None?");
         }
 
         reactionsField.WithValue(sb.ToString());

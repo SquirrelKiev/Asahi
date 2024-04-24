@@ -214,6 +214,9 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.Property<int>("MaxThreshold")
                         .HasColumnType("INTEGER");
 
+                    b.Property<float>("RoundingThreshold")
+                        .HasColumnType("REAL");
+
                     b.Property<int>("UniqueUserDecayDelaySeconds")
                         .HasColumnType("INTEGER");
 

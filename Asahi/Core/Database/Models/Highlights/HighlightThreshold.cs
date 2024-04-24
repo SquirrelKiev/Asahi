@@ -9,6 +9,7 @@ public class HighlightThreshold
 
     public int BaseThreshold { get; set; } = 3;
     public int MaxThreshold { get; set; } = 6;
+    public float RoundingThreshold { get; set; } = 0.4f;
 
     public int UniqueUserMessageMaxAgeSeconds { get; set; } = 1800;
     public float UniqueUserMultiplier { get; set; } = 0.25f;
