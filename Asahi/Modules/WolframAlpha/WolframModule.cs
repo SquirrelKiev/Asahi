@@ -27,7 +27,7 @@ public class WolframModule(BotConfig botConfig, HttpClient httpClient) : BotModu
 
         await DeferAsync(ephemeral);
 
-        var urlEncodedQuery = WebUtility.HtmlEncode(query);
+        var urlEncodedQuery = Uri.EscapeDataString(query);
 
         var requestType = displayType switch
         {
