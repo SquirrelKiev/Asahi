@@ -53,13 +53,13 @@ public class HighlightBoard
     // linq2db wasn't happy with something key related with CachedHighlightedMessage and wouldn't let me do anything so no timespans. this will do
     public int MaxMessageAgeSeconds { get; set; } = 28800;
 
-    public EmbedColorSource EmbedColorSource { get; set; } = EmbedColorSource.AlwaysUseFallbackColor;
+    public EmbedColorSource EmbedColorSource { get; set; } = EmbedColorSource.UsersRoleColor;
 
     /// <remarks>0 means no embed color.</remarks>>
     public uint FallbackEmbedColor { get; set; } = 0u;
 
-    public int AutoReactMaxAttempts { get; set; } = 20;
-    public int AutoReactMaxReactions { get; set; } = 20;
+    public int AutoReactMaxAttempts { get; set; } = 1;
+    public int AutoReactMaxReactions { get; set; } = 1;
 
     public AutoReactEmoteChoicePreference AutoReactEmoteChoicePreference { get; set; } = AutoReactEmoteChoicePreference.ReactionsDescendingPopularity;
 

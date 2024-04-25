@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Channels;
 using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
@@ -73,9 +71,9 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     #endregion
 
-    #region Threshold
+    #region Override Threshold
 
-    [Group("threshold", "Commands relating to thresholds.")]
+    [Group("threshold", "Commands relating to threshold overrides.")]
     public class HighlightsThresholdSubmodule(DbService dbService) : HighlightsSubmodule(dbService)
     {
         [SlashCommand("add", "Adds a new threshold override for the specified channel.")]
@@ -743,10 +741,10 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
                 var message = maxAttempts == 0
                     ? "Auto reactions are now **disabled**."
-                    : $"We'll now attempt to react a maximum of {maxAttempts} times to the highlighted message. " +
+                    : $"Will now attempt to react a maximum of {maxAttempts} times to the highlighted message. " +
                       (options.board.AutoReactFallbackEmoji == ""
-                          ? "Otherwise, we'll not react (no fallback emoji set.)"
-                          : "If we go past that, we'll, switch to fallback.");
+                          ? "If exceeding that, no reaction shall be added (no fallback emoji set.)"
+                          : "If exceeding that, fallback will be reacted with instead.");
                 return Task.FromResult(new ConfigChangeResult(true, message));
             });
         }
@@ -771,7 +769,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                 return Task.FromResult(new ConfigChangeResult(true,
                     maxReactions == 0
                         ? "Auto reactions are now **disabled**."
-                        : $"We'll now react a maximum of {maxReactions} times."));
+                        : $"Auto reaction count now capped at {maxReactions}."));
             });
         }
 
@@ -970,7 +968,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         }
     }
 
-    [SlashCommand("get-threshold", "Retrieves a board's threshold.")]
+    [SlashCommand("get-override", "Retrieves a board's threshold.")]
     public async Task GetThresholdSlash(
         [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
@@ -1041,7 +1039,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         }
     }
 
-    [SlashCommand("get-current", "Gets the current calculated threshold for a channel.")]
+    [SlashCommand("get-threshold", "Gets the current calculated threshold for a channel.")]
     public Task GetCurrentChannelsThresholdSlash(
         [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]

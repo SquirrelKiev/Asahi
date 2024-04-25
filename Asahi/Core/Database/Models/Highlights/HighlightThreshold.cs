@@ -17,7 +17,7 @@ public class HighlightThreshold
 
     public int HighActivityMessageMaxAgeSeconds { get; set; } = 300;
     public int HighActivityMessageLookBack { get; set; } = 50;
-    public float HighActivityMultiplier { get; set; } = 1.2f;
+    public float HighActivityMultiplier { get; set; } = 1.1f;
 
     [JsonIgnore]
     public HighlightBoard HighlightBoard { get; set; } = null!;

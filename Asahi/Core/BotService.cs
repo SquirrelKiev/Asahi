@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Asahi.Database;
+using Asahi.Modules.CustomizeStatus;
 using Asahi.Modules.Highlights;
 using Asahi.Modules.Seigen;
 using Discord.WebSocket;
@@ -15,7 +16,8 @@ public class BotService(
     ILogger<BotService> logger,
     CommandHandler commandHandler,
     IServiceProvider services,
-    HighlightsTrackingService hts) : BackgroundService
+    HighlightsTrackingService hts,
+    CustomStatusService css) : BackgroundService
 {
     public const string WebhookDefaultName = "Asahi Webhook";
     public CancellationTokenSource cts = new();
@@ -154,6 +156,15 @@ public class BotService(
         logger.LogInformation("Logged in as {user}#{discriminator} ({id})", client.CurrentUser?.Username, client.CurrentUser?.Discriminator, client.CurrentUser?.Id);
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
+
+        try
+        {
+            await css.UpdateStatus();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to set custom status in ready!");
+        }
 
         hts.StartBackgroundTask(cts.Token);
 

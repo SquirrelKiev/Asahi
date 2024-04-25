@@ -5,7 +5,7 @@ namespace Asahi.Modules.WolframAlpha;
 
 // limited to trusted users due to geolocation features of Wolfram. Result/Simple API doesn't support changing geolocation for some reason and
 // I can't be bothered to deal with the full results api.
-[HasWolframPermissions]
+[TrustedMember]
 [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 public class WolframModule(BotConfig botConfig, HttpClient httpClient) : BotModule

@@ -18,7 +18,7 @@ namespace Asahi.Modules.Highlights;
 // just for the Oshi no Ko guild), maybe the processing of the queue could be changed to spin up a new task per guild or
 // per channel? maybe limit to like 5 tasks in case Discord gets mad? something to look into if the need arises.
 [Inject(ServiceLifetime.Singleton)]
-public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTrackingService> logger, DiscordSocketClient client)
+public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTrackingService> logger, DiscordSocketClient client, BotConfig botConfig)
 {
     public struct CachedMessage(ulong messageId, ulong authorId, DateTimeOffset timestamp)
     {
@@ -262,6 +262,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var msg = await channel.GetMessageAsync(messageId);
 
         if (msg.Author is not SocketGuildUser guildUser)
+            return;
+
+        if (botConfig.BannedHighlightsUsers.Contains(msg.Author.Id))
             return;
 
         var nonUniqueReactions = msg.Reactions.Sum(x => x.Value.ReactionCount);

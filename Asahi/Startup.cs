@@ -7,6 +7,7 @@ using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Fergun.Interactive;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -31,7 +32,7 @@ public static class Startup
             Environment.Exit(1);
         }
 
-        var builder = new HostApplicationBuilder();
+        var builder = new HostBuilder();
 
         var logLevel = botConfig.LogEventLevel;
 
@@ -48,20 +49,16 @@ public static class Startup
             logConfig.WriteTo.Seq(botConfig.SeqUrl, apiKey: botConfig.SeqApiKey);
         }
 
-        builder.Logging.ClearProviders();
         var logger = logConfig.CreateLogger();
+        builder.ConfigureLogging(logging => 
+            logging
+                .AddSerilog(logger)
+                .AddFilter<SerilogLoggerProvider>("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.None));
 
-        builder.Logging.AddSerilog(logger);
+        builder.ConfigureServices(x => x.AddBotServices(botConfig));
+        builder.ConfigureHostConfiguration(configBuilder => configBuilder.AddEnvironmentVariables(prefix: "DOTNET_"));
 
-        builder.Services.AddBotServices(botConfig);
-        // please let me be free of the log spam
-        builder.Logging.AddFilter<SerilogLoggerProvider>("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.None);
-
-        builder.Services.AddHostedService<BotService>();
-
-        var app = builder.Build();
-
-        await app.RunAsync();
+        await builder.RunConsoleAsync();
     }
 
     private static IServiceCollection AddBotServices(this IServiceCollection serviceCollection, BotConfig config)
@@ -127,6 +124,8 @@ public static class Startup
         //    .As<ConfigPage>()
         //    .As<ConfigPageBase<ConfigPage.Page>>()
         //    .WithTransientLifetime());
+
+        serviceCollection.AddHostedService<BotService>();
 
         return serviceCollection;
     }

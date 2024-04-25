@@ -3,43 +3,51 @@ using System;
 using Asahi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Asahi.Migrations.SqliteMigrations
+namespace Asahi.Migrations.PostgresMigrations
 {
-    [DbContext(typeof(SqliteContext))]
-    partial class SqliteContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(PostgresContext))]
+    [Migration("20240425221236_BotDbConfig")]
+    partial class BotDbConfig
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.4");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "8.0.4")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
                 {
                     b.Property<bool>("DumbKey")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("ActivityStreamingUrl")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<int>("ActivityType")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<string>("BotActivity")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(128)");
 
                     b.Property<bool>("ShouldHaveActivity")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("boolean");
 
                     b.Property<int>("UserStatus")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.HasKey("DumbKey");
 
@@ -48,26 +56,28 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
                 {
-                    b.Property<uint>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
-                    b.Property<ulong>("HighlightBoardGuildId")
-                        .HasColumnType("INTEGER");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<decimal>("HighlightBoardGuildId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<string>("HighlightBoardName")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(32)");
 
-                    b.Property<string>("HighlightMessageIds")
+                    b.Property<decimal[]>("HighlightMessageIds")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("numeric(20,0)[]");
 
-                    b.Property<ulong>("OriginalMessageChannelId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("OriginalMessageChannelId")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<ulong>("OriginalMessageId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("OriginalMessageId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.HasKey("Id");
 
@@ -81,14 +91,14 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.CachedUserRole", b =>
                 {
-                    b.Property<ulong>("RoleId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("RoleId")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<ulong>("UserId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("UserId")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("GuildId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.HasKey("RoleId", "UserId");
 
@@ -99,26 +109,28 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.CustomCommand", b =>
                 {
-                    b.Property<uint>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Contents")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("text");
 
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("GuildId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<bool>("IsRaw")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("text");
 
-                    b.Property<ulong>("OwnerId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("OwnerId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.HasKey("Id");
 
@@ -129,18 +141,18 @@ namespace Asahi.Migrations.SqliteMigrations
                 {
                     b.Property<string>("EmoteName")
                         .HasMaxLength(32)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(32)");
 
-                    b.Property<ulong>("HighlightBoardGuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("HighlightBoardGuildId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<string>("HighlightBoardName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("EmoteReplacement")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("EmoteName", "HighlightBoardGuildId", "HighlightBoardName");
 
@@ -151,14 +163,14 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.GuildConfig", b =>
                 {
-                    b.Property<ulong>("GuildId")
+                    b.Property<decimal>("GuildId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<string>("Prefix")
                         .IsRequired()
                         .HasMaxLength(8)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(8)");
 
                     b.HasKey("GuildId");
 
@@ -167,51 +179,51 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>
                 {
-                    b.Property<ulong>("GuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("GuildId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<string>("Name")
                         .HasMaxLength(32)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<int>("AutoReactEmoteChoicePreference")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<string>("AutoReactFallbackEmoji")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("AutoReactMaxAttempts")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<int>("AutoReactMaxReactions")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<int>("EmbedColorSource")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
-                    b.Property<uint>("FallbackEmbedColor")
-                        .HasColumnType("INTEGER");
+                    b.Property<long>("FallbackEmbedColor")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("FilterSelfReactions")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("boolean");
 
-                    b.Property<string>("FilteredChannels")
+                    b.Property<decimal[]>("FilteredChannels")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("numeric(20,0)[]");
 
                     b.Property<bool>("FilteredChannelsIsBlockList")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("boolean");
 
-                    b.Property<ulong>("HighlightsMuteRole")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("HighlightsMuteRole")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<ulong>("LoggingChannelId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("LoggingChannelId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<int>("MaxMessageAgeSeconds")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.HasKey("GuildId", "Name");
 
@@ -220,41 +232,41 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightThreshold", b =>
                 {
-                    b.Property<ulong>("OverrideId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("OverrideId")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<ulong>("HighlightBoardGuildId")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("HighlightBoardGuildId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<string>("HighlightBoardName")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(32)");
 
                     b.Property<int>("BaseThreshold")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<int>("HighActivityMessageLookBack")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<int>("HighActivityMessageMaxAgeSeconds")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<float>("HighActivityMultiplier")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<int>("MaxThreshold")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<float>("RoundingThreshold")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.Property<int>("UniqueUserDecayDelaySeconds")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<int>("UniqueUserMessageMaxAgeSeconds")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("integer");
 
                     b.Property<float>("UniqueUserMultiplier")
-                        .HasColumnType("REAL");
+                        .HasColumnType("real");
 
                     b.HasKey("OverrideId", "HighlightBoardGuildId", "HighlightBoardName");
 
@@ -265,27 +277,29 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.Trackable", b =>
                 {
-                    b.Property<uint>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
-                    b.Property<ulong>("AssignableGuild")
-                        .HasColumnType("INTEGER");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<ulong>("AssignableRole")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("AssignableGuild")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<uint>("Limit")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("AssignableRole")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<ulong>("LoggingChannel")
-                        .HasColumnType("INTEGER");
+                    b.Property<long>("Limit")
+                        .HasColumnType("bigint");
 
-                    b.Property<ulong>("MonitoredGuild")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("LoggingChannel")
+                        .HasColumnType("numeric(20,0)");
 
-                    b.Property<ulong>("MonitoredRole")
-                        .HasColumnType("INTEGER");
+                    b.Property<decimal>("MonitoredGuild")
+                        .HasColumnType("numeric(20,0)");
+
+                    b.Property<decimal>("MonitoredRole")
+                        .HasColumnType("numeric(20,0)");
 
                     b.HasKey("Id");
 
@@ -297,15 +311,17 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.TrackedUser", b =>
                 {
-                    b.Property<uint>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bigint");
 
-                    b.Property<uint>("TrackableId")
-                        .HasColumnType("INTEGER");
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<ulong>("UserId")
-                        .HasColumnType("INTEGER");
+                    b.Property<long>("TrackableId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("UserId")
+                        .HasColumnType("numeric(20,0)");
 
                     b.HasKey("Id");
 
@@ -317,17 +333,17 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.TrustedId", b =>
                 {
-                    b.Property<ulong>("Id")
+                    b.Property<decimal>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("numeric(20,0)");
 
                     b.Property<bool?>("BotWideConfigDumbKey")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Comment")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
 

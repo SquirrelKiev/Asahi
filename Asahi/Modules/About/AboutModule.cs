@@ -1,8 +1,5 @@
-﻿using BotBase;
-using BotBase.Modules.About;
-using Discord;
+﻿using BotBase.Modules.About;
 using Discord.Interactions;
-using Newtonsoft.Json;
 
 namespace Asahi.Modules.About;
 
