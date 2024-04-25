@@ -7,6 +7,7 @@ namespace Asahi.Modules.WolframAlpha;
 // I can't be bothered to deal with the full results api.
 [HasWolframPermissions]
 [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 public class WolframModule(BotConfig botConfig, HttpClient httpClient) : BotModule
 {
     public enum DisplayType

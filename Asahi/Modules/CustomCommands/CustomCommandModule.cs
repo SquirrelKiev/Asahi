@@ -4,6 +4,7 @@ using Fergun.Interactive;
 
 namespace Asahi.Modules.CustomCommands;
 
+[CommandContextType(InteractionContextType.Guild)]
 [Group("commands", "Stuff related to custom commands.")]
 public class CustomCommandModule(CustomCommandService commandService, InteractiveService interactiveService) : BotModule
 {

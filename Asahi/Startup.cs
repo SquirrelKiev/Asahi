@@ -55,6 +55,7 @@ public static class Startup
         builder.Logging.AddSerilog(logger);
 
         builder.Services.AddBotServices(botConfig);
+        builder.Logging.AddFilter("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.None);
 
         builder.Services.AddHostedService<BotService>();
 

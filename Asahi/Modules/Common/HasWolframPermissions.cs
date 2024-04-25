@@ -8,7 +8,10 @@ public class HasWolframPermissions : PreconditionAttribute
     {
         var config = services.GetRequiredService<BotConfig>();
 
-        var isTrusted = config.WolframTrustedIds.Contains(context.User.Id) || config.WolframTrustedIds.Contains(context.Channel.Id);
+        var isTrusted = config.WolframTrustedIds.Contains(context.User.Id);
+
+        if(!isTrusted && context.Channel != null)
+            isTrusted = isTrusted || config.WolframTrustedIds.Contains(context.Channel.Id);
 
         if (!isTrusted && context.Guild != null)
             isTrusted = isTrusted || config.WolframTrustedIds.Contains(context.Guild.Id);

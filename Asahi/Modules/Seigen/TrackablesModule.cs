@@ -6,8 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Asahi.Modules.Seigen;
 
-[Group("trackables", "Commands relating to managing trackables and their users.")]
 [InteractionsModCommand]
+[CommandContextType(InteractionContextType.Guild)]
+[Group("trackables", "Commands relating to managing trackables and their users.")]
 public class TrackablesModule(DbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";

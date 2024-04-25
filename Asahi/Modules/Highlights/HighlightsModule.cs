@@ -1,4 +1,7 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Channels;
 using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
@@ -10,9 +13,9 @@ using Newtonsoft.Json;
 
 namespace Asahi.Modules.Highlights;
 
-[Group("highlights", "Commands relating to the highlights system.")]
 [InteractionsModCommand]
-[RequireContext(ContextType.Guild)]
+[CommandContextType(InteractionContextType.Guild)]
+[Group("highlights", "Commands relating to the highlights system.")]
 public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger) : HighlightsSubmodule(dbService)
 {
     #region Create/Remove board
@@ -476,6 +479,168 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                 options.board.FilteredChannels.Add(channel.Id);
                 return Task.FromResult(new ConfigChangeResult(true,
                     $"Channel <#{channel.Id}> added to filtered channels."));
+            });
+        }
+
+        [SlashCommand("add-raw",
+            "Add multiple channels to the channel filter. This takes channel IDs. Comma separated.")]
+        public Task AddFilterChannelsRawSlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            string channels)
+        {
+            return CommonBoardConfig(name, async options =>
+            {
+                List<ulong> addedChannels = [];
+                List<ulong> failedChannelsBecauseNull = [];
+                List<ulong> failedChannelsBecauseAlreadyExists = [];
+                List<string> failedChannelsBecauseInvalidUlong = [];
+                foreach (var channelStr in channels.Split(","))
+                {
+                    if (!ulong.TryParse(channelStr, out var channelId))
+                    {
+                        failedChannelsBecauseInvalidUlong.Add(channelStr);
+                        continue;
+                    }
+
+                    var channel = await Context.Guild.GetChannelAsync(channelId);
+
+                    if (channel == null)
+                    {
+                        failedChannelsBecauseNull.Add(channelId);
+                        continue;
+                    }
+                    if (options.board.FilteredChannels.Contains(channel.Id))
+                    {
+                        failedChannelsBecauseAlreadyExists.Add(channelId);
+                        continue;
+                    }
+
+                    options.board.FilteredChannels.Add(channel.Id);
+                    addedChannels.Add(channel.Id);
+                }
+
+                var sb = new StringBuilder();
+                if (addedChannels.Count != 0)
+                {
+                    sb.AppendLine().Append("Added the following channels: ");
+                    foreach (var channel in addedChannels)
+                    {
+                        sb.Append("<#").Append(channel).Append(">, ");
+                    }
+                }
+
+                if (failedChannelsBecauseNull.Count != 0)
+                {
+                    sb.AppendLine().Append("Failed to add the following channels as they could not be found: ");
+                    foreach (var channel in failedChannelsBecauseNull)
+                    {
+                        sb.Append("<#").Append(channel).Append(">, ");
+                    }
+                }
+
+                if (failedChannelsBecauseAlreadyExists.Count != 0)
+                {
+                    sb.AppendLine().Append("Failed to add the following channels as they are already added: ");
+                    foreach (var channel in failedChannelsBecauseAlreadyExists)
+                    {
+                        sb.Append("<#").Append(channel).Append(">, ");
+                    }
+                }
+                
+                if (failedChannelsBecauseInvalidUlong.Count != 0)
+                {
+                    sb.AppendLine().Append("Failed to add the following channels as they could not be parsed: ");
+                    foreach (var channel in failedChannelsBecauseInvalidUlong)
+                    {
+                        sb.Append(channel).Append(", ");
+                    }
+                }
+
+                return new ConfigChangeResult(true, sb.ToString());
+            });
+        }
+
+        [SlashCommand("remove-raw",
+            "Remove multiple channels to the channel filter. This takes channel IDs. Comma separated.")]
+        public Task RemoveFilterChannelsRawSlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            string channels)
+        {
+            return CommonBoardConfig(name, async options =>
+            {
+                List<ulong> removedChannels = [];
+                List<ulong> failedChannelsBecauseNull = [];
+                List<ulong> failedChannelsBecauseDoesntExist = [];
+                List<string> failedChannelsBecauseInvalidUlong = [];
+                foreach (var channelStr in channels.Split(","))
+                {
+                    if (!ulong.TryParse(channelStr, out var channelId))
+                    {
+                        failedChannelsBecauseInvalidUlong.Add(channelStr);
+                        continue;
+                    }
+
+                    var channel = await Context.Guild.GetChannelAsync(channelId);
+
+                    if (channel == null)
+                    {
+                        failedChannelsBecauseNull.Add(channelId);
+                        continue;
+                    }
+                    if (!options.board.FilteredChannels.Contains(channel.Id))
+                    {
+                        failedChannelsBecauseDoesntExist.Add(channelId);
+                        continue;
+                    }
+
+                    options.board.FilteredChannels.Remove(channel.Id);
+                    removedChannels.Add(channel.Id);
+                }
+
+                var sb = new StringBuilder();
+                if (removedChannels.Count != 0)
+                {
+                    sb.AppendLine().Append("Removed the following channels: ");
+                    foreach (var channel in removedChannels)
+                    {
+                        sb.Append("<#").Append(channel).Append(">, ");
+                    }
+                }
+
+                if (failedChannelsBecauseNull.Count != 0)
+                {
+                    sb.AppendLine().Append("Failed to remove the following channels as they could not be found: ");
+                    foreach (var channel in failedChannelsBecauseNull)
+                    {
+                        sb.Append("<#").Append(channel).Append(">, ");
+                    }
+                }
+
+                if (failedChannelsBecauseDoesntExist.Count != 0)
+                {
+                    sb.AppendLine().Append("Failed to remove the following channels as they weren't filtered anyway: ");
+                    foreach (var channel in failedChannelsBecauseDoesntExist)
+                    {
+                        sb.Append("<#").Append(channel).Append(">, ");
+                    }
+                }
+
+                if (failedChannelsBecauseInvalidUlong.Count != 0)
+                {
+                    sb.AppendLine().Append("Failed to remove the following channels as they could not be parsed: ");
+                    foreach (var channel in failedChannelsBecauseInvalidUlong)
+                    {
+                        sb.Append(channel).Append(", ");
+                    }
+                }
+
+                return new ConfigChangeResult(true, sb.ToString());
             });
         }
 

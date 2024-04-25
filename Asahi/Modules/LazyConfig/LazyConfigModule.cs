@@ -4,8 +4,9 @@ using Discord.Interactions;
 
 namespace Asahi.Modules.LazyConfig;
 
+[CommandContextType(InteractionContextType.Guild)]
 // [Group("config", "Configuration commands.")]
-public partial class LazyConfigModule(DbService dbService) : BotModule
+public class LazyConfigModule(DbService dbService) : BotModule
 {
     [SlashCommand("prefix", "Gets/sets the bot prefix.")]
     [InteractionsModCommand]
