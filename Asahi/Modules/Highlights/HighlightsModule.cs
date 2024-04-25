@@ -12,6 +12,7 @@ namespace Asahi.Modules.Highlights;
 
 [Group("highlights", "Commands relating to the highlights system.")]
 [InteractionsModCommand]
+[RequireContext(ContextType.Guild)]
 public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger) : HighlightsSubmodule(dbService)
 {
     #region Create/Remove board

@@ -1,4 +1,5 @@
 ﻿using Serilog.Events;
+using YamlDotNet.Serialization;
 
 namespace Asahi;
 
@@ -17,6 +18,14 @@ public class BotConfig : BotConfigBase
     public LogEventLevel LogEventLevel { get; set; } = LogEventLevel.Verbose;
 
     public override string DefaultPrefix { get; set; } = "]";
+
+    [YamlMember(Description = "The default UserAgent to use when making web requests.")]
+    public string UserAgent { get; set; } = "Asahi/NoSetVersion (https://github.com/SquirrelKiev/Asahi)";
+    [YamlMember(Description = "The App ID to use for the Wolfram command. Can get one from https://developer.wolframalpha.com/.")]
+    public string WolframAppId { get; set; } = "";
+    [YamlMember(Description = "Users/guilds/channels that are to be trusted with Wolfram. This exists because of the geolocation stuff that Wolfram has.")]
+    public HashSet<ulong> WolframTrustedIds { get; set; } = [];
+
     public override string AboutPageTitle { get; set; } = "About {{botUsername}}";
     public override string AboutPageDescription { get; set; } = "Various miscellaneous tools. " +
                                                                 "Originally called Seigen and just had the trackables stuff, " +

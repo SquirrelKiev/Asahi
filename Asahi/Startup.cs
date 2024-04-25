@@ -10,7 +10,6 @@ using Fergun.Interactive;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Asahi;
@@ -65,40 +64,42 @@ public static class Startup
     private static IServiceCollection AddBotServices(this IServiceCollection serviceCollection, BotConfig config)
     {
         serviceCollection
-                .AddSingleton<BotConfigBase>(config)
-                .AddCache(config)
-                .AddSingleton(config)
-                .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
-                {
-                    GatewayIntents = GatewayIntents.Guilds |
-                                     GatewayIntents.MessageContent |
-                                     GatewayIntents.GuildMessageReactions |
-                                     GatewayIntents.GuildMessages |
-                                     GatewayIntents.DirectMessages |
-                                     GatewayIntents.GuildMembers,
-                    LogLevel = LogSeverity.Verbose,
-                    AlwaysDownloadUsers = true
-                }))
-                .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>(), new InteractionServiceConfig()
+            .AddSingleton<BotConfigBase>(config)
+            .AddCache(config)
+            .AddSingleton(config)
+            .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
+            {
+                GatewayIntents = GatewayIntents.Guilds |
+                                 GatewayIntents.MessageContent |
+                                 GatewayIntents.GuildMessageReactions |
+                                 GatewayIntents.GuildMessages |
+                                 GatewayIntents.DirectMessages |
+                                 GatewayIntents.GuildMembers,
+                LogLevel = LogSeverity.Verbose,
+                AlwaysDownloadUsers = true
+            }))
+            .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>(),
+                new InteractionServiceConfig()
                 {
                     LogLevel = LogSeverity.Verbose,
                     DefaultRunMode = Discord.Interactions.RunMode.Async
                 }))
-                .AddSingleton(new CommandService(new CommandServiceConfig
-                {
-                    LogLevel = LogSeverity.Verbose,
-                    DefaultRunMode = Discord.Commands.RunMode.Async
-                }))
-                .AddSingleton<CommandHandler>()
-                .AddSingleton<DbService>()
-                .AddSingleton(x => (DbServiceBase<BotDbContext>)x.GetService<DbService>()!)
-                .AddSingleton<InteractiveService>()
-                // for help command
-                .AddSingleton<OverrideTrackerService>()
-                .AddSingleton<HelpService>()
-                // about command
-                .AddSingleton<AboutService>()
-            ;
+            .AddSingleton(new CommandService(new CommandServiceConfig
+            {
+                LogLevel = LogSeverity.Verbose,
+                DefaultRunMode = Discord.Commands.RunMode.Async
+            }))
+            .AddSingleton<CommandHandler>()
+            .AddSingleton<DbService>()
+            .AddSingleton(x => (DbServiceBase<BotDbContext>)x.GetService<DbService>()!)
+            .AddSingleton<InteractiveService>()
+            // for help command
+            .AddSingleton<OverrideTrackerService>()
+            .AddSingleton<HelpService>()
+            // about command
+            .AddSingleton<AboutService>()
+            .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
+                .ConfigureHttpClient(x => x.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
