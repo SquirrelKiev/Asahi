@@ -7,11 +7,10 @@ using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Fergun.Interactive;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Asahi;
@@ -55,7 +54,8 @@ public static class Startup
         builder.Logging.AddSerilog(logger);
 
         builder.Services.AddBotServices(botConfig);
-        builder.Logging.AddFilter("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.None);
+        // please let me be free of the log spam
+        builder.Logging.AddFilter<SerilogLoggerProvider>("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.None);
 
         builder.Services.AddHostedService<BotService>();
 

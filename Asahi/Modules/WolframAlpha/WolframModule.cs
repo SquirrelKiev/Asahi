@@ -39,7 +39,7 @@ public class WolframModule(BotConfig botConfig, HttpClient httpClient) : BotModu
 
         var requestUrl = $"https://api.wolframalpha.com/v1/{requestType}?appid={botConfig.WolframAppId}&i={urlEncodedQuery}";
 
-        var getQuery = await httpClient.GetAsync(requestUrl);
+        using var getQuery = await httpClient.GetAsync(requestUrl);
 
         var contentHeader = getQuery.Content.Headers.ContentType?.MediaType;
         var dataIsImage = contentHeader != null && contentHeader.StartsWith("image");
