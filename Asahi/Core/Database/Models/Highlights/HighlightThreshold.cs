@@ -12,10 +12,10 @@ public class HighlightThreshold
     public float RoundingThreshold { get; set; } = 0.4f;
 
     public int UniqueUserMessageMaxAgeSeconds { get; set; } = 1800;
-    public float UniqueUserMultiplier { get; set; } = 0.25f;
+    public float UniqueUserMultiplier { get; set; } = 0.125f;
     public int UniqueUserDecayDelaySeconds { get; set; } = 30;
 
-    public int HighActivityMessageMaxAgeSeconds { get; set; } = 30;
+    public int HighActivityMessageMaxAgeSeconds { get; set; } = 300;
     public int HighActivityMessageLookBack { get; set; } = 50;
     public float HighActivityMultiplier { get; set; } = 1.2f;
 

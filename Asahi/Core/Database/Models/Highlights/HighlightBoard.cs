@@ -51,7 +51,7 @@ public class HighlightBoard
     public ulong HighlightsMuteRole { get; set; } = 0ul;
 
     // linq2db wasn't happy with something key related with CachedHighlightedMessage and wouldn't let me do anything so no timespans. this will do
-    public int MaxMessageAgeSeconds { get; set; } = 0;
+    public int MaxMessageAgeSeconds { get; set; } = 28800;
 
     public EmbedColorSource EmbedColorSource { get; set; } = EmbedColorSource.AlwaysUseFallbackColor;
 

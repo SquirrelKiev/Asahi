@@ -18,6 +18,7 @@ public class BotService(
     HighlightsTrackingService hts) : BackgroundService
 {
     public const string WebhookDefaultName = "Asahi Webhook";
+    public CancellationTokenSource cts = new();
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -59,6 +60,8 @@ public class BotService(
         if (ExecuteTask == null)
             return;
 
+        await cts.CancelAsync();
+
         await client.LogoutAsync();
         await client.StopAsync();
 
@@ -80,7 +83,7 @@ public class BotService(
         }
     }
 
-    private async Task Client_ReactionAdded(
+    private Task Client_ReactionAdded(
         Cacheable<IUserMessage, ulong> cachedMessage,
         Cacheable<IMessageChannel, ulong> originChannel,
         SocketReaction reaction)
@@ -88,27 +91,27 @@ public class BotService(
         logger.LogTrace("Reaction added");
 
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
-            return;
+            return Task.CompletedTask;
 
         if (reaction.Channel is not SocketTextChannel channel)
-            return;
+            return Task.CompletedTask;
 
-        await hts.safetySemaphore.WaitAsync();
-        _ = Task.Run(() => hts.CheckMessageForHighlights(cachedMessage, channel, true));
+        hts.QueueMessage(new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), true);
+        return Task.CompletedTask;
     }
 
-    private async Task Client_ReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
+    private Task Client_ReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
     {
         logger.LogTrace("Reaction removed");
 
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
-            return;
+            return Task.CompletedTask;
 
         if (reaction.Channel is not SocketTextChannel channel)
-            return;
+            return Task.CompletedTask;
 
-        await hts.safetySemaphore.WaitAsync();
-        _ = Task.Run(() => hts.CheckMessageForHighlights(cachedMessage, channel, false));
+        hts.QueueMessage(new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), false);
+        return Task.CompletedTask;
     }
 
     private Task Client_MessageReceived(SocketMessage msg)
@@ -151,6 +154,8 @@ public class BotService(
         logger.LogInformation("Logged in as {user}#{discriminator} ({id})", client.CurrentUser?.Username, client.CurrentUser?.Discriminator, client.CurrentUser?.Id);
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
+
+        hts.StartBackgroundTask(cts.Token);
 
         // see comment in ExecuteAsync
         var roleManagement = services.GetRequiredService<RoleManagementService>();

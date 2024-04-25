@@ -7,7 +7,8 @@ namespace Asahi.Modules.Highlights;
 
 public static class HighlightsHelpers
 {
-    public const string ReactionsFieldName = "Reacts";
+    // Not the nuclear kind (I guess some of them could be considered pretty nuclear?)
+    public const string ReactionsFieldName = "Reactors";
 
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
         bool webhookMode, bool spoilerAll = false)
@@ -83,17 +84,6 @@ public static class HighlightsHelpers
         foreach (var attachment in message.Attachments)
         {
             logger.LogTrace("Found attachment {index}.", i);
-            var txt = $"[Attachment {i}]({attachment.Url})";
-            var tooManyAttachmentsText = $"Plus {message.Attachments.Count - i + 1} more.";
-            if (!tooManyAttachments && attachmentsValueContents.Length + txt.Length > 1024 - tooManyAttachmentsText.Length)
-            {
-                attachmentsValueContents.AppendLine(tooManyAttachmentsText);
-                tooManyAttachments = true;
-            }
-            else if (!tooManyAttachments)
-            {
-                attachmentsValueContents.AppendLine(txt);
-            }
 
             if (attachment.ContentType.StartsWith("image"))
             {
@@ -122,13 +112,27 @@ public static class HighlightsHelpers
                     queuedMessages.Add(new MessageContents(attachment.Url, embed: null));
                 }
             }
+            else
+            {
+                var txt = $"[File {i} ({attachment.Filename})]({attachment.Url})";
+                var tooManyAttachmentsText = $"Plus {message.Attachments.Count - i + 1} more.";
+                if (!tooManyAttachments && attachmentsValueContents.Length + txt.Length > 1024 - tooManyAttachmentsText.Length)
+                {
+                    attachmentsValueContents.AppendLine(tooManyAttachmentsText);
+                    tooManyAttachments = true;
+                }
+                else if (!tooManyAttachments)
+                {
+                    attachmentsValueContents.AppendLine(txt);
+                }
+            }
 
             i++;
         }
 
         if (attachmentsValueContents.Length != 0)
         {
-            firstEmbed.AddField("Attachments", attachmentsValueContents.ToString().Truncate(1024, false));
+            firstEmbed.AddField("Attachments", attachmentsValueContents.ToString().Truncate(1024, false), true);
         }
 
         foreach (var sticker in message.Stickers)
@@ -145,10 +149,7 @@ public static class HighlightsHelpers
             firstEmbed.WithDescription("*No content.*");
         }
 
-        queuedMessages.Add(new MessageContents(link));
-
-        queuedMessages.Insert(0, new MessageContents(
-            webhookMode ? "" : link, embeds.Take(10).Select(x => x.Build()).ToArray(), null));
+        queuedMessages.Insert(0, new MessageContents(link, embeds.Take(10).Select(x => x.Build()).ToArray(), null));
 
         return queuedMessages;
     }
