@@ -103,7 +103,7 @@ public static class Startup
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
                 .ConfigureHttpClient(x => x.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent));
 
-        serviceCollection.RemoveAll<IHttpMessageHandlerBuilderFilter>();
+        serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
