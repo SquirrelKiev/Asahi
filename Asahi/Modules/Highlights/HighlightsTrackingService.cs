@@ -274,7 +274,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             && (x.FilteredChannelsIsBlockList
                 ? x.FilteredChannels.All(y => y != parentChannelId)
                 : x.FilteredChannels.Any(y => y == parentChannelId)
-            && (!x.FilteredChannelsIsBlockList || x.FilteredChannels.All(y => y != channel.Id))
+                  || (x.FilteredChannelsIsBlockList
+                      ? x.FilteredChannels.All(y => y != channel.Id)
+                      : x.FilteredChannels.Any(y => y == channel.Id))
         ));
 
         if (channel is SocketThreadChannel)
