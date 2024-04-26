@@ -148,14 +148,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     // god I love linq
     private async Task CheckMessageForHighlights(ulong messageId, SocketTextChannel channel, bool shouldAddNewHighlight)
     {
-        var everyoneChannelPermissions = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole);
-        var everyoneCategoryPermissions = channel.Category?.GetPermissionOverwrite(channel.Guild.EveryoneRole);
-        if (everyoneChannelPermissions is { SendMessages: PermValue.Deny } || everyoneCategoryPermissions is { SendMessages: PermValue.Deny })
-        {
-            logger.LogTrace("channel is locked, skipping.");
-            return;
-        }
-
         logger.LogTrace("Checking message");
 
         await using var context = dbService.GetDbContext();
@@ -263,6 +255,14 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         if (!shouldAddNewHighlight)
             return;
+
+        var everyoneChannelPermissions = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole);
+        var everyoneCategoryPermissions = channel.Category?.GetPermissionOverwrite(channel.Guild.EveryoneRole);
+        if (everyoneChannelPermissions is { SendMessages: PermValue.Deny } || everyoneCategoryPermissions is { SendMessages: PermValue.Deny })
+        {
+            logger.LogTrace("channel is locked, skipping.");
+            return;
+        }
 
         logger.LogTrace("at the highlight testing code");
 
