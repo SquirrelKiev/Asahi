@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Asahi.Migrations.PostgresMigrations
 {
     [DbContext(typeof(PostgresContext))]
-    partial class PostgresqlContextModelSnapshot : ModelSnapshot
+    [Migration("20240426000224_BotDbConfigReset")]
+    partial class BotDbConfigReset
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -20,36 +23,6 @@ namespace Asahi.Migrations.PostgresMigrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
-                {
-                    b.Property<decimal>("BotId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("numeric(20,0)");
-
-                    b.Property<string>("ActivityStreamingUrl")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<int>("ActivityType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("BotActivity")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<bool>("ShouldHaveActivity")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("UserStatus")
-                        .HasColumnType("integer");
-
-                    b.HasKey("BotId");
-
-                    b.ToTable("BotWideConfig");
-                });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
                 {
@@ -328,30 +301,6 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.ToTable("TrackedUsers");
                 });
 
-            modelBuilder.Entity("Asahi.Database.Models.TrustedId", b =>
-                {
-                    b.Property<decimal>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("numeric(20,0)");
-
-                    b.Property<decimal>("BotWideConfigBotId")
-                        .HasColumnType("numeric(20,0)");
-
-                    b.Property<string>("Comment")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("PermissionFlags")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BotWideConfigBotId");
-
-                    b.ToTable("TrustedIds");
-                });
-
             modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
                 {
                     b.HasOne("Asahi.Database.Models.HighlightBoard", "HighlightBoard")
@@ -394,22 +343,6 @@ namespace Asahi.Migrations.PostgresMigrations
                         .IsRequired();
 
                     b.Navigation("Trackable");
-                });
-
-            modelBuilder.Entity("Asahi.Database.Models.TrustedId", b =>
-                {
-                    b.HasOne("Asahi.Database.Models.BotWideConfig", "BotWideConfig")
-                        .WithMany("TrustedIds")
-                        .HasForeignKey("BotWideConfigBotId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BotWideConfig");
-                });
-
-            modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
-                {
-                    b.Navigation("TrustedIds");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>

@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -9,42 +10,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Asahi.Migrations.SqliteMigrations
 {
     [DbContext(typeof(SqliteContext))]
-    partial class SqliteContextModelSnapshot : ModelSnapshot
+    [Migration("20240426000241_BotDbConfigReset")]
+    partial class BotDbConfigReset
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.4");
-
-            modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
-                {
-                    b.Property<ulong>("BotId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ActivityStreamingUrl")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ActivityType")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("BotActivity")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("ShouldHaveActivity")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UserStatus")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("BotId");
-
-                    b.ToTable("BotWideConfig");
-                });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
                 {
@@ -315,30 +288,6 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.ToTable("TrackedUsers");
                 });
 
-            modelBuilder.Entity("Asahi.Database.Models.TrustedId", b =>
-                {
-                    b.Property<ulong>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<ulong>("BotWideConfigBotId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Comment")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("PermissionFlags")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BotWideConfigBotId");
-
-                    b.ToTable("TrustedIds");
-                });
-
             modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
                 {
                     b.HasOne("Asahi.Database.Models.HighlightBoard", "HighlightBoard")
@@ -381,22 +330,6 @@ namespace Asahi.Migrations.SqliteMigrations
                         .IsRequired();
 
                     b.Navigation("Trackable");
-                });
-
-            modelBuilder.Entity("Asahi.Database.Models.TrustedId", b =>
-                {
-                    b.HasOne("Asahi.Database.Models.BotWideConfig", "BotWideConfig")
-                        .WithMany("TrustedIds")
-                        .HasForeignKey("BotWideConfigBotId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BotWideConfig");
-                });
-
-            modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
-                {
-                    b.Navigation("TrustedIds");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>

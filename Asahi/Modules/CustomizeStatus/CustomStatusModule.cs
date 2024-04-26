@@ -3,14 +3,13 @@ using Asahi.Database.Models;
 using Discord.Interactions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Serilog.Core;
 
 namespace Asahi.Modules.CustomizeStatus;
 
-[TrustedMember]
 [Group("bot", "Commands relating to configuring the bot.")]
 public class CustomStatusModule(DbService dbService, CustomStatusService css, ILogger<CustomStatusModule> logger) : BotModule
 {
+    [TrustedMember(TrustedId.TrustedUserPerms.StatusPerms)]
     [SlashCommand("toggle-activity", "Toggles the bot activity.")]
     public async Task ToggleBotActivitySlash(bool isActive)
     {
@@ -18,7 +17,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
 
         await using var context = dbService.GetDbContext();
 
-        var botWideConfig = await context.GetBotWideConfig();
+        var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
         botWideConfig.ShouldHaveActivity = isActive;
 
@@ -29,6 +28,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
         await FollowupAsync("Toggled.");
     }
 
+    [TrustedMember(TrustedId.TrustedUserPerms.StatusPerms)]
     [SlashCommand("activity", "Sets the bot's current activity.")]
     public async Task SetBotStatusSlash(
         [Summary(description: "The activity type the bot should have.")]
@@ -43,7 +43,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
 
         await using var context = dbService.GetDbContext();
 
-        var botWideConfig = await context.GetBotWideConfig();
+        var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
         botWideConfig.ShouldHaveActivity = true;
         botWideConfig.ActivityType = activityType;
@@ -58,6 +58,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
         await FollowupAsync("Successfully set activity.");
     }
 
+    [TrustedMember(TrustedId.TrustedUserPerms.StatusPerms)]
     [SlashCommand("status", "Sets the bot's status.")]
     public async Task SetBotStatusSlash([Summary(description: "The status.")] UserStatus status)
     {
@@ -65,7 +66,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
 
         await using var context = dbService.GetDbContext();
 
-        var botWideConfig = await context.GetBotWideConfig();
+        var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
         botWideConfig.UserStatus = status;
 
@@ -76,8 +77,10 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
         await FollowupAsync($"Successfully set status to {status}.");
     }
 
+    [TrustedMember(TrustedId.TrustedUserPerms.TrustedUserEditPerms)]
     [SlashCommand("add-trusted-id", "Adds a user to the trusted user list. This is a dangerous permission to grant.")]
-    public async Task AddTrustedIdSlash(string idStr, [MaxLength(TrustedId.CommentMaxLength)] string comment)
+    public async Task AddTrustedIdSlash(string idStr, [MaxLength(TrustedId.CommentMaxLength)] string comment, 
+        bool wolframPerms, bool trustedUserPerms, bool statusPerms)
     {
         await DeferAsync();
 
@@ -89,20 +92,38 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
 
         await using var context = dbService.GetDbContext();
 
-        var botWideConfig = await context.GetBotWideConfig();
+        var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
         if (botWideConfig.TrustedIds.Any(x => x.Id == id))
         {
             await FollowupAsync("ID already exists.");
             return;
         }
-        botWideConfig.TrustedIds.Add(new TrustedId(id, comment));
+
+        var permissionFlags = TrustedId.TrustedUserPerms.None;
+
+        if(wolframPerms) permissionFlags |= TrustedId.TrustedUserPerms.WolframPerms;
+        if(trustedUserPerms) permissionFlags |= TrustedId.TrustedUserPerms.TrustedUserEditPerms;
+        if(statusPerms) permissionFlags |= TrustedId.TrustedUserPerms.StatusPerms;
+
+        // why does it break if I just add to the botWideConfig.TrustedIds list?? but only on the 2nd time??? wtf????
+        // weird ass concurrency error, but it shouldn't be a concurrency issue as nothing will be getting modified
+        // and the contents is there cuz if i json serialize it and log it, I get the correct results?
+        // why is it cursed? why? im tearing my hair out here, this better not happen for anything else I swear
+        context.Add(new TrustedId()
+        {
+            Id = id,
+            Comment = comment,
+            PermissionFlags = permissionFlags,
+            BotWideConfig = botWideConfig,
+        });
 
         await context.SaveChangesAsync();
 
         await FollowupAsync("Added ID.");
     }
 
+    [TrustedMember(TrustedId.TrustedUserPerms.TrustedUserEditPerms)]
     [SlashCommand("rm-trusted-id", "Removes a user from the trusted user list.")]
     public async Task RemoveTrustedIdSlash(string idStr)
     {
@@ -116,7 +137,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
 
         await using var context = dbService.GetDbContext();
 
-        var botWideConfig = await context.GetBotWideConfig();
+        var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
         var trusted = botWideConfig.TrustedIds.FirstOrDefault(x => x.Id == id);
         if (trusted == null)
@@ -132,6 +153,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
         await FollowupAsync("Removed ID.");
     }
 
+    [TrustedMember(TrustedId.TrustedUserPerms.TrustedUserEditPerms)]
     [SlashCommand("list-trusted-ids", "Lists the trusted IDs.")]
     public async Task ListTrustedIdsSlash()
     {
@@ -139,7 +161,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css, IL
 
         await using var context = dbService.GetDbContext();
 
-        var botWideConfig = await context.GetBotWideConfig();
+        var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
         await FollowupAsync($"```json\n{JsonConvert.SerializeObject(botWideConfig.TrustedIds, Formatting.Indented)}\n```");
     }

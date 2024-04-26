@@ -17,6 +17,7 @@ public abstract class BotDbContext(string connectionString) : BotDbContextBase(c
     public DbSet<HighlightBoard> HighlightBoards { get; set; }
     public DbSet<CachedHighlightedMessage> CachedHighlightedMessages { get; set; }
     public DbSet<BotWideConfig> BotWideConfig { get; set; }
+    public DbSet<TrustedId> TrustedIds { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

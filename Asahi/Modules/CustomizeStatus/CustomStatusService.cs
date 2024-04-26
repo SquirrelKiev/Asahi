@@ -11,7 +11,7 @@ public class CustomStatusService(ILogger<CustomStatusService> logger, DbService 
     {
         await using var context = dbService.GetDbContext();
 
-        var botWideConfig = await context.GetBotWideConfig();
+        var botWideConfig = await context.GetBotWideConfig(client.CurrentUser.Id);
 
         await client.SetStatusAsync(botWideConfig.UserStatus);
 

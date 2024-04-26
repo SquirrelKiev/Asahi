@@ -35,13 +35,17 @@ public static class DbExtensions
         return command;
     }
 
-    public static async Task<BotWideConfig> GetBotWideConfig(this BotDbContext context)
+    public static async Task<BotWideConfig> GetBotWideConfig(this BotDbContext context, ulong botId)
     {
-        var cfg = await context.BotWideConfig.Include(x => x.TrustedIds).FirstOrDefaultAsync();
+        var cfg = await context.BotWideConfig.Include(x => x.TrustedIds).FirstOrDefaultAsync(x => x.BotId == botId);
         if (cfg != null) return cfg;
 
-        cfg = new BotWideConfig();
-        context.BotWideConfig.Add(cfg);
+        cfg = new BotWideConfig()
+        {
+            BotId = botId
+        };
+
+        context.Add(cfg);
 
         return cfg;
     }
