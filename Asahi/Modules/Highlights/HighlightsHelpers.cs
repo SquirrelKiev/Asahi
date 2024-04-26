@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Asahi.Database.Models;
+using BotBase;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +12,7 @@ public static class HighlightsHelpers
     public const string ReactionsFieldName = "Reactors";
 
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
-        bool webhookMode, bool spoilerAll = false)
+        bool webhookMode, bool spoilerAll = false, string spoilerContext = "")
     {
         var constantUrl = CatboxQts.GetRandomQtUrl();
 
@@ -28,7 +29,7 @@ public static class HighlightsHelpers
 
         if (spoilerAll)
         {
-            messageContent = $"||{messageContent.Replace("|", "\\|")}||";
+            messageContent = messageContent.SpoilerMessage(spoilerContext);
         }
 
         var link = message.GetJumpUrl();
@@ -51,6 +52,7 @@ public static class HighlightsHelpers
         bool attachedImage = false;
         logger.LogTrace("There are {embedCount} embeds in this message.", message.Embeds.Count);
 
+        int spoilerRichEmbeds = 0;
         foreach (var embed in message.Embeds)
         {
             //logger.LogTrace("embed: {embedJson}", JsonConvert.SerializeObject(embed, Formatting.Indented));
@@ -60,22 +62,46 @@ public static class HighlightsHelpers
                 case EmbedType.Image:
                     logger.LogTrace("Adding image embed.");
 
-                    HandleImageEmbed(embed.Url, embeds, embedColor, ref attachedImage, constantUrl);
+                    if (spoilerAll)
+                    {
+                        firstEmbed.Description += $"\n[[Spoiler Image]]({embed.Url})";
+                    }
+                    else
+                    {
+                        HandleImageEmbed(embed.Url, embeds, embedColor, ref attachedImage, constantUrl);
+                    }
                     break;
                 case EmbedType.Video:
+                case EmbedType.Gifv:
                     logger.LogTrace("Queued video link message.");
-                    queuedMessages.Add(new MessageContents(embed.Url, embed: null));
+                    if (spoilerAll)
+                    {
+                        firstEmbed.Description += $"\n[[Spoiler Video]]({embed.Url})";
+                    }
+                    else
+                    {
+                        queuedMessages.Add(new MessageContents(embed.Url, embed: null));
+                    }
+
                     break;
                 case EmbedType.Link:
                 case EmbedType.Article:
                 case EmbedType.Rich:
                     logger.LogTrace("Adding rich embed.");
-                    embeds.Add(embed.ToEmbedBuilderForce());
+                    if (!spoilerAll)
+                        embeds.Add(embed.ToEmbedBuilderForce());
+                    else
+                        spoilerRichEmbeds++;
                     break;
                 default:
                     logger.LogTrace("skipping unknown embed type {embedType}", embed.Type);
                     break;
             }
+        }
+
+        if (spoilerRichEmbeds > 0)
+        {
+            firstEmbed.Description += $"\n[Skipped **{spoilerRichEmbeds}** embed(s) in case of spoilers]";
         }
 
         var attachmentsValueContents = new StringBuilder();
@@ -135,13 +161,16 @@ public static class HighlightsHelpers
             firstEmbed.AddField("Attachments", attachmentsValueContents.ToString().Truncate(1024, false), true);
         }
 
-        foreach (var sticker in message.Stickers)
+        if (!spoilerAll)
         {
-            logger.LogTrace("found sticker, sending as image.");
+            foreach (var sticker in message.Stickers)
+            {
+                logger.LogTrace("found sticker, sending as image.");
 
-            var stickerUrl = CDN.GetStickerUrl(sticker.Id, sticker.Format);
+                var stickerUrl = CDN.GetStickerUrl(sticker.Id, sticker.Format);
 
-            HandleImageEmbed(stickerUrl, embeds, embedColor, ref attachedImage, constantUrl);
+                HandleImageEmbed(stickerUrl, embeds, embedColor, ref attachedImage, constantUrl);
+            }
         }
 
         if (string.IsNullOrWhiteSpace(embeds[0].Description) && string.IsNullOrWhiteSpace(embeds[0].ImageUrl))
@@ -152,6 +181,17 @@ public static class HighlightsHelpers
         queuedMessages.Insert(0, new MessageContents(link, embeds.Take(10).Select(x => x.Build()).ToArray(), null));
 
         return queuedMessages;
+    }
+
+    public static string SpoilerMessage(this string messageContent, string spoilerContext)
+    {
+        var msg = $"{spoilerContext}{(string.IsNullOrWhiteSpace(spoilerContext) ? "" : " ")}";
+        if (!string.IsNullOrWhiteSpace(messageContent))
+        {
+            msg += $"||{messageContent.Replace("|", "\\|")}||";
+        }
+
+        return msg;
     }
 
     private static void HandleImageEmbed(string imageUrl,
@@ -214,7 +254,7 @@ public static class HighlightsHelpers
         return embedColor;
     }
 
-    public static EmbedBuilder ToEmbedBuilderForce(this IEmbed embed)
+    public static EmbedBuilder ToEmbedBuilderForce(this IEmbed embed, bool spoiler = false)
     {
         var imageUrl = embed.Image?.Url;
         var thumbnailUrl = embed.Thumbnail?.Url;
@@ -224,27 +264,25 @@ public static class HighlightsHelpers
             thumbnailUrl = null;
         }
 
-        var builder = new EmbedBuilder
+        var builder = new EmbedBuilder();
+        builder.Author = new EmbedAuthorBuilder
         {
-            Author = new EmbedAuthorBuilder
-            {
-                Name = embed.Author?.Name,
-                IconUrl = embed.Author?.IconUrl,
-                Url = embed.Author?.Url
-            },
-            Color = embed.Color,
-            Description = embed.Description,
-            Footer = new EmbedFooterBuilder
-            {
-                Text = embed.Footer?.Text,
-                IconUrl = embed.Footer?.IconUrl
-            },
-            ImageUrl = imageUrl,
-            ThumbnailUrl = thumbnailUrl,
-            Timestamp = embed.Timestamp,
-            Title = embed.Title,
-            Url = embed.Url
+            Name = embed.Author?.Name,
+            IconUrl = embed.Author?.IconUrl,
+            Url = embed.Author?.Url
         };
+        builder.Color = embed.Color;
+        builder.Description = embed.Description;
+        builder.Footer = new EmbedFooterBuilder
+        {
+            Text = embed.Footer?.Text,
+            IconUrl = embed.Footer?.IconUrl
+        };
+        builder.ImageUrl = imageUrl;
+        builder.ThumbnailUrl = thumbnailUrl;
+        builder.Timestamp = embed.Timestamp;
+        builder.Title = embed.Title;
+        builder.Url = embed.Url;
 
         foreach (var field in embed.Fields)
             builder.AddField(field.Name, field.Value, field.Inline);

@@ -258,6 +258,50 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.ToTable("HighlightThreshold");
                 });
 
+            modelBuilder.Entity("Asahi.Database.Models.LoggingChannelOverride", b =>
+                {
+                    b.Property<ulong>("OverriddenChannelId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<ulong>("HighlightBoardGuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("HighlightBoardName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<ulong>("LoggingChannelId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("OverriddenChannelId", "HighlightBoardGuildId", "HighlightBoardName");
+
+                    b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
+
+                    b.ToTable("LoggingChannelOverride");
+                });
+
+            modelBuilder.Entity("Asahi.Database.Models.SpoilerChannel", b =>
+                {
+                    b.Property<ulong>("ChannelId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<ulong>("HighlightBoardGuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("HighlightBoardName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SpoilerContext")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("ChannelId", "HighlightBoardGuildId", "HighlightBoardName");
+
+                    b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
+
+                    b.ToTable("SpoilerChannel");
+                });
+
             modelBuilder.Entity("Asahi.Database.Models.Trackable", b =>
                 {
                     b.Property<uint>("Id")
@@ -356,6 +400,28 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.Navigation("HighlightBoard");
                 });
 
+            modelBuilder.Entity("Asahi.Database.Models.LoggingChannelOverride", b =>
+                {
+                    b.HasOne("Asahi.Database.Models.HighlightBoard", "HighlightBoard")
+                        .WithMany("LoggingChannelOverrides")
+                        .HasForeignKey("HighlightBoardGuildId", "HighlightBoardName")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("HighlightBoard");
+                });
+
+            modelBuilder.Entity("Asahi.Database.Models.SpoilerChannel", b =>
+                {
+                    b.HasOne("Asahi.Database.Models.HighlightBoard", "HighlightBoard")
+                        .WithMany("SpoilerChannels")
+                        .HasForeignKey("HighlightBoardGuildId", "HighlightBoardName")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("HighlightBoard");
+                });
+
             modelBuilder.Entity("Asahi.Database.Models.TrackedUser", b =>
                 {
                     b.HasOne("Asahi.Database.Models.Trackable", "Trackable")
@@ -386,6 +452,10 @@ namespace Asahi.Migrations.SqliteMigrations
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>
                 {
                     b.Navigation("HighlightedMessages");
+
+                    b.Navigation("LoggingChannelOverrides");
+
+                    b.Navigation("SpoilerChannels");
 
                     b.Navigation("Thresholds");
                 });

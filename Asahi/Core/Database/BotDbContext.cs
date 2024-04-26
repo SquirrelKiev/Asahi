@@ -48,5 +48,15 @@ public abstract class BotDbContext(string connectionString) : BotDbContextBase(c
                 nameof(HighlightThreshold.OverrideId),
                 $"{nameof(HighlightThreshold.HighlightBoard)}{nameof(HighlightBoard.GuildId)}",
                 $"{nameof(HighlightThreshold.HighlightBoard)}{nameof(HighlightBoard.Name)}");
+
+        modelBuilder.Entity<SpoilerChannel>()
+            .HasKey(nameof(SpoilerChannel.ChannelId),
+                $"{nameof(SpoilerChannel.HighlightBoard)}{nameof(HighlightBoard.GuildId)}",
+                $"{nameof(SpoilerChannel.HighlightBoard)}{nameof(HighlightBoard.Name)}");
+
+        modelBuilder.Entity<LoggingChannelOverride>()
+            .HasKey(nameof(LoggingChannelOverride.OverriddenChannelId),
+                $"{nameof(LoggingChannelOverride.HighlightBoard)}{nameof(HighlightBoard.GuildId)}",
+                $"{nameof(LoggingChannelOverride.HighlightBoard)}{nameof(HighlightBoard.Name)}");
     }
 }

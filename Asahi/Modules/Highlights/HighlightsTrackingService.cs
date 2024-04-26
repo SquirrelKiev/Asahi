@@ -173,6 +173,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             .Where(x =>
                 x.GuildId == channel.Guild.Id && x.HighlightedMessages
                     .Any(y => y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)))
+            .Include(highlightBoard => highlightBoard.LoggingChannelOverrides)
             .ToArrayAsync();
 
         if (boardsWithMarkedHighlight.Length != 0)
@@ -196,7 +197,16 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 var firstMessageId = cachedHighlightedMessage.HighlightMessageIds[0];
                 var lastMessageId = cachedHighlightedMessage.HighlightMessageIds[^1];
 
-                var loggingChannel = channel.Guild.GetTextChannel(board.LoggingChannelId);
+                var loggingChannelId = board.LoggingChannelId;
+                var loggingChannelOverride =
+                    board.LoggingChannelOverrides.FirstOrDefault(x => x.OverriddenChannelId == originalMessage.Channel.Id);
+
+                if (loggingChannelOverride != null)
+                {
+                    loggingChannelId = loggingChannelOverride.LoggingChannelId;
+                }
+
+                var loggingChannel = channel.Guild.GetTextChannel(loggingChannelId);
 
                 var firstMessage = await loggingChannel.GetMessageAsync(firstMessageId);
                 if (firstMessage == null)
@@ -256,7 +266,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         logger.LogTrace("at the highlight testing code");
 
-        if (await context.HighlightBoards.AnyAsync(x => x.LoggingChannelId == parentChannelId))
+        if (await context.HighlightBoards.AnyAsync
+                (x => x.LoggingChannelId == parentChannelId || x.LoggingChannelOverrides.Any(y => y.LoggingChannelId == parentChannelId)))
             return;
 
         var msg = await channel.GetMessageAsync(messageId);
@@ -293,6 +304,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var boards = (await boardsQuery
             .Include(x => x.Thresholds)
+            .Include(x => x.SpoilerChannels)
+            .Include(x => x.LoggingChannelOverrides)
             .ToArrayAsync()).Where(x => guildUser.Roles.All(y => y.Id != x.HighlightsMuteRole))
             .ToArray();
 
@@ -410,16 +423,28 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
     private async Task SendAndTrackHighlightMessage(HighlightBoard board, EmoteAlias[] aliases, IMessage message, int totalUniqueReactions)
     {
-        logger.LogTrace("Sending highlight message to {channel}", board.LoggingChannelId);
+        var loggingChannelId = board.LoggingChannelId;
 
-        var textChannel = client.GetGuild(board.GuildId).GetTextChannel(board.LoggingChannelId);
+        var loggingChannelOverride =
+            board.LoggingChannelOverrides.FirstOrDefault(x => x.OverriddenChannelId == message.Channel.Id);
+
+        if (loggingChannelOverride != null)
+        {
+            loggingChannelId = loggingChannelOverride.LoggingChannelId;
+        }
+
+        logger.LogTrace("Sending highlight message to {channel}", loggingChannelId);
+
+        var loggingChannel = client.GetGuild(board.GuildId).GetTextChannel(loggingChannelId);
         var embedAuthor = (IGuildUser)message.Author;
         var embedColor = await HighlightsHelpers.GetQuoteEmbedColor(board.EmbedColorSource, board.FallbackEmbedColor, embedAuthor, client);
 
         logger.LogTrace("Embed color will be {color}", embedColor);
 
+        var spoilerEntry = board.SpoilerChannels.FirstOrDefault(x => x.ChannelId == message.Channel.Id);
 
-        var queuedMessages = HighlightsHelpers.QuoteMessage(message, embedColor, logger, true);
+        var queuedMessages = 
+            HighlightsHelpers.QuoteMessage(message, embedColor, logger, true, spoilerEntry != null, spoilerEntry?.SpoilerContext ?? "");
 
         var eb = queuedMessages[0].embeds?[0].ToEmbedBuilder();
         if (eb != null)
@@ -428,7 +453,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             queuedMessages[0].embeds![0] = eb.Build();
         }
 
-        var webhook = await textChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName, client.CurrentUser);
+        var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName, client.CurrentUser);
         var webhookClient = new DiscordWebhookClient(webhook);
         List<ulong> highlightMessages = [];
 
@@ -446,13 +471,13 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         {
             if (board.AutoReactMaxAttempts != 0)
             {
-                var lastMessageObj = await textChannel.GetMessageAsync(highlightMessages[^1]);
+                var lastMessageObj = await loggingChannel.GetMessageAsync(highlightMessages[^1]);
                 await AutoReact(board, aliases, message.Reactions, lastMessageObj);
             }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to auto-react in channel {channel}!", textChannel.Id);
+            logger.LogError(ex, "Failed to auto-react in channel {channel}!", loggingChannel.Id);
         }
 
 

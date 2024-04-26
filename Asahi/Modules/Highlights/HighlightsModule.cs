@@ -352,6 +352,130 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     #endregion
 
+
+    [SlashCommand("add-spoiler-channel", "Any channel added here will always have its messages spoiler tagged.")]
+    public Task AddSpoilerChannelSlash(
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
+        string name,
+        [Summary(description: "Any highlights originating from this channel are spoiler-tagged.")]
+        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        IGuildChannel spoilerTaggedChannel,
+        [MaxLength(SpoilerChannel.MaxContextLength)]
+        string spoilerContext
+        )
+    {
+        return CommonBoardConfig(name, options =>
+        {
+            var spoilerChannel = options.board.SpoilerChannels.FirstOrDefault(x => x.ChannelId == spoilerTaggedChannel.Id);
+
+            if (spoilerChannel == null)
+            {
+                spoilerChannel = new SpoilerChannel()
+                {
+                    ChannelId = spoilerTaggedChannel.Id,
+                    SpoilerContext = spoilerContext
+                };
+                options.board.SpoilerChannels.Add(spoilerChannel);
+            }
+            else
+            {
+                spoilerChannel.SpoilerContext = spoilerContext;
+            }
+
+            return Task.FromResult(new ConfigChangeResult(true, $"Added <#{spoilerTaggedChannel.Id}> to spoiler channels."));
+        }, boards => boards.Include(x => x.SpoilerChannels));
+    }
+
+    [SlashCommand("rm-spoiler-channel", "Removes a spoiler channel.")]
+    public Task RemoveSpoilerChannelSlash(
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
+        string name,
+        [Summary(description: "The channel to remove.")]
+        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        IGuildChannel spoilerTaggedChannel
+    )
+    {
+        return CommonBoardConfig(name, options =>
+        {
+            var spoilerChannel = options.board.SpoilerChannels.FirstOrDefault(x => x.ChannelId == spoilerTaggedChannel.Id);
+
+            if (spoilerChannel == null)
+            {
+                return Task.FromResult(new ConfigChangeResult(false, "Channel isn't in spoiler channels list anyway."));
+            }
+
+            options.board.SpoilerChannels.Remove(spoilerChannel);
+
+            return Task.FromResult(new ConfigChangeResult(true, $"Removed <#{spoilerTaggedChannel.Id}> from spoiler channels."));
+        }, boards => boards.Include(x => x.SpoilerChannels));
+    }
+
+    [SlashCommand("add-log-override", "Highlighted messages from the overridden channel will be sent to a different highlight channel.")]
+    public Task AddLogOverrideSlash(
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
+        string name,
+        [Summary(description: "The channel to override the logging channel for.")]
+        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        IGuildChannel overriddenChannel,
+        [Summary(description: "The logging channel to use instead.")]
+        ITextChannel logChannel
+        )
+    {
+        return CommonBoardConfig(name, options =>
+        {
+            var overriden = options.board.LoggingChannelOverrides
+                .FirstOrDefault(x => x.OverriddenChannelId == overriddenChannel.Id);
+
+            if (overriden == null)
+            {
+                overriden = new()
+                {
+                    OverriddenChannelId = overriddenChannel.Id,
+                    LoggingChannelId = logChannel.Id
+                };
+                options.board.LoggingChannelOverrides.Add(overriden);
+            }
+            else
+            {
+                overriden.LoggingChannelId = logChannel.Id;
+            }
+
+            return Task.FromResult(new ConfigChangeResult(true, $"Changed <#{overriddenChannel.Id}> to log to <#{logChannel.Id}> instead."));
+        }, boards => boards.Include(x => x.SpoilerChannels));
+    }
+
+    [SlashCommand("rm-log-override", "Removes a logging channel override.")]
+    public Task RemoveLogOverrideSlash(
+        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
+        string name,
+        [Summary(description: "The overridden channel to reset to default.")]
+        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        IGuildChannel overriddenChannel
+    )
+    {
+        return CommonBoardConfig(name, options =>
+        {
+            var overridden = options.board.LoggingChannelOverrides.FirstOrDefault(x => x.OverriddenChannelId == overriddenChannel.Id);
+
+            if (overridden == null)
+            {
+                return Task.FromResult(new ConfigChangeResult(false, "Channel isn't overridden anyway."));
+            }
+
+            options.board.LoggingChannelOverrides.Remove(overridden);
+
+            return Task.FromResult(new ConfigChangeResult(true, $"Reset logging channel for <#{overriddenChannel.Id}>."));
+        }, boards => boards.Include(x => x.SpoilerChannels));
+    }
+
     #region Misc
 
     [SlashCommand("set-mute-role", "Any users with the role specified will not make it into highlights.")]
@@ -853,7 +977,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             });
         }
 
-        [SlashCommand("remove-alias-emote", "Removes an emote alias.")]
+        [SlashCommand("rm-alias-emote", "Removes an emote alias.")]
         public Task RemoveEmoteAliasSlash(
             [Summary(description: "The emote name to replace. Case insensitive.")]
         [MaxLength(32)]
@@ -900,7 +1024,11 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Summary(description: "Includes thresholds in the output.")]
         bool includeThresholds = false,
         [Summary(description: "Includes filtered channels in the output.")]
-        bool includeFilteredChannels = false)
+        bool includeFilteredChannels = false,
+        [Summary(description: "Includes logging channel overrides in the output.")]
+        bool includeLoggingOverrides = false,
+        [Summary(description: "Includes spoiler channels in the output.")]
+        bool includeSpoilerChannels = false)
     {
         await DeferAsync();
 
@@ -922,6 +1050,14 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         if (includeThresholds)
         {
             highlightBoards = highlightBoards.Include(x => x.Thresholds);
+        }
+        if (includeLoggingOverrides)
+        {
+            highlightBoards = highlightBoards.Include(x => x.LoggingChannelOverrides);
+        }
+        if (includeSpoilerChannels)
+        {
+            highlightBoards = highlightBoards.Include(x => x.SpoilerChannels);
         }
 
         var board = await highlightBoards.FirstOrDefaultAsync(x => x.Name == name);
