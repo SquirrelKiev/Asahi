@@ -292,7 +292,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         }
 
         var boards = (await boardsQuery
-            .Include(x => x.EmoteAliases)
             .Include(x => x.Thresholds)
             .ToArrayAsync()).Where(x => guildUser.Roles.All(y => y.Id != x.HighlightsMuteRole))
             .ToArray();
@@ -301,6 +300,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         if (boards.Length == 0)
             return;
+
+        var aliases = await context.EmoteAliases.Where(x => x.GuildId == channel.Guild.Id).ToArrayAsync();
 
         HashSet<HighlightBoard> completedBoards = [];
         HashSet<SocketGuildUser> uniqueReactionUsers = [];
@@ -364,7 +365,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             {
                 completedBoards.Add(board);
 
-                await SendAndTrackHighlightMessage(board, msg, uniqueReactionUsers.Count);
+                await SendAndTrackHighlightMessage(board, aliases, msg, uniqueReactionUsers.Count);
             }
 
             if (completedBoards.Count == boards.Length)
@@ -407,7 +408,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         reactionsField.WithValue(sb.ToString());
     }
 
-    private async Task SendAndTrackHighlightMessage(HighlightBoard board, IMessage message, int totalUniqueReactions)
+    private async Task SendAndTrackHighlightMessage(HighlightBoard board, EmoteAlias[] aliases, IMessage message, int totalUniqueReactions)
     {
         logger.LogTrace("Sending highlight message to {channel}", board.LoggingChannelId);
 
@@ -446,7 +447,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             if (board.AutoReactMaxAttempts != 0)
             {
                 var lastMessageObj = await textChannel.GetMessageAsync(highlightMessages[^1]);
-                await AutoReact(board, message.Reactions, lastMessageObj);
+                await AutoReact(board, aliases, message.Reactions, lastMessageObj);
             }
         }
         catch (Exception ex)
@@ -465,7 +466,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         logger.LogTrace("Sent and tracked highlight {messageCount} messages", highlightMessages.Count);
     }
 
-    private async Task AutoReact(HighlightBoard board, IReadOnlyDictionary<IEmote, ReactionMetadata> reactions, IMessage lastMessage)
+    private async Task AutoReact(HighlightBoard board, EmoteAlias[] aliases, IReadOnlyDictionary<IEmote, ReactionMetadata> reactions, IMessage lastMessage)
     {
         IEmote? fallbackEmote = null;
 
@@ -487,7 +488,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                     .OrderByDescending(x => x.Value.ReactionCount)
                     .Select(x =>
                     {
-                        var emoteAlias = board.EmoteAliases.FirstOrDefault(y =>
+                        var emoteAlias = aliases.FirstOrDefault(y =>
                             x.Key.Name.Equals(y.EmoteName, StringComparison.InvariantCultureIgnoreCase));
 
                         if (emoteAlias == null) return x.Key;

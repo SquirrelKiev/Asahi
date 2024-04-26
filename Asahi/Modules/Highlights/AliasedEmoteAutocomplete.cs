@@ -14,21 +14,12 @@ public class AliasedEmoteAutocomplete : AutocompleteHandler
 
         var dbService = services.GetRequiredService<DbService>();
 
-        var boardOption = autocompleteInteraction.Data.Options.FirstOrDefault(x => x.Name == "name");
-
-        if (boardOption == null)
-            return AutocompletionResult.FromSuccess();
-
         await using var dbContext = dbService.GetDbContext();
 
-        var board = await dbContext.HighlightBoards.Include(highlightBoard => highlightBoard.EmoteAliases)
-            .FirstOrDefaultAsync(x => x.GuildId == context.Guild.Id && x.Name == (string)boardOption.Value);
-
-        if (board == null)
-            return AutocompletionResult.FromSuccess();
+        var aliases = await dbContext.EmoteAliases.Where(x => x.GuildId == context.Guild.Id).ToArrayAsync();
 
         return AutocompletionResult.FromSuccess(
-            board.EmoteAliases.Where(x => x.EmoteName.StartsWith((string)boardOption.Value))
+            aliases.Where(x => x.EmoteName.StartsWith((string)autocompleteInteraction.Data.Current.Value))
                 .Select(emote => new AutocompleteResult(emote.EmoteName, emote.EmoteName)).Take(25));
     }
 }

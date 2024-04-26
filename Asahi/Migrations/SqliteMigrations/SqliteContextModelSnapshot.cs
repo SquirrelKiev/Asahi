@@ -127,14 +127,11 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.EmoteAlias", b =>
                 {
-                    b.Property<string>("EmoteName")
-                        .HasMaxLength(32)
-                        .HasColumnType("TEXT");
-
-                    b.Property<ulong>("HighlightBoardGuildId")
+                    b.Property<ulong>("GuildId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("HighlightBoardName")
+                    b.Property<string>("EmoteName")
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EmoteReplacement")
@@ -142,11 +139,9 @@ namespace Asahi.Migrations.SqliteMigrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.HasKey("EmoteName", "HighlightBoardGuildId", "HighlightBoardName");
+                    b.HasKey("GuildId", "EmoteName");
 
-                    b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
-
-                    b.ToTable("EmoteAlias");
+                    b.ToTable("EmoteAliases");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.GuildConfig", b =>
@@ -350,17 +345,6 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.Navigation("HighlightBoard");
                 });
 
-            modelBuilder.Entity("Asahi.Database.Models.EmoteAlias", b =>
-                {
-                    b.HasOne("Asahi.Database.Models.HighlightBoard", "HighlightBoard")
-                        .WithMany("EmoteAliases")
-                        .HasForeignKey("HighlightBoardGuildId", "HighlightBoardName")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("HighlightBoard");
-                });
-
             modelBuilder.Entity("Asahi.Database.Models.HighlightThreshold", b =>
                 {
                     b.HasOne("Asahi.Database.Models.HighlightBoard", "HighlightBoard")
@@ -401,8 +385,6 @@ namespace Asahi.Migrations.SqliteMigrations
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>
                 {
-                    b.Navigation("EmoteAliases");
-
                     b.Navigation("HighlightedMessages");
 
                     b.Navigation("Thresholds");

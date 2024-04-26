@@ -67,8 +67,6 @@ public class HighlightBoard
     [MaxLength(100)]
     public string AutoReactFallbackEmoji { get; set; } = "\ud83d\ude2d"; // decodes to 😭
 
-    public ICollection<EmoteAlias> EmoteAliases { get; } = new List<EmoteAlias>();
-
     [JsonIgnore]
     public ICollection<CachedHighlightedMessage> HighlightedMessages { get; } = new List<CachedHighlightedMessage>();
 

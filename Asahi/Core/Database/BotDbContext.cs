@@ -18,6 +18,7 @@ public abstract class BotDbContext(string connectionString) : BotDbContextBase(c
     public DbSet<CachedHighlightedMessage> CachedHighlightedMessages { get; set; }
     public DbSet<BotWideConfig> BotWideConfig { get; set; }
     public DbSet<TrustedId> TrustedIds { get; set; }
+    public DbSet<EmoteAlias> EmoteAliases { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,12 +42,6 @@ public abstract class BotDbContext(string connectionString) : BotDbContextBase(c
         modelBuilder.Entity<CachedHighlightedMessage>()
             .HasIndex(x => x.HighlightMessageIds)
             .IsUnique();
-
-        modelBuilder.Entity<EmoteAlias>()
-            .HasKey(
-                nameof(EmoteAlias.EmoteName),
-                $"{nameof(EmoteAlias.HighlightBoard)}{nameof(HighlightBoard.GuildId)}",
-                $"{nameof(EmoteAlias.HighlightBoard)}{nameof(HighlightBoard.Name)}");
 
         modelBuilder.Entity<HighlightThreshold>()
             .HasKey(

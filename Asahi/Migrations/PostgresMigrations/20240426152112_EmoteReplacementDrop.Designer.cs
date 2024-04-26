@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Asahi.Migrations.PostgresMigrations
 {
     [DbContext(typeof(PostgresContext))]
-    partial class PostgresqlContextModelSnapshot : ModelSnapshot
+    [Migration("20240426152112_EmoteReplacementDrop")]
+    partial class EmoteReplacementDrop
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -132,25 +135,6 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.HasKey("Id");
 
                     b.ToTable("CustomCommands");
-                });
-
-            modelBuilder.Entity("Asahi.Database.Models.EmoteAlias", b =>
-                {
-                    b.Property<decimal>("GuildId")
-                        .HasColumnType("numeric(20,0)");
-
-                    b.Property<string>("EmoteName")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<string>("EmoteReplacement")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("GuildId", "EmoteName");
-
-                    b.ToTable("EmoteAliases");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.GuildConfig", b =>

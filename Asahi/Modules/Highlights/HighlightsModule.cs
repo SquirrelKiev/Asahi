@@ -547,7 +547,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                         sb.Append("<#").Append(channel).Append(">, ");
                     }
                 }
-                
+
                 if (failedChannelsBecauseInvalidUlong.Count != 0)
                 {
                     sb.AppendLine().Append("Failed to add the following channels as they could not be parsed: ");
@@ -777,12 +777,12 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             "Sets the emote to react with if the bot can't react with the attempted emote.")]
         public Task AutoReactFallbackSlash(
             [Summary(description: "The name/ID of the board. Case insensitive.")]
-        [MaxLength(HighlightBoard.MaxNameLength)]
-        [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string name,
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
             [Summary(description: "The fallback emote to use. Put \"none\" if you don't want any reaction on fallback.")]
-        [MaxLength(100)]
-        string emote)
+            [MaxLength(100)]
+            string emote)
         {
             return CommonBoardConfig(name, options =>
             {
@@ -827,66 +827,59 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("alias-emote",
             "Any reaction emote with the name specified will be replaced with the alias. Good for private emotes.")]
         public Task AddEmoteAliasSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
-        [MaxLength(HighlightBoard.MaxNameLength)]
-        [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string name,
             [Summary(description: "The emote name to replace. Case insensitive.")] [MaxLength(32)]
-        string emoteName,
-            [Summary(description: "The emote to replace with.")] [MaxLength(32)]
-        IEmote emote)
+            string emoteName,
+            [Summary(description: "The emote to replace with.")] [MaxLength(100)]
+            IEmote emote)
         {
-            return CommonBoardConfig(name, options =>
+            return CommonConfig(null, async (context, _) =>
             {
                 emoteName = emoteName.ToLowerInvariant();
 
-                var existingEntry = options.board.EmoteAliases.FirstOrDefault(x => x.EmoteName == emoteName);
+
+                var existingEntry = await context.EmoteAliases.FirstOrDefaultAsync(x => x.EmoteName == emoteName);
                 if (existingEntry != null)
                 {
                     existingEntry.EmoteReplacement = emote.ToString()!;
                 }
                 else
                 {
-                    options.board.EmoteAliases.Add(new EmoteAlias
-                    { EmoteName = emoteName, EmoteReplacement = emote.ToString()! });
+                    context.Add(new EmoteAlias
+                    { GuildId = Context.Guild.Id, EmoteName = emoteName, EmoteReplacement = emote.ToString()! });
                 }
 
-                return Task.FromResult(new ConfigChangeResult(true,
-                    $"Aliased any emote with the name \"{emoteName}\" to the emote {emote}."));
-            }, boards => boards.Include(x => x.EmoteAliases));
+                return new ConfigChangeResult(true,
+                    $"Aliased any emote with the name \"{emoteName}\" to the emote {emote}.");
+            });
         }
 
         [SlashCommand("remove-alias-emote", "Removes an emote alias.")]
         public Task RemoveEmoteAliasSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
-        [MaxLength(HighlightBoard.MaxNameLength)]
-        [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string name,
             [Summary(description: "The emote name to replace. Case insensitive.")]
         [MaxLength(32)]
         [Autocomplete(typeof(AliasedEmoteAutocomplete))]
         string emoteName)
         {
-            return CommonBoardConfig(name, options =>
+            return CommonConfig(null, async (context, _) =>
             {
                 emoteName = emoteName.ToLowerInvariant();
 
-                var existingEntry = options.board.EmoteAliases.FirstOrDefault(x => x.EmoteName == emoteName);
+                var existingEntry = await context.EmoteAliases.FirstOrDefaultAsync(x => x.EmoteName == emoteName);
                 if (existingEntry != null)
                 {
-                    options.board.EmoteAliases.Remove(existingEntry);
+                    context.EmoteAliases.Remove(existingEntry);
                 }
                 else
                 {
-                    return Task.FromResult(new ConfigChangeResult(false,
-                        $"Alias for {emoteName} doesn't exist anyway."));
+                    return new ConfigChangeResult(false,
+                        $"Alias for {emoteName} doesn't exist anyway.");
                 }
 
-                return Task.FromResult(
-                    new ConfigChangeResult(true, $"Removed the alias for {emoteName}."));
-            },
-                boards => boards.Include(x => x.EmoteAliases));
+                return new ConfigChangeResult(true, $"Removed the alias for {emoteName}.");
+            });
         }
+
+
     }
 
     #endregion
@@ -904,8 +897,6 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
-        [Summary(description: "Includes emote aliases in the output.")]
-        bool includeEmoteAliases = false,
         [Summary(description: "Includes thresholds in the output.")]
         bool includeThresholds = false,
         [Summary(description: "Includes filtered channels in the output.")]
@@ -927,12 +918,6 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         await using var context = dbService.GetDbContext();
 
         IQueryable<HighlightBoard> highlightBoards = context.HighlightBoards;
-
-        if (includeEmoteAliases)
-        {
-            highlightBoards = highlightBoards
-                .Include(x => x.EmoteAliases);
-        }
 
         if (includeThresholds)
         {
@@ -1052,9 +1037,9 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         return CommonBoardConfig(name, options =>
         {
             var threshold = options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
-            if(channel is SocketThreadChannel threadChannel)
+            if (channel is SocketThreadChannel threadChannel)
                 threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == threadChannel.ParentChannel.Id);
-            if(channel is ITextChannel textChannel)
+            if (channel is ITextChannel textChannel)
                 threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == textChannel.CategoryId);
             threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
 
@@ -1081,7 +1066,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Summary(description: "The name/ID of the board. Case insensitive.")]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string name, 
+        string name,
         [Summary(description: "The channel to check the threshold of.")]
         [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
         IGuildChannel channel, bool stopLogging = false)
@@ -1151,21 +1136,24 @@ public struct ConfigChangeOptions(BotDbContext context, HighlightBoard board, st
 public static partial class HighlightsModuleUtility
 {
     public static async Task<bool> CommonConfig(IInteractionContext botContext, DbService dbService,
-        string name,
+        string? name,
         Func<BotDbContext, string, Task<ConfigChangeResult>> updateAction)
     {
         await botContext.Interaction.DeferAsync();
-        name = name.ToLowerInvariant();
-
-        if (!IsValidId().IsMatch(name))
+        if (name != null)
         {
-            await botContext.Interaction.FollowupAsync($"`{name}` is not valid.");
-            return false;
+            name = name.ToLowerInvariant();
+
+            if (!IsValidId().IsMatch(name))
+            {
+                await botContext.Interaction.FollowupAsync($"`{name}` is not valid.");
+                return false;
+            }
         }
 
         await using var context = dbService.GetDbContext();
 
-        var message = await updateAction(context, name);
+        var message = await updateAction(context, name ?? "(N/A)");
 
         if (message.wasSuccess)
             await context.SaveChangesAsync();
@@ -1231,7 +1219,7 @@ public class HighlightsSubmodule(DbService dbService) : BotModule
 {
     protected readonly DbService dbService = dbService;
 
-    protected Task<bool> CommonConfig(string name,
+    protected Task<bool> CommonConfig(string? name,
         Func<BotDbContext, string, Task<ConfigChangeResult>> updateAction)
     {
         return HighlightsModuleUtility.CommonConfig(Context, dbService, name, updateAction);
