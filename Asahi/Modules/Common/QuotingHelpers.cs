@@ -189,7 +189,7 @@ public static class QuotingHelpers
         var msg = $"{spoilerContext}{(string.IsNullOrWhiteSpace(spoilerContext) ? "" : " ")}";
         if (!string.IsNullOrWhiteSpace(messageContent))
         {
-            msg += $"||{messageContent.Replace("|", "\\|")}||";
+            msg += $"|| {messageContent.Replace("|", "\\|")} ||";
         }
 
         return msg;
