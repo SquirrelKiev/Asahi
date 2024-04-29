@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Asahi.Modules.CustomizeStatus;
 using Asahi.Modules.Highlights;
+using Asahi.Modules.ModSpoilers;
 using Asahi.Modules.Seigen;
 using Discord.WebSocket;
 using Microsoft.Extensions.Hosting;
@@ -17,7 +18,8 @@ public class BotService(
     CommandHandler commandHandler,
     IServiceProvider services,
     HighlightsTrackingService hts,
-    CustomStatusService css) : BackgroundService
+    CustomStatusService css,
+    ModSpoilerService mss) : BackgroundService
 {
     public const string WebhookDefaultName = "Asahi Webhook";
     public CancellationTokenSource cts = new();
@@ -99,6 +101,8 @@ public class BotService(
             return Task.CompletedTask;
 
         hts.QueueMessage(new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), true);
+
+        Task.Run(() => mss.ReactionCheck(reaction));
         return Task.CompletedTask;
     }
 

@@ -557,7 +557,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                     .WithAuthor(currentUser)
                     .WithDescription("Here's how that color source looks.")
                     .WithCurrentTimestamp()
-                    .WithOptionalColor(await HighlightsHelpers.GetQuoteEmbedColor(colorSource, color, currentUser,
+                    .WithOptionalColor(await QuotingHelpers.GetQuoteEmbedColor(colorSource, color, currentUser,
                         (DiscordSocketClient)Context.Client))
                     .Build(),
                 new EmbedBuilder()
@@ -1183,7 +1183,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                 return Task.FromResult(new ConfigChangeResult(false, "Couldn't find a threshold for that channel! " +
                                                                      "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev."));
 
-            HighlightsHelpers.CalculateThreshold(threshold, hts.GetCachedMessages(channel.Id), DateTimeOffset.UtcNow, out var message);
+            HighlightsTrackingService.CalculateThreshold(threshold, hts.GetCachedMessages(channel.Id), DateTimeOffset.UtcNow, out var message);
 
             return Task.FromResult(new ConfigChangeResult(true, message));
         }, boards => boards.Include(x => x.Thresholds));
@@ -1229,7 +1229,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             if (threshold == null || loggingShouldStop)
                 return;
 
-            HighlightsHelpers.CalculateThreshold(board.Thresholds.First(), hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out var threshDebugInfo);
+            HighlightsTrackingService.CalculateThreshold(board.Thresholds.First(), hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out var threshDebugInfo);
             logger.LogTrace("info is {info}", threshDebugInfo);
         }
     }

@@ -1,4 +1,4 @@
-﻿namespace Asahi.Modules.Highlights;
+﻿namespace Asahi.Modules;
 
 public static class EmbedBuilderExtensions
 {

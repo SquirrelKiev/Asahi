@@ -9,7 +9,8 @@ public class BotConfig : BotConfigBase
     public override CacheType Cache { get; set; } = CacheType.Memory;
     public override DatabaseType Database { get; set; } = DatabaseType.Sqlite;
     public override string DatabaseConnectionString { get; set; } = "Data Source=data/BotDb.db";
-    public override string ErrorEmote { get; set; } = "\u2753";
+    public override string ErrorEmote { get; set; } = "\u2753"; // ❓
+    public string LoadingEmote { get; set; } = "\ud83e\udd14"; // 🤔
     public override HashSet<ulong> ManagerUserIds { get; set; } = [0ul];
 
     public override string SeqUrl { get; set; } = "";

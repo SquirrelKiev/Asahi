@@ -356,7 +356,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
                     var messages = GetCachedMessages(channel.Id);
 
-                    var requiredReactions = HighlightsHelpers.CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
+                    var requiredReactions = CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
 
                     logger.LogTrace("threshold is {threshold}", requiredReactions);
 
@@ -397,10 +397,10 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
     private void AddReactionsFieldToQuote(EmbedBuilder embedBuilder, IEnumerable<ReactionInfo> reactions, int totalUniqueReactions)
     {
-        var reactionsField = embedBuilder.Fields.FirstOrDefault(x => x.Name == HighlightsHelpers.ReactionsFieldName);
+        var reactionsField = embedBuilder.Fields.FirstOrDefault(x => x.Name == QuotingHelpers.ReactionsFieldName);
         if (reactionsField == null)
         {
-            reactionsField = new EmbedFieldBuilder().WithName(HighlightsHelpers.ReactionsFieldName)
+            reactionsField = new EmbedFieldBuilder().WithName(QuotingHelpers.ReactionsFieldName)
                 .WithIsInline(true);
             embedBuilder.AddField(reactionsField);
         }
@@ -437,14 +437,14 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var loggingChannel = client.GetGuild(board.GuildId).GetTextChannel(loggingChannelId);
         var embedAuthor = (IGuildUser)message.Author;
-        var embedColor = await HighlightsHelpers.GetQuoteEmbedColor(board.EmbedColorSource, board.FallbackEmbedColor, embedAuthor, client);
+        var embedColor = await QuotingHelpers.GetQuoteEmbedColor(board.EmbedColorSource, board.FallbackEmbedColor, embedAuthor, client);
 
         logger.LogTrace("Embed color will be {color}", embedColor);
 
         var spoilerEntry = board.SpoilerChannels.FirstOrDefault(x => x.ChannelId == message.Channel.Id);
 
         var queuedMessages = 
-            HighlightsHelpers.QuoteMessage(message, embedColor, logger, true, spoilerEntry != null, spoilerEntry?.SpoilerContext ?? "");
+            QuotingHelpers.QuoteMessage(message, embedColor, logger, true, spoilerEntry != null, spoilerEntry?.SpoilerContext ?? "");
 
         var eb = queuedMessages[0].embeds?[0].ToEmbedBuilder();
         if (eb != null)
@@ -557,5 +557,60 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 logger.LogTrace(ex, "Failed to add fallback reaction.");
             }
         }
+    }
+
+    public static int CalculateThreshold(HighlightThreshold thresholdConfig,
+        IReadOnlyCollection<HighlightsTrackingService.CachedMessage> messages,
+        DateTimeOffset messageSentAt,
+        out string debugInfo)
+    {
+        Dictionary<ulong, double> userWeights = [];
+
+        var orderedMessages = messages
+            .OrderByDescending(x => x.timestamp)
+            .ToArray();
+
+        var userWeightMessages = orderedMessages.Where(x => x.timestamp <= messageSentAt &&
+                                                            x.timestamp >= messageSentAt - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds))
+            .ToArray();
+
+        foreach (var message in userWeightMessages)
+        {
+            var userId = message.authorId;
+            if (userWeights.ContainsKey(userId))
+                continue;
+
+            var timeSinceLastMessage = messageSentAt - message.timestamp;
+            double weight = 1f;
+
+            if (!(timeSinceLastMessage.TotalSeconds <= thresholdConfig.UniqueUserDecayDelaySeconds))
+            {
+                weight = 1 - (timeSinceLastMessage.TotalSeconds - thresholdConfig.UniqueUserDecayDelaySeconds) /
+                    (thresholdConfig.UniqueUserMessageMaxAgeSeconds - thresholdConfig.UniqueUserDecayDelaySeconds);
+            }
+
+            userWeights.TryAdd(userId, weight);
+        }
+
+        var highActivity = orderedMessages.Length >= thresholdConfig.HighActivityMessageLookBack &&
+                           (messageSentAt - orderedMessages[thresholdConfig.HighActivityMessageLookBack - 1].timestamp)
+                           .TotalSeconds < thresholdConfig.HighActivityMessageMaxAgeSeconds;
+
+        var weightedUserCount = userWeights.Sum(kvp => kvp.Value);
+
+        var highActivityMultiplier = highActivity ? thresholdConfig.HighActivityMultiplier : 1f;
+
+        var rawThreshold = (thresholdConfig.BaseThreshold + weightedUserCount * thresholdConfig.UniqueUserMultiplier) * highActivityMultiplier;
+
+        var thresholdDecimal = rawThreshold % 1;
+        var roundedThreshold = Math.Min(thresholdConfig.MaxThreshold, 
+            thresholdDecimal < thresholdConfig.RoundingThreshold ? Math.Floor(rawThreshold) : Math.Ceiling(rawThreshold));
+
+        debugInfo = $"Current threshold is {roundedThreshold}. Raw threshold is `{rawThreshold}`. " +
+                    $"weighted users is `{weightedUserCount}`, unweighted users is `{userWeights.Count}`. " +
+                    $"{(highActivity ? "`Channel is high activity!` " : "`Normal activity levels.` ")}" +
+                    $"Total of `{orderedMessages.Length}` messages cached, `{userWeightMessages.Length}` of which are being considered for unique user count.";
+
+        return (int)roundedThreshold;
     }
 }

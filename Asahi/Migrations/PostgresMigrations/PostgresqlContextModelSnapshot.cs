@@ -164,6 +164,17 @@ namespace Asahi.Migrations.PostgresMigrations
                         .HasMaxLength(8)
                         .HasColumnType("character varying(8)");
 
+                    b.Property<bool>("SpoilerBotAutoDeleteContextSetting")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SpoilerBotAutoDeleteOriginal")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SpoilerReactionEmote")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.HasKey("GuildId");
 
                     b.ToTable("GuildConfigs");

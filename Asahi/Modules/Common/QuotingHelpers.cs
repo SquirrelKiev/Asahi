@@ -1,12 +1,12 @@
-﻿using System.Text;
+﻿using System.Diagnostics.Contracts;
+using System.Text;
 using Asahi.Database.Models;
-using BotBase;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 
-namespace Asahi.Modules.Highlights;
+namespace Asahi.Modules;
 
-public static class HighlightsHelpers
+public static class QuotingHelpers
 {
     // Not the nuclear kind (I guess some of them could be considered pretty nuclear?)
     public const string ReactionsFieldName = "Reactors";
@@ -183,7 +183,8 @@ public static class HighlightsHelpers
         return queuedMessages;
     }
 
-    public static string SpoilerMessage(this string messageContent, string spoilerContext)
+    [Pure]
+    public static string SpoilerMessage(this string messageContent, string? spoilerContext)
     {
         var msg = $"{spoilerContext}{(string.IsNullOrWhiteSpace(spoilerContext) ? "" : " ")}";
         if (!string.IsNullOrWhiteSpace(messageContent))
@@ -254,7 +255,8 @@ public static class HighlightsHelpers
         return embedColor;
     }
 
-    public static EmbedBuilder ToEmbedBuilderForce(this IEmbed embed, bool spoiler = false)
+    // TODO: Spoiler handling
+    public static EmbedBuilder ToEmbedBuilderForce(this IEmbed embed)
     {
         var imageUrl = embed.Image?.Url;
         var thumbnailUrl = embed.Thumbnail?.Url;
@@ -288,60 +290,5 @@ public static class HighlightsHelpers
             builder.AddField(field.Name, field.Value, field.Inline);
 
         return builder;
-    }
-
-    public static int CalculateThreshold(HighlightThreshold thresholdConfig,
-        IReadOnlyCollection<HighlightsTrackingService.CachedMessage> messages,
-        DateTimeOffset messageSentAt,
-        out string debugInfo)
-    {
-        Dictionary<ulong, double> userWeights = [];
-
-        var orderedMessages = messages
-            .OrderByDescending(x => x.timestamp)
-            .ToArray();
-
-        var userWeightMessages = orderedMessages.Where(x => x.timestamp <= messageSentAt &&
-                                                             x.timestamp >= messageSentAt - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds))
-            .ToArray();
-
-        foreach (var message in userWeightMessages)
-        {
-            var userId = message.authorId;
-            if (userWeights.ContainsKey(userId))
-                continue;
-
-            var timeSinceLastMessage = messageSentAt - message.timestamp;
-            double weight = 1f;
-
-            if (!(timeSinceLastMessage.TotalSeconds <= thresholdConfig.UniqueUserDecayDelaySeconds))
-            {
-                weight = 1 - (timeSinceLastMessage.TotalSeconds - thresholdConfig.UniqueUserDecayDelaySeconds) /
-                    (thresholdConfig.UniqueUserMessageMaxAgeSeconds - thresholdConfig.UniqueUserDecayDelaySeconds);
-            }
-
-            userWeights.TryAdd(userId, weight);
-        }
-
-        var highActivity = orderedMessages.Length >= thresholdConfig.HighActivityMessageLookBack &&
-                                           (messageSentAt - orderedMessages[thresholdConfig.HighActivityMessageLookBack - 1].timestamp)
-                                           .TotalSeconds < thresholdConfig.HighActivityMessageMaxAgeSeconds;
-
-        var weightedUserCount = userWeights.Sum(kvp => kvp.Value);
-
-        var highActivityMultiplier = highActivity ? thresholdConfig.HighActivityMultiplier : 1f;
-
-        var rawThreshold = (thresholdConfig.BaseThreshold + weightedUserCount * thresholdConfig.UniqueUserMultiplier) * highActivityMultiplier;
-
-        var thresholdDecimal = rawThreshold % 1;
-        var roundedThreshold = Math.Min(thresholdConfig.MaxThreshold, 
-            thresholdDecimal < thresholdConfig.RoundingThreshold ? Math.Floor(rawThreshold) : Math.Ceiling(rawThreshold));
-
-        debugInfo = $"Current threshold is {roundedThreshold}. Raw threshold is `{rawThreshold}`. " +
-                    $"weighted users is `{weightedUserCount}`, unweighted users is `{userWeights.Count}`. " +
-                    $"{(highActivity ? "`Channel is high activity!` " : "`Normal activity levels.` ")}" +
-                    $"Total of `{orderedMessages.Length}` messages cached, `{userWeightMessages.Length}` of which are being considered for unique user count.";
-
-        return (int)roundedThreshold;
     }
 }

@@ -12,4 +12,11 @@ public class GuildConfig
 
     [MaxLength(MaxPrefixLength)]
     public string Prefix { get; set; } = DefaultPrefix;
+
+    public bool SpoilerBotAutoDeleteOriginal { get; set; } = true;
+
+    public bool SpoilerBotAutoDeleteContextSetting { get; set; } = true;
+
+    [MaxLength(100)]
+    public string SpoilerReactionEmote { get; set; } = "";
 }
