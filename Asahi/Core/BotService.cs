@@ -21,7 +21,11 @@ public class BotService(
     CustomStatusService css,
     ModSpoilerService mss) : BackgroundService
 {
-    public const string WebhookDefaultName = "Asahi Webhook";
+    public const string WebhookDefaultName =
+#if DEBUG
+        "[DEBUG] " +
+#endif
+        "Asahi Webhook";
     public CancellationTokenSource cts = new();
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)

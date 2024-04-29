@@ -10,8 +10,9 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
     {
         public string Title => "Spoiler Message";
 
-        [ModalTextInput(ModulePrefixes.SPOILER_MODAL_CONTEXT_INPUT)]
-        public string Context { get; set; }
+        [ModalTextInput(ModulePrefixes.SPOILER_MODAL_CONTEXT_INPUT, maxLength: 500)]
+        [RequiredInput(false)]
+        public string? Context { get; set; } = null;
     }
 
     public struct MessageReference

@@ -233,7 +233,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
                 var reactions = uniqueReactionEmotes.Select(x => new ReactionInfo(x));
 
-                var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName, client.CurrentUser);
+                var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
                 var webhookClient = new DiscordWebhookClient(webhook);
 
                 await webhookClient.ModifyMessageAsync(firstMessageId, messageProperties =>
@@ -453,7 +453,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             queuedMessages[0].embeds![0] = eb.Build();
         }
 
-        var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName, client.CurrentUser);
+        var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
         var webhookClient = new DiscordWebhookClient(webhook);
         List<ulong> highlightMessages = [];
 

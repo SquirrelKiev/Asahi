@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Asahi.Database;
-using Asahi.Database.Models;
 using Discord.Webhook;
 using Discord.WebSocket;
 using Fergun.Interactive;
@@ -155,9 +154,12 @@ public class ModSpoilerService(
 
             if (contextMsg.Value.Content.Equals("cancel", StringComparison.InvariantCultureIgnoreCase))
             {
-                await contextMsg.Value.DeleteAsync();
-                await modContextQuestionMsg.DeleteAsync();
-                await message.RemoveReactionAsync(reaction.Emote, reactor);
+                if (guildConfig.SpoilerBotAutoDeleteContextSetting)
+                {
+                    await contextMsg.Value.DeleteAsync();
+                    await modContextQuestionMsg.DeleteAsync();
+                    await message.RemoveReactionAsync(reaction.Emote, reactor);
+                }
 
                 return;
             }
