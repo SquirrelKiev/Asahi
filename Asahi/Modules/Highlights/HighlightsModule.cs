@@ -588,7 +588,8 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
-        IMessageChannel channel)
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        IGuildChannel channel)
         {
             return CommonBoardConfig(name, options =>
             {
@@ -601,6 +602,30 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                 options.board.FilteredChannels.Add(channel.Id);
                 return Task.FromResult(new ConfigChangeResult(true,
                     $"Channel <#{channel.Id}> added to filtered channels."));
+            });
+        }
+
+        [SlashCommand("remove",
+            "Removes the channel from the channel filter. Channel filter is blocklist by default.")]
+        public Task RemoveFilterChannelSlash(
+            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [MaxLength(HighlightBoard.MaxNameLength)]
+            [Autocomplete(typeof(HighlightsNameAutocomplete))]
+            string name,
+            [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread)]
+            IGuildChannel channel)
+        {
+            return CommonBoardConfig(name, options =>
+            {
+                if (!options.board.FilteredChannels.Contains(channel.Id))
+                {
+                    return Task.FromResult(
+                        new ConfigChangeResult(false, $"Channel not in filtered channels anyway."));
+                }
+
+                options.board.FilteredChannels.Remove(channel.Id);
+                return Task.FromResult(new ConfigChangeResult(true,
+                    $"Channel <#{channel.Id}> removed from filtered channels."));
             });
         }
 
@@ -765,30 +790,6 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
                 return new ConfigChangeResult(true, sb.ToString());
             });
         }
-
-        [SlashCommand("remove",
-            "Removes the channel from the channel filter. Channel filter is blocklist by default.")]
-        public Task RemoveFilterChannelSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
-        [MaxLength(HighlightBoard.MaxNameLength)]
-        [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string name,
-            IMessageChannel channel)
-        {
-            return CommonBoardConfig(name, options =>
-            {
-                if (!options.board.FilteredChannels.Contains(channel.Id))
-                {
-                    return Task.FromResult(
-                        new ConfigChangeResult(false, $"Channel not in filtered channels anyway."));
-                }
-
-                options.board.FilteredChannels.Remove(channel.Id);
-                return Task.FromResult(new ConfigChangeResult(true,
-                    $"Channel <#{channel.Id}> removed from filtered channels."));
-            });
-        }
-
 
         public enum AllowBlockList
         {

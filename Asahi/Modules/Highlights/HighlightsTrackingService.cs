@@ -285,22 +285,14 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var boardsQuery = context.HighlightBoards.Where(x =>
             x.GuildId == channel.Guild.Id
             && (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds)
-            && (x.FilteredChannelsIsBlockList
-                ? x.FilteredChannels.All(y => y != parentChannelId)
-                : x.FilteredChannels.Any(y => y == parentChannelId)
-                  || (x.FilteredChannelsIsBlockList
-                      ? x.FilteredChannels.All(y => y != channel.Id)
-                      : x.FilteredChannels.Any(y => y == channel.Id))
+            && ((x.FilteredChannelsIsBlockList
+                    ? x.FilteredChannels.All(y => y != parentChannelId)
+                    : x.FilteredChannels.Any(y => y == parentChannelId))
+                || 
+                (x.FilteredChannelsIsBlockList
+                    ? x.FilteredChannels.All(y => y != channel.Id)
+                    : x.FilteredChannels.Any(y => y == channel.Id))
         ));
-
-        if (channel is SocketThreadChannel)
-        {
-            var threadId = channel.Id;
-
-            boardsQuery = boardsQuery.Where(x => x.FilteredChannelsIsBlockList
-                ? x.FilteredChannels.All(y => y != threadId)
-                        : x.FilteredChannels.Any(y => y == threadId));
-        }
 
         var boards = (await boardsQuery
             .Include(x => x.Thresholds)
