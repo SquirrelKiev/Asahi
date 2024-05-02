@@ -1,13 +1,12 @@
 ﻿using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Asahi.Modules.CustomizeStatus;
 
 [Group("bot", "Commands relating to configuring the bot.")]
-public class CustomStatusModule(DbService dbService, CustomStatusService css, ILogger<CustomStatusModule> logger) : BotModule
+public class CustomStatusModule(DbService dbService, CustomStatusService css) : BotModule
 {
     [TrustedMember(TrustedId.TrustedUserPerms.StatusPerms)]
     [SlashCommand("toggle-activity", "Toggles the bot activity.")]

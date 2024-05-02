@@ -13,7 +13,7 @@ public static class QuotingHelpers
 
     /// <remarks>If <see cref="spoilerAll"/> is true, return value will always be a length of 1.</remarks>
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
-        bool webhookMode, bool spoilerAll = false, string spoilerContext = "")
+        bool webhookMode, bool spoilerAll = false, string? spoilerContext = "")
     {
         var constantUrl = CatboxQts.GetRandomQtUrl();
 
@@ -25,7 +25,7 @@ public static class QuotingHelpers
         {
             channelName += $" • #{threadChannel.ParentChannel.Name}";
         }
-
+        
         var messageContent = message.Content;
 
         if (spoilerAll)

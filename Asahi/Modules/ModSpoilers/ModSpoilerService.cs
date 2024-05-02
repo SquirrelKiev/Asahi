@@ -277,7 +277,7 @@ public class ModSpoilerService(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError("Failed to delete context messages.");
+                    logger.LogError(ex, "Failed to delete context messages.");
                 }
             }
         }
