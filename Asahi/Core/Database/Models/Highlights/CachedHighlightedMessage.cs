@@ -10,7 +10,5 @@ public class CachedHighlightedMessage : DbModel
 
     public required List<ulong> HighlightMessageIds { get; set; }
 
-    public bool ForceSpoilerTagged { get; set; } = false;
-
     public HighlightBoard HighlightBoard { get; set; } = null!;
 }
