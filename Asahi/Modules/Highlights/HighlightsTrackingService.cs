@@ -68,7 +68,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     /// <remarks>Should only be one of these running!</remarks>
     private async Task TimerTask(CancellationToken cancellationToken)
     {
-        logger.LogTrace("highlights timer task started");
+        logger.LogTrace("Highlights timer task started");
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
         while (await timer.WaitForNextTickAsync(cancellationToken))
         {
@@ -102,24 +102,40 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             messageQueueShouldSendHighlight.Clear();
         }
 
-        foreach (var queuedMessage in messages)
+        List<Task> guildTasks = [];
+        
+        foreach (var groupedMessages in messages.GroupBy(x => x.guildId))
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            try
+            guildTasks.Add(Task.Run(async () =>
             {
-                var guild = client.GetGuild(queuedMessage.guildId);
-                var textChannel = guild.GetTextChannel(queuedMessage.channelId);
+                logger.LogTrace("Checking for Guild {guildId} has begun.", groupedMessages.Key);
 
-                var shouldAddNewHighlight = messagesShouldSendHighlight.Contains(queuedMessage.messageId);
-                await CheckMessageForHighlights(queuedMessage.messageId, textChannel, shouldAddNewHighlight);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to check message {messageId} in channel {channel}!", queuedMessage.messageId, queuedMessage.channelId);
-            }
+                foreach (var queuedMessage in groupedMessages)
+                {
+                    try
+                    {
+                        var guild = client.GetGuild(queuedMessage.guildId);
+                        var textChannel = guild.GetTextChannel(queuedMessage.channelId);
+
+                        var shouldAddNewHighlight = messagesShouldSendHighlight.Contains(queuedMessage.messageId);
+
+                        await CheckMessageForHighlights(queuedMessage.messageId, textChannel, shouldAddNewHighlight);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to check message {messageId} in channel {channel}!",
+                            queuedMessage.messageId, queuedMessage.channelId);
+                    }
+                }
+
+                logger.LogTrace("Finished processing messages for Guild {guildId}.", groupedMessages.Key);
+            }, cancellationToken));
         }
+
+        await Task.WhenAll(guildTasks);
     }
 
     /// <remarks>Not thread-safe.</remarks>
