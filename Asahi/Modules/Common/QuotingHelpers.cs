@@ -11,6 +11,7 @@ public static class QuotingHelpers
     // Not the nuclear kind (I guess some of them could be considered pretty nuclear?)
     public const string ReactionsFieldName = "Reactors";
 
+    /// <remarks>If <see cref="spoilerAll"/> is true, return value will always be a length of 1.</remarks>
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
         bool webhookMode, bool spoilerAll = false, string spoilerContext = "")
     {

@@ -91,7 +91,7 @@ public class BotService(
         }
     }
 
-    private Task Client_ReactionAdded(
+    private async Task Client_ReactionAdded(
         Cacheable<IUserMessage, ulong> cachedMessage,
         Cacheable<IMessageChannel, ulong> originChannel,
         SocketReaction reaction)
@@ -99,29 +99,47 @@ public class BotService(
         logger.LogTrace("Reaction added");
 
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
-            return Task.CompletedTask;
+            return;
 
         if (reaction.Channel is not SocketTextChannel channel)
-            return Task.CompletedTask;
+            return;
 
-        hts.QueueMessage(new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), true);
+        await using var context = dbService.GetDbContext();
+        var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
-        Task.Run(() => mss.ReactionCheck(reaction));
-        return Task.CompletedTask;
+        if(ModSpoilerService.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote))
+        {
+            if (!spoilerEmote.Equals(reaction.Emote))
+            {
+                hts.QueueMessage(
+                    new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), true);
+            }
+        }
+
+        _ = Task.Run(() => mss.ReactionCheck(reaction));
     }
 
-    private Task Client_ReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
+    private async Task Client_ReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
     {
         logger.LogTrace("Reaction removed");
 
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
-            return Task.CompletedTask;
+            return;
 
         if (reaction.Channel is not SocketTextChannel channel)
-            return Task.CompletedTask;
+            return;
 
-        hts.QueueMessage(new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), false);
-        return Task.CompletedTask;
+        await using var context = dbService.GetDbContext();
+        var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
+
+        if (ModSpoilerService.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote))
+        {
+            if (!spoilerEmote.Equals(reaction.Emote))
+            {
+                hts.QueueMessage(new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), false);
+            }
+        }
+        return;
     }
 
     private Task Client_MessageReceived(SocketMessage msg)

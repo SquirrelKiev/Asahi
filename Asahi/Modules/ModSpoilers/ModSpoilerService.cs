@@ -1,10 +1,14 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Asahi.Database;
+using Asahi.Database.Models;
+using Asahi.Modules.Highlights;
 using Discord.Webhook;
 using Discord.WebSocket;
 using Fergun.Interactive;
 using Humanizer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using static Asahi.Modules.Highlights.HighlightsTrackingService;
 
 namespace Asahi.Modules.ModSpoilers;
 
@@ -15,6 +19,7 @@ public class ModSpoilerService(
     DbService dbService,
     InteractiveService interactive,
     BotConfig botConfig,
+    HighlightsTrackingService hts,
     ILogger<ModSpoilerModule> logger)
 {
     [method: SetsRequiredMembers]
@@ -24,7 +29,7 @@ public class ModSpoilerService(
         public required string response = response;
     }
 
-    public async Task<SpoilerAttemptResult> SpoilerMessage(IMessage message, bool deleteOg, string context = "")
+    public async Task<SpoilerAttemptResult> SpoilerMessage(IMessage message, bool deleteOg, BotDbContext dbContext, string? context = "")
     {
         if (message.Channel is not IIntegrationChannel channel)
         {
@@ -59,30 +64,109 @@ public class ModSpoilerService(
         var webhook = await channel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
         var webhookClient = new DiscordWebhookClient(webhook);
 
-        var contents = message.Content.SpoilerMessage(context);
-
-        List<FileAttachment> attachmentStreams = [];
-        List<IDisposable> disposables = [];
-        foreach (var attachment in message.Attachments)
+        var cachedHighlightedMessage = await
+            dbContext.CachedHighlightedMessages
+                .Include(cachedHighlightedMessage => cachedHighlightedMessage.HighlightBoard)
+                .FirstOrDefaultAsync(x => x.HighlightMessageIds.Contains(message.Id));
+        if (cachedHighlightedMessage == null)
         {
-            var req = await httpClient.GetAsync(attachment.Url);
-            attachmentStreams.Add(new FileAttachment(await req.Content.ReadAsStreamAsync(), attachment.Filename, attachment.Description, true));
-            disposables.Add(req);
+            var contents = message.Content.SpoilerMessage(context);
+
+            List<FileAttachment> attachmentStreams = [];
+            List<IDisposable> disposables = [];
+            foreach (var attachment in message.Attachments)
+            {
+                var req = await httpClient.GetAsync(attachment.Url);
+                attachmentStreams.Add(new FileAttachment(await req.Content.ReadAsStreamAsync(), attachment.Filename, attachment.Description, true));
+                disposables.Add(req);
+            }
+
+            var username = author is IWebhookUser webhookUser ? webhookUser.Username : author.DisplayName;
+            var avatar = author.GetDisplayAvatarUrl();
+
+            var threadId = threadChannel?.Id;
+            await webhookClient.SendFilesAsync(attachmentStreams, contents, username: username, avatarUrl: avatar,
+                isTTS: message.IsTTS, allowedMentions: AllowedMentions.None, threadId: threadId);
+
+            if (deleteOg)
+                await message.DeleteAsync();
+
+            foreach (var disposable in disposables)
+            {
+                disposable.Dispose();
+            }
         }
-
-        var username = author is IWebhookUser webhookUser ? webhookUser.Username : author.DisplayName;
-        var avatar = author.GetDisplayAvatarUrl();
-
-        var threadId = threadChannel?.Id;
-        await webhookClient.SendFilesAsync(attachmentStreams, contents, username: username, avatarUrl: avatar, 
-            isTTS: message.IsTTS, allowedMentions: AllowedMentions.None, threadId: threadId);
-
-        if(deleteOg)
-            await message.DeleteAsync();
-
-        foreach (var disposable in disposables)
+        else
         {
-            disposable.Dispose();
+            // "channel" is assumed to be the logging channel here.
+            if (channel is not ITextChannel loggingChannel)
+            {
+                return new SpoilerAttemptResult(false, "Channel is not a text channel.");
+            }
+
+            var ogChannel = await loggingChannel.Guild.GetTextChannelAsync(cachedHighlightedMessage.OriginalMessageChannelId);
+
+            var ogMessage = await ogChannel.GetMessageAsync(cachedHighlightedMessage.OriginalMessageId);
+
+            var quoteEmbedColor = await QuotingHelpers.GetQuoteEmbedColor(
+                cachedHighlightedMessage.HighlightBoard.EmbedColorSource,
+                cachedHighlightedMessage.HighlightBoard.FallbackEmbedColor,
+                ogMessage.Author as IGuildUser,
+                client);
+            var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, true, true, context);
+
+            var i = 0;
+            bool deletedMessage = false;
+            foreach (var highlightMessageId in cachedHighlightedMessage.HighlightMessageIds)
+            {
+                if (i == 0)
+                {
+                    var firstMessage = messageContents[0];
+
+                    var firstMessageObj = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
+                    var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
+                        await hts.UniqueReactionUsersAutoReact(channel.Guild, ogMessage, firstMessageObj);
+
+                    if (firstMessage.embeds == null)
+                    {
+                        return new SpoilerAttemptResult(false, "New highlight message missing embeds.");
+                    }
+
+                    var eb = firstMessage.embeds[0].ToEmbedBuilder();
+
+                    hts.AddReactionsFieldToQuote(eb,
+                        uniqueReactionEmotes.Select(x => new ReactionInfo(x)), uniqueReactionUsersAutoReact.Count);
+
+                    firstMessage.embeds[0] = eb.Build();
+
+                    await webhookClient.ModifyMessageAsync(highlightMessageId, props =>
+                    {
+                        props.Content = firstMessage.body;
+                        props.Embeds = firstMessage.embeds;
+                        props.Components = firstMessage.components;
+                    });
+                }
+                else
+                {
+                    await loggingChannel.DeleteMessageAsync(highlightMessageId);
+                    deletedMessage = true;
+                }
+
+                i++;
+            }
+
+            if (deletedMessage)
+            {
+                var aliases = await dbContext.EmoteAliases.Where(x => x.GuildId == channel.GuildId).ToArrayAsync();
+
+                if (cachedHighlightedMessage.HighlightBoard.AutoReactMaxAttempts != 0)
+                {
+                    var firstMessage = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
+                    await hts.AutoReact(cachedHighlightedMessage.HighlightBoard, aliases, ogMessage.Reactions, firstMessage);
+                }
+            }
+
+            cachedHighlightedMessage.HighlightMessageIds = [cachedHighlightedMessage.HighlightMessageIds[0]];
         }
 
         return new SpoilerAttemptResult(true, "Spoiler tagged.");
@@ -169,7 +253,7 @@ public class ModSpoilerService(
             var waitEmote = Emoji.Parse(botConfig.LoadingEmote);
             await contextMsg.Value.AddReactionAsync(waitEmote);
 
-            var spoilerAttempt = await SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, spoilerContext);
+            var spoilerAttempt = await SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, context, spoilerContext);
 
             await contextMsg.Value.RemoveReactionAsync(waitEmote, client.CurrentUser.Id);
 
@@ -179,6 +263,8 @@ public class ModSpoilerService(
                     allowedMentions: AllowedMentions.None);
                 return;
             }
+
+            await context.SaveChangesAsync();
 
             if (guildConfig.SpoilerBotAutoDeleteContextSetting)
             {
@@ -201,7 +287,7 @@ public class ModSpoilerService(
         }
     }
 
-    private static bool TryParseEmote(string text, [NotNullWhen(true)] out IEmote? emote)
+    public static bool TryParseEmote(string text, [NotNullWhen(true)] out IEmote? emote)
     {
         if (Emote.TryParse(text, out var result))
         {

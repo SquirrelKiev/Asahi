@@ -4,14 +4,13 @@ namespace Asahi.Database.Models;
 
 public class CachedHighlightedMessage : DbModel
 {
-    //public required ulong GuildId { get; set; }
-
-    //public required ulong ChannelId { get; set; }
-
     public required ulong OriginalMessageChannelId { get; set; }
+
     public required ulong OriginalMessageId { get; set; }
 
     public required List<ulong> HighlightMessageIds { get; set; }
+
+    public bool ForceSpoilerTagged { get; set; } = false;
 
     public HighlightBoard HighlightBoard { get; set; } = null!;
 }

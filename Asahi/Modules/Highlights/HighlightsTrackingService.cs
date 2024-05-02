@@ -224,28 +224,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 if (lastMessage == null)
                     continue;
 
-                HashSet<ulong> uniqueReactionUsersAutoReact = [];
-                HashSet<IEmote> uniqueReactionEmotes = [];
-
-                // tried for quite a while to get this all within one linq statement, but seemed too much of a pain unfortunately, so three foreach instead.
-                // no linq one-liners today :pensive:
-                foreach (var thing in originalMessage.Reactions
-                                   .Select(x => new Tuple<IMessage, IEmote>(originalMessage, x.Key))
-                                   .Concat(lastMessage.Reactions
-                                       .Select(x => new Tuple<IMessage, IEmote>(lastMessage, x.Key))))
-                {
-                    await foreach (var userCollection in thing.Item1.GetReactionUsersAsync(thing.Item2, int.MaxValue))
-                    {
-                        foreach (var user in userCollection.Select(genericUser => channel.Guild.GetUser(genericUser.Id))
-                                     .Where(user => user != null && !user.IsBot))
-                        {
-                            uniqueReactionUsersAutoReact.Add(user.Id);
-
-                            // done in the loop so the IsBot applies
-                            uniqueReactionEmotes.Add(thing.Item2);
-                        }
-                    }
-                }
+                var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) = 
+                    await UniqueReactionUsersAutoReact(channel.Guild, originalMessage, lastMessage);
 
                 var reactions = uniqueReactionEmotes.Select(x => new ReactionInfo(x));
 
@@ -396,6 +376,36 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         await context.SaveChangesAsync();
     }
 
+    public async Task<(HashSet<ulong> uniqueReactionUsersAutoReact, HashSet<IEmote> uniqueReactionEmotes)> UniqueReactionUsersAutoReact(
+        IGuild guild, IMessage originalHighlightedMessage,
+        IMessage lastHighlightMessage)
+    {
+        HashSet<ulong> uniqueReactionUsersAutoReact = [];
+        HashSet<IEmote> uniqueReactionEmotes = [];
+
+        // tried for quite a while to get this all within one linq statement, but seemed too much of a pain unfortunately, so three foreach instead.
+        // no linq one-liners today :pensive:
+        foreach (var thing in originalHighlightedMessage.Reactions
+                     .Select(x => new Tuple<IMessage, IEmote>(originalHighlightedMessage, x.Key))
+                     .Concat(lastHighlightMessage.Reactions
+                         .Select(x => new Tuple<IMessage, IEmote>(lastHighlightMessage, x.Key))))
+        {
+            await foreach (var userCollection in thing.Item1.GetReactionUsersAsync(thing.Item2, int.MaxValue))
+            {
+                await foreach (var user in userCollection.ToAsyncEnumerable().SelectAwait(async genericUser => await guild.GetUserAsync(genericUser.Id))
+                             .Where(user => user != null && !user.IsBot))
+                {
+                    uniqueReactionUsersAutoReact.Add(user.Id);
+
+                    // done in the loop so the IsBot applies
+                    uniqueReactionEmotes.Add(thing.Item2);
+                }
+            }
+        }
+
+        return (uniqueReactionUsersAutoReact, uniqueReactionEmotes);
+    }
+
     public IReadOnlyCollection<CachedMessage> GetCachedMessages(ulong channelId)
     {
         messageCaches.TryGetValue(channelId, out var queue);
@@ -403,7 +413,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         return messages;
     }
 
-    private void AddReactionsFieldToQuote(EmbedBuilder embedBuilder, IEnumerable<ReactionInfo> reactions, int totalUniqueReactions)
+    public void AddReactionsFieldToQuote(EmbedBuilder embedBuilder, IEnumerable<ReactionInfo> reactions, int totalUniqueReactions)
     {
         var reactionsField = embedBuilder.Fields.FirstOrDefault(x => x.Name == QuotingHelpers.ReactionsFieldName);
         if (reactionsField == null)
@@ -499,7 +509,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         logger.LogTrace("Sent and tracked highlight {messageCount} messages", highlightMessages.Count);
     }
 
-    private async Task AutoReact(HighlightBoard board, EmoteAlias[] aliases, IReadOnlyDictionary<IEmote, ReactionMetadata> reactions, IMessage lastMessage)
+    public async Task AutoReact(HighlightBoard board, EmoteAlias[] aliases, IReadOnlyDictionary<IEmote, ReactionMetadata> reactions, IMessage lastMessage)
     {
         IEmote? fallbackEmote = null;
 

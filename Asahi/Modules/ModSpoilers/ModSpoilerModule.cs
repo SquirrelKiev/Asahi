@@ -121,7 +121,11 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
         await using var context = dbService.GetDbContext();
         var guildConfig = await context.GetGuildConfig(Context.Guild.Id);
 
-        var response = await mss.SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, modal.Context);
+        var response = await mss.SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, context, modal.Context);
+
+        if(response.wasSuccess)
+            await context.SaveChangesAsync();
+
         var eb = new EmbedBuilder()
             .WithColor(response.wasSuccess ? Color.Green : Color.Red)
             .WithDescription(response.response);
