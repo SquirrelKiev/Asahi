@@ -125,7 +125,7 @@ public class ModSpoilerService(
 
                     var firstMessageObj = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
                     var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
-                        await hts.UniqueReactionUsersAutoReact(channel.Guild, ogMessage, firstMessageObj);
+                        await hts.GetReactions(channel.Guild, [ogMessage, firstMessageObj], [ogMessage]);
 
                     if (firstMessage.embeds == null)
                     {

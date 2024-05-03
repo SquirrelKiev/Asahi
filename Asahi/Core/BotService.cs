@@ -107,13 +107,10 @@ public class BotService(
         await using var context = dbService.GetDbContext();
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
-        if(ModSpoilerService.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote))
+        if (!ModSpoilerService.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote) || !spoilerEmote.Equals(reaction.Emote))
         {
-            if (!spoilerEmote.Equals(reaction.Emote))
-            {
                 hts.QueueMessage(
                     new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), true);
-            }
         }
 
         _ = Task.Run(() => mss.ReactionCheck(reaction));
@@ -132,14 +129,11 @@ public class BotService(
         await using var context = dbService.GetDbContext();
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
-        if (ModSpoilerService.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote))
+        if (!ModSpoilerService.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote) || !spoilerEmote.Equals(reaction.Emote))
         {
-            if (!spoilerEmote.Equals(reaction.Emote))
-            {
-                hts.QueueMessage(new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), false);
-            }
+            hts.QueueMessage(
+                new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), false);
         }
-        return;
     }
 
     private Task Client_MessageReceived(SocketMessage msg)

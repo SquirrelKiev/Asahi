@@ -48,6 +48,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
     public void QueueMessage(QueuedMessage messageToQueue, bool shouldSendHighlight)
     {
+
+
         lock (lockMessageQueue)
         {
             messageQueue.Add(messageToQueue);
@@ -103,7 +105,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         }
 
         List<Task> guildTasks = [];
-        
+
         foreach (var groupedMessages in messages.GroupBy(x => x.guildId))
         {
             if (cancellationToken.IsCancellationRequested)
@@ -224,8 +226,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 if (lastMessage == null)
                     continue;
 
-                var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) = 
-                    await UniqueReactionUsersAutoReact(channel.Guild, originalMessage, lastMessage);
+                var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
+                    await GetReactions(channel.Guild, [originalMessage, lastMessage], [originalMessage]);
 
                 var reactions = uniqueReactionEmotes.Select(x => new ReactionInfo(x));
 
@@ -284,7 +286,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             && ((x.FilteredChannelsIsBlockList
                     ? x.FilteredChannels.All(y => y != parentChannelId)
                     : x.FilteredChannels.Any(y => y == parentChannelId))
-                || 
+                ||
                 (x.FilteredChannelsIsBlockList
                     ? x.FilteredChannels.All(y => y != channel.Id)
                     : x.FilteredChannels.Any(y => y == channel.Id))
@@ -305,100 +307,78 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var aliases = await context.EmoteAliases.Where(x => x.GuildId == channel.Guild.Id).ToArrayAsync();
 
         HashSet<HighlightBoard> completedBoards = [];
-        HashSet<SocketGuildUser> uniqueReactionUsers = [];
+        var (uniqueReactionUsers, reactionEmotes) = await GetReactions(channel.Guild, [msg], [msg]);
 
-        await foreach (var userCollection in msg.Reactions.ToAsyncEnumerable()
-                                   .SelectMany(reactionMetadata =>
-                                       msg.GetReactionUsersAsync(reactionMetadata.Key, int.MaxValue)))
+        foreach (var board in boards.Where(x => !completedBoards.Contains(x)).Where(board =>
         {
-            foreach (var user in userCollection.Select(genericUser => channel.Guild.GetUser(genericUser.Id)).Where(user => user != null))
+            var threshold = messageThresholds.GetOrCreate($"{board.GuildId}-{board.Name}-{msg.Id}", entry =>
             {
-                if (client.CurrentUser.Id == user.Id || user.IsBot)
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
+
+                var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
+                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannelId);
+                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
+                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
+
+                if (threshold == null)
                 {
-                    logger.LogTrace("Skipped bot react.");
-                    continue;
+                    logger.LogError("Could not find a threshold for {board} in {guild}! This is very bad! Defaulting to 3.", board.Name, board.GuildId);
+
+                    return 3;
                 }
 
-                uniqueReactionUsers.Add(user);
-                logger.LogTrace("Added unique user {user}.", user.Id);
-            }
+                var messages = GetCachedMessages(channel.Id);
 
-            // in the loop so in the case that all the boards for this guild are satisfied, we don't have to waste time processing unnecessary reactions.
-            foreach (var board in boards.Where(x => !completedBoards.Contains(x)).Where(board =>
-            {
-                var threshold = messageThresholds.GetOrCreate($"{board.GuildId}-{board.Name}-{msg.Id}", entry =>
+                var requiredReactions = CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
+
+                logger.LogTrace("threshold is {threshold}", requiredReactions);
+
+                return requiredReactions;
+            });
+
+            return threshold <= uniqueReactionUsers
+                .Count(y =>
                 {
-                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
+                    logger.LogTrace(
+                        "user {user}: filter self react: {fsr}, is self react: {isr}",
+                        y,
+                        board.FilterSelfReactions, y == msg.Author.Id);
 
-                    var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
-                    threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannelId);
-                    threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
-                    threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
-
-                    if (threshold == null)
-                    {
-                        logger.LogError("Could not find a threshold for {board} in {guild}! This is very bad! Defaulting to 3.", board.Name, board.GuildId);
-
-                        return 3;
-                    }
-
-                    var messages = GetCachedMessages(channel.Id);
-
-                    var requiredReactions = CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
-
-                    logger.LogTrace("threshold is {threshold}", requiredReactions);
-
-                    return requiredReactions;
+                    return board.FilterSelfReactions == false || y != msg.Author.Id;
                 });
 
-                return threshold <= uniqueReactionUsers
-                    .Count(y =>
-                    {
-                        logger.LogTrace(
-                            "user {user}: filter self react: {fsr}, is self react: {isr}",
-                            y.Id,
-                            board.FilterSelfReactions, y.Id == msg.Author.Id);
+        }))
+        {
+            completedBoards.Add(board);
 
-                        return board.FilterSelfReactions == false || y.Id != msg.Author.Id;
-                    });
-
-            }))
-            {
-                completedBoards.Add(board);
-
-                await SendAndTrackHighlightMessage(board, aliases, msg, uniqueReactionUsers.Count);
-            }
-
-            if (completedBoards.Count == boards.Length)
-                break;
+            await SendAndTrackHighlightMessage(board, aliases, msg, reactionEmotes.Select(x => new ReactionInfo(x)), uniqueReactionUsers.Count);
         }
+
 
         await context.SaveChangesAsync();
     }
 
-    public async Task<(HashSet<ulong> uniqueReactionUsersAutoReact, HashSet<IEmote> uniqueReactionEmotes)> UniqueReactionUsersAutoReact(
-        IGuild guild, IMessage originalHighlightedMessage,
-        IMessage lastHighlightMessage)
+    public async Task<(HashSet<ulong> uniqueReactionUsersAutoReact, HashSet<IEmote> uniqueReactionEmotes)> GetReactions(
+        IGuild guild, IEnumerable<IMessage> messagesToCheckReactions, IEnumerable<IMessage> messagesToAddReactionEmotes)
     {
         HashSet<ulong> uniqueReactionUsersAutoReact = [];
         HashSet<IEmote> uniqueReactionEmotes = [];
 
-        // tried for quite a while to get this all within one linq statement, but seemed too much of a pain unfortunately, so three foreach instead.
-        // no linq one-liners today :pensive:
-        foreach (var thing in originalHighlightedMessage.Reactions
-                     .Select(x => new Tuple<IMessage, IEmote>(originalHighlightedMessage, x.Key))
-                     .Concat(lastHighlightMessage.Reactions
-                         .Select(x => new Tuple<IMessage, IEmote>(lastHighlightMessage, x.Key))))
+        var reactionEmotes = messagesToAddReactionEmotes.SelectMany(x => x.Reactions.Keys).Distinct().ToHashSet();
+        foreach (var message in messagesToCheckReactions)
         {
-            await foreach (var userCollection in thing.Item1.GetReactionUsersAsync(thing.Item2, int.MaxValue))
+            foreach (var reaction in message.Reactions)
             {
-                await foreach (var user in userCollection.ToAsyncEnumerable().SelectAwait(async genericUser => await guild.GetUserAsync(genericUser.Id))
-                             .Where(user => user != null && !user.IsBot))
-                {
-                    uniqueReactionUsersAutoReact.Add(user.Id);
+                if (!reactionEmotes.Contains(reaction.Key))
+                    continue;
 
-                    // done in the loop so the IsBot applies
-                    uniqueReactionEmotes.Add(thing.Item2);
+                await foreach (var user in message.GetReactionUsersAsync(reaction.Key, int.MaxValue).Flatten())
+                {
+                    if (user.IsBot)
+                        continue;
+
+                    uniqueReactionEmotes.Add(reaction.Key);
+                    uniqueReactionUsersAutoReact.Add(user.Id);
                 }
             }
         }
@@ -439,7 +419,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         reactionsField.WithValue(sb.ToString());
     }
 
-    private async Task SendAndTrackHighlightMessage(HighlightBoard board, EmoteAlias[] aliases, IMessage message, int totalUniqueReactions)
+    private async Task SendAndTrackHighlightMessage(HighlightBoard board, EmoteAlias[] aliases, IMessage message, IEnumerable<ReactionInfo> reactions, int totalUniqueReactions)
     {
         var loggingChannelId = board.LoggingChannelId;
 
@@ -461,13 +441,13 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var spoilerEntry = board.SpoilerChannels.FirstOrDefault(x => x.ChannelId == message.Channel.Id);
 
-        var queuedMessages = 
+        var queuedMessages =
             QuotingHelpers.QuoteMessage(message, embedColor, logger, true, spoilerEntry != null, spoilerEntry?.SpoilerContext ?? "");
 
         var eb = queuedMessages[0].embeds?[0].ToEmbedBuilder();
         if (eb != null)
         {
-            AddReactionsFieldToQuote(eb, message.Reactions.Select(x => new ReactionInfo(x.Key)), totalUniqueReactions);
+            AddReactionsFieldToQuote(eb, reactions, totalUniqueReactions);
             queuedMessages[0].embeds![0] = eb.Build();
         }
 
@@ -621,7 +601,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var rawThreshold = (thresholdConfig.BaseThreshold + weightedUserCount * thresholdConfig.UniqueUserMultiplier) * highActivityMultiplier;
 
         var thresholdDecimal = rawThreshold % 1;
-        var roundedThreshold = Math.Min(thresholdConfig.MaxThreshold, 
+        var roundedThreshold = Math.Min(thresholdConfig.MaxThreshold,
             thresholdDecimal < thresholdConfig.RoundingThreshold ? Math.Floor(rawThreshold) : Math.Ceiling(rawThreshold));
 
         debugInfo = $"Current threshold is {roundedThreshold}. Raw threshold is `{rawThreshold}`. " +
