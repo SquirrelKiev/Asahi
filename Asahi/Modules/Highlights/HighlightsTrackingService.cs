@@ -245,8 +245,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                     messageProperties.Embeds = embeds.Select(x => x.Build()).ToArray();
                 });
             }
-
-            return;
         }
 
         #endregion
@@ -261,8 +259,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             logger.LogTrace("channel is locked, skipping.");
             return;
         }
-
-        logger.LogTrace("at the highlight testing code");
 
         if (await context.HighlightBoards.AnyAsync
                 (x => x.LoggingChannelId == parentChannelId || x.LoggingChannelOverrides.Any(y => y.LoggingChannelId == parentChannelId)))
@@ -290,7 +286,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 (x.FilteredChannelsIsBlockList
                     ? x.FilteredChannels.All(y => y != channel.Id)
                     : x.FilteredChannels.Any(y => y == channel.Id))
-        ));
+        )
+            && !x.HighlightedMessages
+                .Any(y => y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)));
 
         var boards = (await boardsQuery
             .Include(x => x.Thresholds)
