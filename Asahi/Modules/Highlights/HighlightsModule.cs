@@ -473,7 +473,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             options.board.LoggingChannelOverrides.Remove(overridden);
 
             return Task.FromResult(new ConfigChangeResult(true, $"Reset logging channel for <#{overriddenChannel.Id}>."));
-        }, boards => boards.Include(x => x.SpoilerChannels));
+        }, boards => boards.Include(x => x.LoggingChannelOverrides));
     }
 
     #region Misc
