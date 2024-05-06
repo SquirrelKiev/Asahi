@@ -113,7 +113,29 @@ public class ModSpoilerService(
                 cachedHighlightedMessage.HighlightBoard.FallbackEmbedColor,
                 ogMessage.Author as IGuildUser,
                 client);
-            var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, true, true, context);
+
+            IMessage? replyMessage = null;
+            if (ogMessage.Reference != null)
+            {
+                if (ogMessage.Reference.ChannelId == ogMessage.Channel.Id)
+                {
+                    if (ogMessage.Reference.MessageId.IsSpecified)
+                    {
+                        replyMessage = await ogMessage.Channel.GetMessageAsync(ogMessage.Reference.MessageId.Value);
+                    }
+                }
+            }
+
+            var firstMessageObj = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
+            var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
+                await hts.GetReactions(channel.Guild, [ogMessage, firstMessageObj], [ogMessage]);
+
+            var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, false, true, context, 
+                replyMessage, eb =>
+                {
+                    hts.AddReactionsFieldToQuote(eb,
+                        uniqueReactionEmotes.Select(x => new ReactionInfo(x)), uniqueReactionUsersAutoReact.Count);
+                });
 
             var i = 0;
             bool deletedMessage = false;
@@ -123,21 +145,10 @@ public class ModSpoilerService(
                 {
                     var firstMessage = messageContents[0];
 
-                    var firstMessageObj = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
-                    var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
-                        await hts.GetReactions(channel.Guild, [ogMessage, firstMessageObj], [ogMessage]);
-
                     if (firstMessage.embeds == null)
                     {
                         return new SpoilerAttemptResult(false, "New highlight message missing embeds.");
                     }
-
-                    var eb = firstMessage.embeds[0].ToEmbedBuilder();
-
-                    hts.AddReactionsFieldToQuote(eb,
-                        uniqueReactionEmotes.Select(x => new ReactionInfo(x)), uniqueReactionUsersAutoReact.Count);
-
-                    firstMessage.embeds[0] = eb.Build();
 
                     await webhookClient.ModifyMessageAsync(highlightMessageId, props =>
                     {

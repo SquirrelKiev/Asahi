@@ -25,7 +25,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Summary(description: "The channel to log highlights to. Can be changed later.")]
         ITextChannel channel)
     {
-        return CommonConfig(name, async (context, cleanName) =>
+        return CommonConfig(name, async (context, cleanName, _) =>
         {
             if (await context.HighlightBoards.AnyAsync(x => x.GuildId == Context.Guild.Id && x.Name == cleanName))
             {
@@ -56,7 +56,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name)
     {
-        return CommonConfig(name, async (context, cleanName) =>
+        return CommonConfig(name, async (context, cleanName, _) =>
         {
             var board = await context.HighlightBoards.FirstOrDefaultAsync(x => x.Name == name);
             if (board == null)
@@ -957,7 +957,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             [Summary(description: "The emote to replace with.")] [MaxLength(100)]
             IEmote emote)
         {
-            return CommonConfig(null, async (context, _) =>
+            return CommonConfig(null, async (context, _, _) =>
             {
                 emoteName = emoteName.ToLowerInvariant();
 
@@ -985,7 +985,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Autocomplete(typeof(AliasedEmoteAutocomplete))]
         string emoteName)
         {
-            return CommonConfig(null, async (context, _) =>
+            return CommonConfig(null, async (context, _, _) =>
             {
                 emoteName = emoteName.ToLowerInvariant();
 
@@ -1186,7 +1186,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
             HighlightsTrackingService.CalculateThreshold(threshold, hts.GetCachedMessages(channel.Id), DateTimeOffset.UtcNow, out var message);
 
-            return Task.FromResult(new ConfigChangeResult(true, message));
+            return Task.FromResult(new ConfigChangeResult(true, $"Threshold info for <#{channel.Id}>\n\n{message}"));
         }, boards => boards.Include(x => x.Thresholds));
     }
 
@@ -1263,18 +1263,19 @@ public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraE
     }
 }
 
-public struct ConfigChangeOptions(BotDbContext context, HighlightBoard board, string name)
+public struct ConfigChangeOptions(BotDbContext context, HighlightBoard board, string name, EmbedBuilder embedBuilder)
 {
     public BotDbContext context = context;
     public HighlightBoard board = board;
     public string name = name;
+    public EmbedBuilder embedBuilder = embedBuilder;
 }
 
 public static partial class HighlightsModuleUtility
 {
     public static async Task<bool> CommonConfig(IInteractionContext botContext, DbService dbService,
         string? name,
-        Func<BotDbContext, string, Task<ConfigChangeResult>> updateAction)
+        Func<BotDbContext, string, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
     {
         await botContext.Interaction.DeferAsync();
         if (name != null)
@@ -1290,13 +1291,14 @@ public static partial class HighlightsModuleUtility
 
         await using var context = dbService.GetDbContext();
 
-        var message = await updateAction(context, name ?? "(N/A)");
+        var embedBuilder = new EmbedBuilder();
+        var message = await updateAction(context, name ?? "(N/A)", embedBuilder);
 
         if (message.wasSuccess)
             await context.SaveChangesAsync();
 
         await botContext.Interaction.FollowupAsync(embeds: message.extraEmbeds.Prepend(
-            new EmbedBuilder()
+            embedBuilder
                 .WithAuthor(name)
                 .WithDescription(message.message)
                 .WithColor(message.wasSuccess ? Color.Green : Color.Red)
@@ -1312,7 +1314,7 @@ public static partial class HighlightsModuleUtility
     {
         highlightBoardModifier ??= boards => boards;
 
-        return CommonConfig(botContext, dbService, userSetName, async (context, name) =>
+        return CommonConfig(botContext, dbService, userSetName, async (context, name, eb) =>
         {
             var board = await highlightBoardModifier(context.HighlightBoards).FirstOrDefaultAsync(x => x.GuildId == botContext.Guild.Id && x.Name == name);
 
@@ -1321,7 +1323,7 @@ public static partial class HighlightsModuleUtility
                 return new ConfigChangeResult(false, $"`{name}` does not exist.");
             }
 
-            return await updateAction(new ConfigChangeOptions(context, board, name));
+            return await updateAction(new ConfigChangeOptions(context, board, name, eb));
         });
     }
 
@@ -1344,6 +1346,9 @@ public static partial class HighlightsModuleUtility
                 return new ConfigChangeResult(false, $"<#{overrideId}> does not have an override. Create one first.");
             }
 
+            var overrideName = (await botContext.Guild.GetChannelAsync(threshold.OverrideId))?.Name;
+            overrideName = overrideName == null ? (await botContext.Client.GetGuildAsync(threshold.OverrideId)).Name : $"#{overrideName}";
+            options.embedBuilder.WithFooter(overrideName);
             return await updateAction(options, threshold);
         }, x => x.Include(y => y.Thresholds));
     }
@@ -1357,7 +1362,7 @@ public class HighlightsSubmodule(DbService dbService) : BotModule
     protected readonly DbService dbService = dbService;
 
     protected Task<bool> CommonConfig(string? name,
-        Func<BotDbContext, string, Task<ConfigChangeResult>> updateAction)
+        Func<BotDbContext, string, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
     {
         return HighlightsModuleUtility.CommonConfig(Context, dbService, name, updateAction);
     }

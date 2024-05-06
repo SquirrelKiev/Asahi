@@ -11,9 +11,8 @@ public static class QuotingHelpers
     // Not the nuclear kind (I guess some of them could be considered pretty nuclear?)
     public const string ReactionsFieldName = "Reactors";
 
-    /// <remarks>If <see cref="spoilerAll"/> is true, return value will always be a length of 1.</remarks>
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
-        bool webhookMode, bool spoilerAll = false, string? spoilerContext = "")
+        bool showAuthor, bool spoilerAll = false, string? spoilerContext = "", IMessage? replyMessage = null, Action<EmbedBuilder>? modifyQuoteEmbed = null)
     {
         var constantUrl = CatboxQts.GetRandomQtUrl();
 
@@ -21,11 +20,23 @@ public static class QuotingHelpers
 
         var channelName = $"#{message.Channel.Name}";
 
+        List<MessageContents>? replyMessages = null;
+        if (replyMessage != null)
+        {
+            showAuthor = true;
+            replyMessages = QuoteMessage(replyMessage, embedColor, logger, showAuthor, spoilerAll, modifyQuoteEmbed:
+                eb =>
+                {
+                    eb.WithFooter(new EmbedFooterBuilder());
+                    eb.Timestamp = null;
+                });
+        }
+
         if (message.Channel is SocketThreadChannel threadChannel)
         {
             channelName += $" • #{threadChannel.ParentChannel.Name}";
         }
-        
+
         var messageContent = message.Content;
 
         if (spoilerAll)
@@ -41,7 +52,7 @@ public static class QuotingHelpers
             .WithOptionalColor(embedColor)
             .WithUrl(constantUrl);
 
-        if (!webhookMode)
+        if (showAuthor)
         {
             firstEmbed.WithAuthor(message.Author);
         }
@@ -179,7 +190,38 @@ public static class QuotingHelpers
             firstEmbed.WithDescription("*No content.*");
         }
 
+        modifyQuoteEmbed?.Invoke(firstEmbed);
+
         queuedMessages.Insert(0, new MessageContents(link, embeds.Take(10).Select(x => x.Build()).ToArray(), null));
+
+        if (replyMessages != null)
+        {
+            var firstReplyMessage = replyMessages[0];
+            var replyMessageAuthor = firstReplyMessage.embeds![0].Author!.Value;
+            firstReplyMessage.embeds![0] = firstReplyMessage.embeds![0].ToEmbedBuilder()
+                .WithAuthor($"Replying to {replyMessageAuthor.Name}", replyMessageAuthor.IconUrl, replyMessageAuthor.Url).Build();
+
+            if (replyMessages.Count == 1 && queuedMessages[0].embeds?.Length < 10)
+            {
+                replyMessages[0] = firstReplyMessage;
+
+                var firstMessage = queuedMessages[0];
+                firstMessage.embeds = [.. replyMessages[0].embeds!, .. queuedMessages[0].embeds!];
+                queuedMessages[0] = firstMessage;
+            }
+            else
+            {
+                var firstQueuedMessage = queuedMessages[0];
+
+                firstReplyMessage.body = firstQueuedMessage.body;
+                firstQueuedMessage.body = "";
+
+                replyMessages[0] = firstReplyMessage;
+                queuedMessages[0] = firstQueuedMessage;
+
+                queuedMessages.InsertRange(0, replyMessages);
+            }
+        }
 
         return queuedMessages;
     }

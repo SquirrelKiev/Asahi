@@ -439,15 +439,24 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var spoilerEntry = board.SpoilerChannels.FirstOrDefault(x => x.ChannelId == message.Channel.Id);
 
-        var queuedMessages =
-            QuotingHelpers.QuoteMessage(message, embedColor, logger, true, spoilerEntry != null, spoilerEntry?.SpoilerContext ?? "");
-
-        var eb = queuedMessages[0].embeds?[0].ToEmbedBuilder();
-        if (eb != null)
+        IMessage? replyMessage = null;
+        if (message.Reference != null)
         {
-            AddReactionsFieldToQuote(eb, reactions, totalUniqueReactions);
-            queuedMessages[0].embeds![0] = eb.Build();
+            if (message.Reference.ChannelId == message.Channel.Id)
+            {
+                if (message.Reference.MessageId.IsSpecified)
+                {
+                    replyMessage = await message.Channel.GetMessageAsync(message.Reference.MessageId.Value);
+                }
+            }
         }
+
+        var queuedMessages =
+            QuotingHelpers.QuoteMessage(message, embedColor, logger, false, spoilerEntry != null, 
+                spoilerEntry?.SpoilerContext ?? "", replyMessage, eb =>
+                {
+                    AddReactionsFieldToQuote(eb, reactions, totalUniqueReactions);
+                });
 
         var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
         var webhookClient = new DiscordWebhookClient(webhook);
@@ -555,10 +564,34 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         }
     }
 
+    public struct ThresholdInfo
+    {
+        public required double CurrentThreshold { get; set; }
+        public required double RawThreshold { get; set; }
+        public required double WeightedUserCount { get; set; }
+        public required int UnweightedUserCount { get; set; }
+        public required bool IsHighActivity { get; set; }
+        public required int TotalCachedMessages { get; set; }
+        public required int CachedMessagesBeingConsidered { get; set; }
+
+        public readonly override string ToString()
+        {
+            return $"**Important info:**\n" +
+                   $"Current threshold: `{CurrentThreshold}`\n" +
+                   $"Weighted users: `{WeightedUserCount}`\n" +
+                   $"Activity level: {(IsHighActivity ? "`High`" : "`Normal`")}\n\n" +
+                   $"**Extra debug info:**\n" +
+                   $"Raw threshold: `{RawThreshold}`\n" +
+                   $"Unweighted users: `{UnweightedUserCount}`\n" +
+                   $"Total messages cached: `{TotalCachedMessages}`\n" +
+                   $"Cached messages being considered in user count: `{CachedMessagesBeingConsidered}`";
+        }
+    }
+
     public static int CalculateThreshold(HighlightThreshold thresholdConfig,
         IReadOnlyCollection<HighlightsTrackingService.CachedMessage> messages,
         DateTimeOffset messageSentAt,
-        out string debugInfo)
+        out ThresholdInfo debugInfo)
     {
         Dictionary<ulong, double> userWeights = [];
 
@@ -602,10 +635,16 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var roundedThreshold = Math.Min(thresholdConfig.MaxThreshold,
             thresholdDecimal < thresholdConfig.RoundingThreshold ? Math.Floor(rawThreshold) : Math.Ceiling(rawThreshold));
 
-        debugInfo = $"Current threshold is {roundedThreshold}. Raw threshold is `{rawThreshold}`. " +
-                    $"weighted users is `{weightedUserCount}`, unweighted users is `{userWeights.Count}`. " +
-                    $"{(highActivity ? "`Channel is high activity!` " : "`Normal activity levels.` ")}" +
-                    $"Total of `{orderedMessages.Length}` messages cached, `{userWeightMessages.Length}` of which are being considered for unique user count.";
+        debugInfo = new ThresholdInfo()
+        {
+            CurrentThreshold = roundedThreshold,
+            RawThreshold = rawThreshold,
+            WeightedUserCount = weightedUserCount,
+            UnweightedUserCount = userWeights.Count,
+            IsHighActivity = highActivity,
+            TotalCachedMessages = orderedMessages.Length,
+            CachedMessagesBeingConsidered = userWeightMessages.Length
+        };
 
         return (int)roundedThreshold;
     }
