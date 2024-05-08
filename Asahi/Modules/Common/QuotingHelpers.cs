@@ -10,6 +10,7 @@ public static class QuotingHelpers
 {
     // Not the nuclear kind (I guess some of them could be considered pretty nuclear?)
     public const string ReactionsFieldName = "Reactors";
+    public const string ReplyingTo = "Replying to ";
 
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
         bool showAuthor, bool spoilerAll = false, string? spoilerContext = "", IMessage? replyMessage = null, Action<EmbedBuilder>? modifyQuoteEmbed = null)
@@ -199,7 +200,7 @@ public static class QuotingHelpers
             var firstReplyMessage = replyMessages[0];
             var replyMessageAuthor = firstReplyMessage.embeds![0].Author!.Value;
             firstReplyMessage.embeds![0] = firstReplyMessage.embeds![0].ToEmbedBuilder()
-                .WithAuthor($"Replying to {replyMessageAuthor.Name}", replyMessageAuthor.IconUrl, replyMessageAuthor.Url).Build();
+                .WithAuthor($"{ReplyingTo}{replyMessageAuthor.Name}", replyMessageAuthor.IconUrl, replyMessageAuthor.Url).Build();
 
             if (replyMessages.Count == 1 && queuedMessages[0].embeds?.Length < 10)
             {

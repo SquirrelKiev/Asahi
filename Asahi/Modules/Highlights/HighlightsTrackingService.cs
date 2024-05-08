@@ -205,9 +205,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 if (originalMessage == null)
                     continue;
 
-                var firstMessageId = cachedHighlightedMessage.HighlightMessageIds[0];
-                var lastMessageId = cachedHighlightedMessage.HighlightMessageIds[^1];
-
                 var loggingChannelId = board.LoggingChannelId;
                 var loggingChannelOverride =
                     board.LoggingChannelOverrides.FirstOrDefault(x => x.OverriddenChannelId == originalMessage.Channel.Id);
@@ -219,27 +216,51 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
                 var loggingChannel = channel.Guild.GetTextChannel(loggingChannelId);
 
-                var firstMessage = await loggingChannel.GetMessageAsync(firstMessageId);
-                if (firstMessage == null)
-                    continue;
-
-                var lastMessage = firstMessageId == lastMessageId ? firstMessage : await loggingChannel.GetMessageAsync(lastMessageId);
-                if (lastMessage == null)
-                    continue;
+                List<IMessage> highlightMessages = [];
+                foreach (var highlightMessageId in cachedHighlightedMessage.HighlightMessageIds)
+                {
+                    highlightMessages.Add(await loggingChannel.GetMessageAsync(highlightMessageId));
+                }
 
                 var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
-                    await GetReactions(channel.Guild, [originalMessage, lastMessage], [originalMessage]);
+                    await GetReactions(channel.Guild, [originalMessage, highlightMessages[^1]], [originalMessage]);
 
                 var reactions = uniqueReactionEmotes.Select(x => new ReactionInfo(x));
 
                 var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
                 var webhookClient = new DiscordWebhookClient(webhook);
 
-                await webhookClient.ModifyMessageAsync(firstMessageId, messageProperties =>
+                IMessage? reactorsMessage = null;
+                int reactorsEmbedIndex = -1;
+                foreach (var highlightMessage in highlightMessages)
                 {
-                    var embeds = firstMessage.Embeds.Select(x => x.ToEmbedBuilder()).ToArray();
+                    int i = 0;
+                    foreach (var x in highlightMessage.Embeds)
+                    {
+                        if (!(x.Author.HasValue && x.Author.Value.Name.StartsWith(QuotingHelpers.ReplyingTo)) && x.Fields.Any(y => y.Name == QuotingHelpers.ReactionsFieldName))
+                        {
+                            reactorsEmbedIndex = i;
+                            break;
+                        }
 
-                    var eb = embeds[0];
+                        i++;
+                    }
+
+                    if (reactorsEmbedIndex != -1)
+                    {
+                        reactorsMessage = highlightMessage;
+                        break;
+                    }
+                }
+
+                if (reactorsMessage == null)
+                    return;
+
+                await webhookClient.ModifyMessageAsync(reactorsMessage.Id, messageProperties =>
+                {
+                    var embeds = reactorsMessage.Embeds.Select(x => x.ToEmbedBuilder()).ToArray();
+
+                    var eb = embeds[reactorsEmbedIndex];
 
                     AddReactionsFieldToQuote(eb, reactions, uniqueReactionUsersAutoReact.Count);
 
