@@ -170,7 +170,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         await using var context = dbService.GetDbContext();
 
-        var parentChannelId = channel is SocketThreadChannel threadChannel ? threadChannel.ParentChannel.Id : channel.Id;
+        var threadChannel = channel as SocketThreadChannel;
+        var parentChannel = threadChannel is not null ? threadChannel.ParentChannel : channel;
 
         // could probably be merged into one request?
         if (await context.HighlightBoards.AllAsync(x => x.GuildId != channel.Guild.Id))
@@ -252,16 +253,23 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         if (!shouldAddNewHighlight)
             return;
 
-        var everyoneChannelPermissions = channel.GetPermissionOverwrite(channel.Guild.EveryoneRole);
-        var everyoneCategoryPermissions = channel.Category?.GetPermissionOverwrite(channel.Guild.EveryoneRole);
-        if (everyoneChannelPermissions is { SendMessages: PermValue.Deny } || everyoneCategoryPermissions is { SendMessages: PermValue.Deny })
+        var everyoneChannelPermissions = PermissionsForRole(channel);
+
+        bool hasPerms = parentChannel is IForumChannel ? everyoneChannelPermissions.SendMessagesInThreads : everyoneChannelPermissions.SendMessages;
+        if (threadChannel is not null)
+        {
+            if (threadChannel.IsLocked)
+                hasPerms = false;
+        }
+
+        if (!hasPerms)
         {
             logger.LogTrace("channel is locked, skipping.");
             return;
         }
 
         if (await context.HighlightBoards.AnyAsync
-                (x => x.LoggingChannelId == parentChannelId || x.LoggingChannelOverrides.Any(y => y.LoggingChannelId == parentChannelId)))
+                (x => x.LoggingChannelId == parentChannel.Id || x.LoggingChannelOverrides.Any(y => y.LoggingChannelId == parentChannel.Id)))
             return;
 
         var msg = await channel.GetMessageAsync(messageId);
@@ -280,8 +288,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             x.GuildId == channel.Guild.Id
             && (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds)
             && ((x.FilteredChannelsIsBlockList
-                    ? x.FilteredChannels.All(y => y != parentChannelId)
-                    : x.FilteredChannels.Any(y => y == parentChannelId))
+                    ? x.FilteredChannels.All(y => y != parentChannel.Id)
+                    : x.FilteredChannels.Any(y => y == parentChannel.Id))
                 ||
                 (x.FilteredChannelsIsBlockList
                     ? x.FilteredChannels.All(y => y != channel.Id)
@@ -314,7 +322,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
 
                 var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
-                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannelId);
+                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannel.Id);
                 threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
                 threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
 
@@ -452,7 +460,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         }
 
         var queuedMessages =
-            QuotingHelpers.QuoteMessage(message, embedColor, logger, false, spoilerEntry != null, 
+            QuotingHelpers.QuoteMessage(message, embedColor, logger, false, spoilerEntry != null,
                 spoilerEntry?.SpoilerContext ?? "", replyMessage, eb =>
                 {
                     AddReactionsFieldToQuote(eb, reactions, totalUniqueReactions);
@@ -647,5 +655,20 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         };
 
         return (int)roundedThreshold;
+    }
+
+    public static ChannelPermissions PermissionsForRole(IGuildChannel channel)
+    {
+        var role = channel.Guild.EveryoneRole;
+
+        //Start with everyone's guild permissions
+        ulong resolvedPermissions = role.Permissions.RawValue;
+
+        //Give/Take Everyone permissions
+        var perms = channel.GetPermissionOverwrite(role);
+        if (perms != null)
+            resolvedPermissions = (resolvedPermissions & ~perms.Value.DenyValue) | perms.Value.AllowValue;
+
+        return new ChannelPermissions(resolvedPermissions);
     }
 }
