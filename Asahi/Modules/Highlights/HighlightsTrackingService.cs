@@ -7,6 +7,7 @@ using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Webhook;
 using Microsoft.Extensions.Caching.Memory;
+using static Asahi.Modules.Highlights.HighlightsTrackingService;
 
 namespace Asahi.Modules.Highlights;
 
@@ -20,23 +21,23 @@ namespace Asahi.Modules.Highlights;
 [Inject(ServiceLifetime.Singleton)]
 public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTrackingService> logger, DiscordSocketClient client, BotConfig botConfig)
 {
-    public struct CachedMessage(ulong messageId, ulong authorId, DateTimeOffset timestamp)
+    public record struct CachedMessage(ulong MessageId, ulong AuthorId, DateTimeOffset Timestamp)
     {
-        public ulong messageId = messageId;
-        public ulong authorId = authorId;
-        public DateTimeOffset timestamp = timestamp;
-
-        public readonly override int GetHashCode() => messageId.GetHashCode();
+        public readonly bool Equals(CachedMessage? other)
+        {
+            return other.HasValue && other.Value.MessageId == MessageId;
+        }
     }
 
-    public struct QueuedMessage(ulong guildId, ulong channelId, ulong messageId)
+    public record struct QueuedMessage(ulong GuildId, ulong ChannelId, ulong MessageId)
     {
-        public ulong guildId = guildId;
-        public ulong channelId = channelId;
-        public ulong messageId = messageId;
+        public readonly bool Equals(QueuedMessage? other)
+        {
+            return other.HasValue && other.Value.MessageId == MessageId;
+        }
+    };
 
-        public readonly override int GetHashCode() => messageId.GetHashCode();
-    }
+    public record struct ForcedMessage(QueuedMessage QueuedMessage, string BoardName);
 
     private readonly ConcurrentDictionary<ulong, ConcurrentQueue<CachedMessage>> messageCaches = [];
     private readonly MemoryCache messageThresholds = new(new MemoryCacheOptions());
@@ -45,16 +46,26 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     private readonly object lockMessageQueue = new();
     private readonly HashSet<QueuedMessage> messageQueue = [];
     private readonly HashSet<QueuedMessage> messageQueueShouldSendHighlight = [];
+    private readonly HashSet<ForcedMessage> messageQueueForceToHighlights = [];
 
     public void QueueMessage(QueuedMessage messageToQueue, bool shouldSendHighlight)
     {
-
-
         lock (lockMessageQueue)
         {
             messageQueue.Add(messageToQueue);
+
             if (shouldSendHighlight)
                 messageQueueShouldSendHighlight.Add(messageToQueue);
+        }
+    }
+
+    public void ForceMessageToHighlights(QueuedMessage messageToQueue, string boardName)
+    {
+        lock (lockMessageQueue)
+        {
+            QueueMessage(messageToQueue, true);
+
+            messageQueueForceToHighlights.Add(new ForcedMessage(messageToQueue, boardName));
         }
     }
 
@@ -87,7 +98,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
     private async Task OnFinishWaitingForTick(CancellationToken cancellationToken)
     {
-        QueuedMessage[] messages;
+        ForcedMessage[] forcedMessages;
+        HashSet<QueuedMessage> messages;
         HashSet<ulong> messagesShouldSendHighlight;
         lock (lockMessageQueue)
         {
@@ -96,17 +108,18 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 return;
             }
 
-            messages = new QueuedMessage[messageQueue.Count];
-            messageQueue.CopyTo(messages);
+            messages = [.. messageQueue];
             messageQueue.Clear();
 
-            messagesShouldSendHighlight = messageQueueShouldSendHighlight.Select(x => x.messageId).ToHashSet();
+            messagesShouldSendHighlight = messageQueueShouldSendHighlight.Select(x => x.MessageId).ToHashSet();
             messageQueueShouldSendHighlight.Clear();
+
+            forcedMessages = [.. messageQueueForceToHighlights];
         }
 
         List<Task> guildTasks = [];
 
-        foreach (var groupedMessages in messages.GroupBy(x => x.guildId))
+        foreach (var groupedMessages in messages.GroupBy(x => x.GuildId))
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
@@ -119,17 +132,18 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 {
                     try
                     {
-                        var guild = client.GetGuild(queuedMessage.guildId);
-                        var textChannel = guild.GetTextChannel(queuedMessage.channelId);
+                        var guild = client.GetGuild(queuedMessage.GuildId);
+                        var textChannel = guild.GetTextChannel(queuedMessage.ChannelId);
 
-                        var shouldAddNewHighlight = messagesShouldSendHighlight.Contains(queuedMessage.messageId);
+                        var shouldAddNewHighlight = messagesShouldSendHighlight.Contains(queuedMessage.MessageId);
 
-                        await CheckMessageForHighlights(queuedMessage.messageId, textChannel, shouldAddNewHighlight);
+                        await CheckMessageForHighlights(queuedMessage.MessageId, textChannel, shouldAddNewHighlight,
+                            forcedMessages.Where(x => x.QueuedMessage == queuedMessage).Select(x => x.BoardName).ToArray());
                     }
                     catch (Exception ex)
                     {
                         logger.LogError(ex, "Failed to check message {messageId} in channel {channel}!",
-                            queuedMessage.messageId, queuedMessage.channelId);
+                            queuedMessage.MessageId, queuedMessage.ChannelId);
                     }
                 }
 
@@ -164,7 +178,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     }
 
     // god I love linq
-    private async Task CheckMessageForHighlights(ulong messageId, SocketTextChannel channel, bool shouldAddNewHighlight)
+    private async Task CheckMessageForHighlights(ulong messageId, SocketTextChannel channel, bool shouldAddNewHighlight, string[] forcedBoards)
     {
         logger.LogTrace("Checking message");
 
@@ -180,7 +194,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         #region Handling new reactions to already highlighted messages
 
         var boardsWithMarkedHighlight = await context.HighlightBoards
-            .Include(x => x.HighlightedMessages)
             .Where(x =>
                 x.GuildId == channel.Guild.Id && x.HighlightedMessages
                     .Any(y => y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)))
@@ -191,8 +204,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         {
             foreach (var board in boardsWithMarkedHighlight)
             {
-                var cachedHighlightedMessage = board.HighlightedMessages
-                    .FirstOrDefault(x =>
+                var cachedHighlightedMessage = await context.CachedHighlightedMessages
+                    .FirstOrDefaultAsync(x =>
                         x.OriginalMessageId == messageId || x.HighlightMessageIds.Contains(messageId));
 
                 if (cachedHighlightedMessage == null)
@@ -223,12 +236,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 }
 
                 var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
-                    await GetReactions(channel.Guild, [originalMessage, highlightMessages[^1]], [originalMessage]);
+                    await GetReactions([originalMessage, highlightMessages[^1]], [originalMessage]);
 
                 var reactions = uniqueReactionEmotes.Select(x => new ReactionInfo(x));
-
-                var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
-                var webhookClient = new DiscordWebhookClient(webhook);
 
                 IMessage? reactorsMessage = null;
                 int reactorsEmbedIndex = -1;
@@ -256,6 +266,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 if (reactorsMessage == null)
                     return;
 
+                var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
+                var webhookClient = new DiscordWebhookClient(webhook);
+
                 await webhookClient.ModifyMessageAsync(reactorsMessage.Id, messageProperties =>
                 {
                     var embeds = reactorsMessage.Embeds.Select(x => x.ToEmbedBuilder()).ToArray();
@@ -267,6 +280,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                     messageProperties.Embeds = embeds.Select(x => x.Build()).ToArray();
                 });
             }
+
+            // we dont return after this, in case another board has highlights it needs to check
         }
 
         #endregion
@@ -277,15 +292,16 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var everyoneChannelPermissions = PermissionsForRole(channel);
 
         bool hasPerms = parentChannel is IForumChannel ? everyoneChannelPermissions.SendMessagesInThreads : everyoneChannelPermissions.SendMessages;
+
         if (threadChannel is not null)
         {
             if (threadChannel.IsLocked)
                 hasPerms = false;
         }
 
-        if (!hasPerms)
+        if (!hasPerms && forcedBoards.Length == 0)
         {
-            logger.LogTrace("channel is locked, skipping.");
+            logger.LogTrace("Channel locked, skipping!");
             return;
         }
 
@@ -307,15 +323,15 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var boardsQuery = context.HighlightBoards.Where(x =>
             x.GuildId == channel.Guild.Id
-            && (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds)
-            && ((x.FilteredChannelsIsBlockList
-                    ? x.FilteredChannels.All(y => y != parentChannel.Id)
-                    : x.FilteredChannels.Any(y => y == parentChannel.Id))
-                ||
-                (x.FilteredChannelsIsBlockList
-                    ? x.FilteredChannels.All(y => y != channel.Id)
-                    : x.FilteredChannels.Any(y => y == channel.Id))
-        )
+            && (((x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds)
+                 && ((x.FilteredChannelsIsBlockList
+                         ? x.FilteredChannels.All(y => y != parentChannel.Id)
+                         : x.FilteredChannels.Any(y => y == parentChannel.Id))
+                     ||
+                     (x.FilteredChannelsIsBlockList
+                         ? x.FilteredChannels.All(y => y != channel.Id)
+                         : x.FilteredChannels.Any(y => y == channel.Id))
+                 )) || forcedBoards.Contains(x.Name))
             && !x.HighlightedMessages
                 .Any(y => y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)));
 
@@ -334,47 +350,53 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         var aliases = await context.EmoteAliases.Where(x => x.GuildId == channel.Guild.Id).ToArrayAsync();
 
         HashSet<HighlightBoard> completedBoards = [];
-        var (uniqueReactionUsers, reactionEmotes) = await GetReactions(channel.Guild, [msg], [msg]);
+        var (uniqueReactionUsers, reactionEmotes) = await GetReactions([msg], [msg]);
 
         foreach (var board in boards.Where(x => !completedBoards.Contains(x)).Where(board =>
-        {
-            var threshold = messageThresholds.GetOrCreate($"{board.GuildId}-{board.Name}-{msg.Id}", entry =>
-            {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
+                 {
+                     if (forcedBoards.Contains(board.Name))
+                         return true;
 
-                var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
-                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannel.Id);
-                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
-                threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
+                     if (!hasPerms)
+                         return false;
 
-                if (threshold == null)
-                {
-                    logger.LogError("Could not find a threshold for {board} in {guild}! This is very bad! Defaulting to 3.", board.Name, board.GuildId);
+                     var threshold = messageThresholds.GetOrCreate($"{board.GuildId}-{board.Name}-{msg.Id}", entry =>
+                     {
+                         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
 
-                    return 3;
-                }
+                         var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
+                         threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannel.Id);
+                         threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.CategoryId);
+                         threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
 
-                var messages = GetCachedMessages(channel.Id);
+                         if (threshold == null)
+                         {
+                             logger.LogError("Could not find a threshold for {board} in {guild}! This is very bad! Defaulting to 3.", board.Name, board.GuildId);
 
-                var requiredReactions = CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
+                             return 3;
+                         }
 
-                logger.LogTrace("threshold is {threshold}", requiredReactions);
+                         var messages = GetCachedMessages(channel.Id);
 
-                return requiredReactions;
-            });
+                         var requiredReactions = CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
 
-            return threshold <= uniqueReactionUsers
-                .Count(y =>
-                {
-                    logger.LogTrace(
-                        "user {user}: filter self react: {fsr}, is self react: {isr}",
-                        y,
-                        board.FilterSelfReactions, y == msg.Author.Id);
+                         logger.LogTrace("threshold is {threshold}", requiredReactions);
 
-                    return board.FilterSelfReactions == false || y != msg.Author.Id;
-                });
+                         return requiredReactions;
+                     });
 
-        }))
+                     return threshold <= uniqueReactionUsers
+                         .Count(y =>
+                         {
+                             logger.LogTrace(
+                                 "user {user}: filter self react: {fsr}, is self react: {isr}",
+                                 y,
+                                 board.FilterSelfReactions, y == msg.Author.Id);
+
+                             return board.FilterSelfReactions == false || y != msg.Author.Id;
+                         });
+
+                 }))
         {
             completedBoards.Add(board);
 
@@ -386,7 +408,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     }
 
     public async Task<(HashSet<ulong> uniqueReactionUsersAutoReact, HashSet<IEmote> uniqueReactionEmotes)> GetReactions(
-        IGuild guild, IEnumerable<IMessage> messagesToCheckReactions, IEnumerable<IMessage> messagesToAddReactionEmotes)
+        IEnumerable<IMessage> messagesToCheckReactions, IEnumerable<IMessage> messagesToAddReactionEmotes)
     {
         HashSet<ulong> uniqueReactionUsersAutoReact = [];
         HashSet<IEmote> uniqueReactionEmotes = [];
@@ -446,7 +468,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         reactionsField.WithValue(sb.ToString());
     }
 
-    private async Task SendAndTrackHighlightMessage(HighlightBoard board, EmoteAlias[] aliases, IMessage message, IEnumerable<ReactionInfo> reactions, int totalUniqueReactions)
+    public async Task SendAndTrackHighlightMessage(HighlightBoard board, EmoteAlias[] aliases, IMessage message,
+        IEnumerable<ReactionInfo> reactions, int totalUniqueReactions)
     {
         var loggingChannelId = board.LoggingChannelId;
 
@@ -513,7 +536,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         {
             logger.LogError(ex, "Failed to auto-react in channel {channel}!", loggingChannel.Id);
         }
-
 
         board.HighlightedMessages.Add(new CachedHighlightedMessage()
         {
@@ -625,20 +647,20 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         Dictionary<ulong, double> userWeights = [];
 
         var orderedMessages = messages
-            .OrderByDescending(x => x.timestamp)
+            .OrderByDescending(x => x.Timestamp)
             .ToArray();
 
-        var userWeightMessages = orderedMessages.Where(x => x.timestamp <= messageSentAt &&
-                                                            x.timestamp >= messageSentAt - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds))
+        var userWeightMessages = orderedMessages.Where(x => x.Timestamp <= messageSentAt &&
+                                                            x.Timestamp >= messageSentAt - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds))
             .ToArray();
 
         foreach (var message in userWeightMessages)
         {
-            var userId = message.authorId;
+            var userId = message.AuthorId;
             if (userWeights.ContainsKey(userId))
                 continue;
 
-            var timeSinceLastMessage = messageSentAt - message.timestamp;
+            var timeSinceLastMessage = messageSentAt - message.Timestamp;
             double weight = 1f;
 
             if (!(timeSinceLastMessage.TotalSeconds <= thresholdConfig.UniqueUserDecayDelaySeconds))
@@ -651,7 +673,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         }
 
         var highActivity = orderedMessages.Length >= thresholdConfig.HighActivityMessageLookBack &&
-                           (messageSentAt - orderedMessages[thresholdConfig.HighActivityMessageLookBack - 1].timestamp)
+                           (messageSentAt - orderedMessages[thresholdConfig.HighActivityMessageLookBack - 1].Timestamp)
                            .TotalSeconds < thresholdConfig.HighActivityMessageMaxAgeSeconds;
 
         var weightedUserCount = userWeights.Sum(kvp => kvp.Value);

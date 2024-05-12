@@ -4,6 +4,8 @@ using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Fergun.Interactive;
+using Fergun.Interactive.Selection;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,7 +16,7 @@ namespace Asahi.Modules.Highlights;
 [InteractionsModCommand]
 [CommandContextType(InteractionContextType.Guild)]
 [Group("highlights", "Commands relating to the highlights system.")]
-public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger) : HighlightsSubmodule(dbService)
+public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger, InteractiveService interactive) : HighlightsSubmodule(dbService)
 {
     #region Create/Remove board
 
@@ -352,6 +354,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     #endregion
 
+    #region Misc
 
     [SlashCommand("add-spoiler-channel", "Any channel added here will always have its messages spoiler tagged.")]
     public Task AddSpoilerChannelSlash(
@@ -475,8 +478,6 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             return Task.FromResult(new ConfigChangeResult(true, $"Reset logging channel for <#{overriddenChannel.Id}>."));
         }, boards => boards.Include(x => x.LoggingChannelOverrides));
     }
-
-    #region Misc
 
     [SlashCommand("set-mute-role", "Any users with the role specified will not make it into highlights.")]
     public Task SetMuteRoleSlash(
@@ -1190,9 +1191,75 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         }, boards => boards.Include(x => x.Thresholds));
     }
 
+    [MessageCommand("Force to highlights")]
+    public async Task SpoilerMessageSlash(IMessage message)
+    {
+        await DeferAsync(true);
+
+        await using var context = dbService.GetDbContext();
+
+        var boards = await context.HighlightBoards.Where(x => x.GuildId == Context.Guild.Id).ToArrayAsync();
+
+        if (boards.Length == 0)
+        {
+            await FollowupAsync("No boards!");
+            return;
+        }
+
+        var eb = new PageBuilder()
+            .WithTitle("Force to highlights")
+            .WithDescription("Select the board to send the highlight to.");
+
+        var selBuilder = new SelectionBuilder<string>()
+            .AddUser(Context.User)
+            .WithOptions(boards.Select(x => x.Name).ToArray())
+            .WithInputType(InputType.SelectMenus)
+            .WithSelectionPage(eb)
+            .Build();
+
+        var selectionResponse = await interactive.SendSelectionAsync(selBuilder, Context.Interaction, TimeSpan.FromMinutes(1), InteractionResponseType.DeferredChannelMessageWithSource);
+
+        var isSuccess = selectionResponse.IsSuccess;
+
+        if (!isSuccess)
+        {
+            await ModifyOriginalResponseAsync(new MessageContents("Timed out."));
+            return;
+        }
+
+        var selectedBoardStr = selectionResponse.Value;
+
+        var board = boards.FirstOrDefault(x => x.Name == selectedBoardStr);
+
+        if (board == null)
+        {
+            await ModifyOriginalResponseAsync(new MessageContents("Could not find board."));
+            return;
+        }
+
+        if (await context.CachedHighlightedMessages.AnyAsync(x =>
+                x.HighlightBoard.Name == board.Name && x.OriginalMessageId == message.Id))
+        {
+            await ModifyOriginalResponseAsync(new MessageContents("Message already highlighted!"));
+            return;
+        }
+
+        // race conditions bad
+        //var aliases = await context.EmoteAliases.Where(x => x.GuildId == Context.Guild.Id).ToArrayAsync();
+        //var (uniqueReactionUsers, reactionEmotes) = await hts.GetReactions([message], [message]);
+
+        //await hts.SendAndTrackHighlightMessage(board, aliases, message, reactionEmotes.Select(x => new ReactionInfo(x)), uniqueReactionUsers.Count);
+
+        //await context.SaveChangesAsync();
+
+        hts.ForceMessageToHighlights(new HighlightsTrackingService.QueuedMessage(Context.Guild.Id, Context.Channel.Id, message.Id), board.Name);
+
+        await ModifyOriginalResponseAsync(new MessageContents("Queued message for highlight."));
+    }
+
     #endregion
 
-    #region Debug Commands
+        #region Debug Commands
 
 #if DEBUG
 

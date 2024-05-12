@@ -93,9 +93,7 @@ public static class Startup
             .AddSingleton<DbService>()
             .AddSingleton(x => (DbServiceBase<BotDbContext>)x.GetService<DbService>()!)
             .AddSingleton<InteractiveService>()
-            // for help command
             .AddSingleton<OverrideTrackerService>()
-            .AddSingleton<HelpService>()
             // about command
             .AddSingleton<AboutService>()
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)

@@ -5,12 +5,12 @@ using Discord.Interactions;
 namespace Asahi.Modules.LazyConfig;
 
 [CommandContextType(InteractionContextType.Guild)]
+[InteractionsModCommand]
 // [Group("config", "Configuration commands.")]
 public class LazyConfigModule(DbService dbService) : BotModule
 {
     [SlashCommand("prefix", "Gets/sets the bot prefix.")]
-    [InteractionsModCommand]
-    public async Task SetPrefix([MinLength(1),MaxLength(GuildConfig.MaxPrefixLength)]string prefix = "")
+    public async Task SetPrefix([MinLength(1), MaxLength(GuildConfig.MaxPrefixLength)] string prefix = "")
     {
         await DeferAsync();
 

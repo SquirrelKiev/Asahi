@@ -17,6 +17,14 @@ public class CustomCommandModule(CustomCommandService commandService, Interactiv
         await FollowupAsync(await commandService.AddCustomCommand(await Context.Guild.GetUserAsync(Context.User.Id), name, contents));
     }
 
+    [SlashCommand("list", "Lists all the custom commands.")]
+    public async Task ListCommands()
+    {
+        var paginator = await commandService.ListCommands(Context.User, Context.Guild);
+
+        await interactiveService.SendPaginatorAsync(paginator, Context.Interaction, TimeSpan.FromMinutes(5));
+    }
+
     [InteractionsModCommand]
     [SlashCommand("remove", "Removes a custom command (if you own it).")]
     public async Task RemoveCommand(string name)
@@ -24,14 +32,6 @@ public class CustomCommandModule(CustomCommandService commandService, Interactiv
         await DeferAsync();
 
         await FollowupAsync(await commandService.RemoveCustomCommand(await Context.Guild.GetUserAsync(Context.User.Id), name));
-    }
-
-    [SlashCommand("list", "Lists all the custom commands.")]
-    public async Task ListCommands()
-    {
-        var paginator = await commandService.ListCommands(Context.User, Context.Guild);
-
-        await interactiveService.SendPaginatorAsync(paginator, Context.Interaction, TimeSpan.FromMinutes(5));
     }
 
     [InteractionsModCommand]
