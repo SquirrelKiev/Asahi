@@ -7,7 +7,6 @@ using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Webhook;
 using Microsoft.Extensions.Caching.Memory;
-using static Asahi.Modules.Highlights.HighlightsTrackingService;
 
 namespace Asahi.Modules.Highlights;
 

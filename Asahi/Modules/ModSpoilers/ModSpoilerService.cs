@@ -261,12 +261,17 @@ public class ModSpoilerService(
 
             var spoilerContext = contextMsg.Value.Content == "0" ? "" : contextMsg.Value.Content;
 
-            var waitEmote = Emoji.Parse(botConfig.LoadingEmote);
-            await contextMsg.Value.AddReactionAsync(waitEmote);
-
+            if (TryParseEmote(botConfig.LoadingEmote, out var waitEmote))
+            {
+                await contextMsg.Value.AddReactionAsync(waitEmote);
+            }
+            
             var spoilerAttempt = await SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, context, spoilerContext);
 
-            await contextMsg.Value.RemoveReactionAsync(waitEmote, client.CurrentUser.Id);
+            if (waitEmote != null)
+            {
+                await contextMsg.Value.RemoveReactionAsync(waitEmote, client.CurrentUser.Id);
+            }
 
             if (!spoilerAttempt.wasSuccess)
             {
