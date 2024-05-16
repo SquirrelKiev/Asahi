@@ -22,6 +22,8 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
     public Task DummyComponent() => Task.CompletedTask;
 
     [SlashCommand("theme", "Searches for anime theme songs via animethemes.moe.")]
+    [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
+    [IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
     public async Task ThemeSlash(string query)
     {
         const int maxPageLength = 5;
