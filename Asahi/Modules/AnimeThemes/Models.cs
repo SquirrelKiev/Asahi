@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using Humanizer;
 using Newtonsoft.Json;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -231,6 +232,40 @@ public class AnimeThemeResource
     public AnimeThemeEntryResource[]? animeThemeEntries;
 
     public SongResource? song;
+
+    public override string ToString()
+    {
+        List<string> labels = [];
+        if (animeThemeEntries != null)
+        {
+            if (animeThemeEntries.All(x => x.nsfw.GetValueOrDefault()))
+            {
+                labels.Add("NSFW");
+            }
+            else if (animeThemeEntries.Any(x => x.nsfw.GetValueOrDefault()))
+            {
+                labels.Add("May contain NSFW");
+            }
+
+            if (animeThemeEntries.All(x => x.spoiler.GetValueOrDefault()))
+            {
+                labels.Add("spoilers");
+            }
+            else if (animeThemeEntries.Any(x => x.spoiler.GetValueOrDefault()))
+            {
+                labels.Add("may contain spoilers");
+            }
+        }
+
+        var warnings = "";
+        if (labels.Count != 0)
+        {
+            warnings = $"({labels.Humanize()}) ";
+        }
+
+        return $"{warnings}{slug}{(song != null ? $" - {song.title}{(song.artists.Length != 0 ? $" by {song.artists
+            .Select(y => y.artistsong?.character != null ? $"{y.artistsong.character} (CV: {y.name})" : y.name).Humanize()}" : "")}" : "")}";
+    }
 }
 
 public class AnimeThemeResourceComparer : IComparer<AnimeThemeResource>
@@ -288,7 +323,7 @@ public class SongResource
     public DateTime? deleted_at;
 
     // includes
-    public SongArtistResource[] artists;
+    public SongArtistResource[]? artists;
 }
 
 public class SongArtistResource
@@ -381,6 +416,30 @@ public class AnimeThemeEntryResource
 
     // includes
     public VideoResource[]? videos;
+
+    public override string ToString()
+    {
+        List<string> labels = [];
+
+        if (nsfw.HasValue && nsfw.Value)
+        {
+            labels.Add("NSFW");
+        }
+
+        if (spoiler.HasValue && spoiler.Value)
+        {
+            labels.Add("Spoiler");
+        }
+
+        var warnings = "";
+
+        if (labels.Count != 0)
+        {
+            warnings = $"({labels.Humanize()}) ";
+        }
+
+        return $"{warnings}v{(version.HasValue ? version.Value : "1")} - episodes {episodes}";
+    }
 }
 
 public class VideoResource

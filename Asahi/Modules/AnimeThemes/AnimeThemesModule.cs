@@ -66,7 +66,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             selectedAnime.response.animethemes.Order(new AnimeThemeResourceComparer()).ToArray(),
             maxPageLength,
             SELECT_PREFIX,
-            x => $"{x.slug}{(x.song != null ? $" - {x.song.title} by {x.song.artists.Select(z => z.artistsong?.character != null ? $"{z.artistsong.character} (CV: {z.name})" : z.name).Humanize()}" : "")}",
+            x => x.ToString(),
             x => x.id.ToString(),
             "select theme",
             AnimeRichInfo
@@ -96,7 +96,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
              selectedTheme.response.animeThemeEntries,
              maxPageLength,
              SELECT_PREFIX,
-             x => $"v{(x.version.HasValue ? x.version.Value : "1")} - episodes {x.episodes}",
+             x => x.ToString(),
              x => x.id.ToString(),
              "select theme entry",
              AnimeRichInfo);
@@ -124,7 +124,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             selectedAnimeThemeEntry.response.videos,
             maxPageLength,
             SELECT_PREFIX,
-            x => $"{x}",
+            x => x.ToString(),
             x => x.id.ToString(),
             "select video",
             AnimeRichInfo);
@@ -146,12 +146,39 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             return;
         }
 
-        var msg = await ModifyOriginalResponseAsync(new MessageContents($"(this might take a little time to embed)\n{selectedVideo.response.link}",
+        bool nsfw = selectedAnimeThemeEntry.response.nsfw.GetValueOrDefault();
+        bool spoiler = selectedAnimeThemeEntry.response.spoiler.GetValueOrDefault();
+
+        List<string> videoContextTags = [];
+
+        if (nsfw)
+        {
+            videoContextTags.Add("NSFW");
+        }
+
+        if (spoiler)
+        {
+            videoContextTags.Add("Spoiler");
+        }
+
+        var warnings = "";
+
+        if (videoContextTags.Count != 0)
+        {
+            warnings = $"({videoContextTags.Humanize()}) ";
+        }
+
+        var msg = await ModifyOriginalResponseAsync(new MessageContents($"{selectedAnime.response.name} {selectedTheme.response.slug}\n" +
+                                                                        $"(this might take a little time to embed)\n" +
+                                                                        warnings +
+                                                                        $"{(nsfw || spoiler ? "|| " : "")}" +
+                                                                        $"{selectedVideo.response.link}" + 
+                                                                        $"{(nsfw || spoiler ? " ||" : "")}",
         components: new ComponentBuilder().WithButton("Back", BACK_BUTTON, ButtonStyle.Secondary).WithRedButton()));
 
         var selectInteraction = await interactive.NextMessageComponentAsync(
             x => msg.Id == x.Message.Id &&
-                 (x.Data.CustomId == BACK_BUTTON || x.Data.CustomId == BaseModulePrefixes.RED_BUTTON),
+                 x.Data.CustomId is BACK_BUTTON or BaseModulePrefixes.RED_BUTTON,
             timeout: ThemeSlashExpiryTime);
 
         if (!selectInteraction.IsSuccess)
@@ -246,10 +273,10 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             var selectInteraction = await interactive.NextMessageComponentAsync(
             x => msg.Id == x.Message.Id && x.User.Id == Context.User.Id &&
                  (x.Data.CustomId == prefix ||
-                  x.Data.CustomId == BACK_BUTTON ||
-                  x.Data.CustomId == BaseModulePrefixes.RED_BUTTON ||
-                  x.Data.CustomId == PREVIOUS_PAGE_BUTTON ||
-                  x.Data.CustomId == NEXT_PAGE_BUTTON),
+                  x.Data.CustomId is BACK_BUTTON 
+                      or BaseModulePrefixes.RED_BUTTON 
+                      or PREVIOUS_PAGE_BUTTON 
+                      or NEXT_PAGE_BUTTON),
             timeout: ThemeSlashExpiryTime);
 
             if (!selectInteraction.IsSuccess)
