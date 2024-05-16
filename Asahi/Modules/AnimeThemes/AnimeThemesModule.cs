@@ -8,7 +8,7 @@ namespace Asahi.Modules.AnimeThemes;
 
 public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService interactive, ILogger<AnimeThemesModule> logger) : BotModule
 {
-    private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(3);
     private const string BACK_BUTTON = "at-bb:";
     private const string PREVIOUS_PAGE_BUTTON = "at-pp:";
     private const string NEXT_PAGE_BUTTON = "at-np:";
