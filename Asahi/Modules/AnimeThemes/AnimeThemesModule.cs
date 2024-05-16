@@ -24,7 +24,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
     [SlashCommand("theme", "Searches for anime theme songs via animethemes.moe.")]
     [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
     [IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
-    public async Task ThemeSlash(string query)
+    public async Task ThemeSlash([Summary(description: "The anime to look for the theme songs of.")] string query)
     {
         const int maxPageLength = 5;
         await DeferAsync();
