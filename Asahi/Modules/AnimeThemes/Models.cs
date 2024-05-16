@@ -263,8 +263,24 @@ public class AnimeThemeResource
             warnings = $"({labels.Humanize()}) ";
         }
 
-        return $"{warnings}{slug}{(song != null ? $" - {song.title}{(song.artists.Length != 0 ? $" by {song.artists
-            .Select(y => y.artistsong?.character != null ? $"{y.artistsong.character} (CV: {y.name})" : y.name).Humanize()}" : "")}" : "")}";
+        var songInfo = "";
+
+        if (song != null)
+        {
+            var artistInfo = "";
+            if (song.artists != null && song.artists.Length != 0)
+            {
+                artistInfo = " by " + song.artists
+                    .Select(y => y.artistsong?.character != null
+                        ? $"{y.artistsong.character} (CV: {y.name})"
+                        : y.name)
+                    .Humanize();
+            }
+
+            songInfo = $" - {song.title}{artistInfo}";
+        }
+
+        return $"{warnings}{slug}{songInfo}";
     }
 }
 
