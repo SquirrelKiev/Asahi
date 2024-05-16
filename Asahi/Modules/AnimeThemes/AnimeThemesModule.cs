@@ -188,7 +188,8 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             return;
         }
 
-        await selectInteraction.Value.DeferAsync();
+        if (selectInteraction.Value.Data.CustomId != BaseModulePrefixes.RED_BUTTON)
+            await selectInteraction.Value.DeferAsync();
 
         if (selectInteraction.Value.Data.Type == ComponentType.Button)
         {
