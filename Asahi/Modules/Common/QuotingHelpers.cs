@@ -66,6 +66,7 @@ public static class QuotingHelpers
         logger.LogTrace("There are {embedCount} embeds in this message.", message.Embeds.Count);
 
         int spoilerRichEmbeds = 0;
+        bool addedSpoilerMessage = false;
         foreach (var embed in message.Embeds)
         {
             //logger.LogTrace("embed: {embedJson}", JsonConvert.SerializeObject(embed, Formatting.Indented));
@@ -77,7 +78,12 @@ public static class QuotingHelpers
 
                     if (spoilerAll)
                     {
-                        firstEmbed.Description += $"\n[[Spoiler Image]]({embed.Url})";
+                        if (!addedSpoilerMessage)
+                        {
+                            firstEmbed.Description += $"\n\n**Spoiler attachments**";
+                            addedSpoilerMessage = true;
+                        }
+                        firstEmbed.Description += $"\n{embed.Url}";
                     }
                     else
                     {
@@ -89,7 +95,12 @@ public static class QuotingHelpers
                     logger.LogTrace("Queued video link message.");
                     if (spoilerAll)
                     {
-                        firstEmbed.Description += $"\n[[Spoiler Video]]({embed.Url})";
+                        if (!addedSpoilerMessage)
+                        {
+                            firstEmbed.Description += $"\n\n**Spoiler attachments**";
+                            addedSpoilerMessage = true;
+                        }
+                        firstEmbed.Description += $"\n{embed.Url}";
                     }
                     else
                     {
@@ -130,7 +141,12 @@ public static class QuotingHelpers
 
                 if (spoilerAll || attachment.IsSpoiler())
                 {
-                    firstEmbed.Description += $"\n[[Spoiler Image]]({attachment.Url})";
+                    if (!addedSpoilerMessage)
+                    {
+                        firstEmbed.Description += $"\n\n**Spoiler attachments**";
+                        addedSpoilerMessage = true;
+                    }
+                    firstEmbed.Description += $"\n{attachment.Url}";
                 }
                 else
                 {
@@ -143,7 +159,14 @@ public static class QuotingHelpers
                 if (spoilerAll || attachment.IsSpoiler())
                 {
                     logger.LogTrace("attachment is spoiler video");
-                    firstEmbed.Description += $"\n[[Spoiler Video]]({attachment.Url})";
+
+                    if (!addedSpoilerMessage)
+                    {
+                        firstEmbed.Description += $"\n\n**Spoiler attachments**";
+                        addedSpoilerMessage = true;
+                    }
+
+                    firstEmbed.Description += $"\nSpoiler Video{attachment.Url}";
                 }
                 else
                 {

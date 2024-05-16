@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Asahi.Database;
+using Asahi.Modules.AnimeThemes;
 using BotBase.Database;
 using BotBase.Modules.About;
 using BotBase.Modules.Help;
@@ -7,9 +8,11 @@ using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Fergun.Interactive;
+using JsonApiSerializer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Refit;
 using Serilog;
 using Serilog.Extensions.Logging;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -92,6 +95,7 @@ public static class Startup
             .AddSingleton<CommandHandler>()
             .AddSingleton<DbService>()
             .AddSingleton(x => (DbServiceBase<BotDbContext>)x.GetService<DbService>()!)
+            .AddSingleton(new InteractiveConfig(){ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true})
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()
             // about command
@@ -100,6 +104,13 @@ public static class Startup
                 .ConfigureHttpClient(x => x.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent));
 
         serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
+
+        // it says its implementing the JSON:API spec but it's so different lol
+        // new JsonApiSerializerSettings()
+        var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
+
+        serviceCollection.AddRefitClient<IAnimeThemesClient>(settings)
+            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.animethemes.moe/"));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

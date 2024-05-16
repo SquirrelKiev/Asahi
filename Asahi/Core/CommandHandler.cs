@@ -108,7 +108,7 @@ namespace Asahi
 
             if (res.IsSuccess)
             {
-                logger.LogInformation("Command {ModuleName}.{MethodName} successfully executed. Message contents: {contents}",
+                logger.LogTrace("Command {ModuleName}.{MethodName} successfully executed. Message contents: {contents}",
                     cmdInfo?.Module.Name, cmdInfo?.Name, ctx.Message.CleanContent);
             }
             else
@@ -166,7 +166,7 @@ namespace Asahi
         {
             if (res.IsSuccess)
             {
-                logger.LogInformation("Interaction {ModuleName}.{MethodName} successfully executed.", 
+                logger.LogTrace("Interaction {ModuleName}.{MethodName} successfully executed.", 
                     cmdInfo.Module.Name, cmdInfo.MethodName);
             }
             else
