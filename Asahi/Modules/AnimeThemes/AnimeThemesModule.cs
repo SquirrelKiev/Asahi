@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.AnimeThemes;
 
-public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService interactive, ILogger<AnimeThemesModule> logger) : BotModule
+public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService interactive, BotConfig config, ILogger<AnimeThemesModule> logger) : BotModule
 {
     private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(3);
     private const string BACK_BUTTON = "at-bb:";
@@ -27,7 +27,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
     public async Task ThemeSlash([Summary(description: "The anime to look for the theme songs of.")] string query)
     {
         const int maxPageLength = 5;
-        await DeferAsync();
+        await RespondAsync($"{config.LoadingEmote} Please wait...", allowedMentions: AllowedMentions.None);
 
         var searchRes = await atClient.SearchAsync(query, new IAnimeThemesClient.SearchQueryParams());
 
@@ -66,7 +66,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             selectedAnime.response.animethemes.Order(new AnimeThemeResourceComparer()).ToArray(),
             maxPageLength,
             SELECT_PREFIX,
-            x => x.ToString(),
+            x => x.ToStringNoWarnings(),
             x => x.id.ToString(),
             "select theme",
             AnimeRichInfo
@@ -168,7 +168,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             warnings = $"({videoContextTags.Humanize()}) ";
         }
 
-        var msg = await ModifyOriginalResponseAsync(new MessageContents($"{selectedAnime.response.name} {selectedTheme.response.slug}\n" +
+        var msg = await ModifyOriginalResponseAsync(new MessageContents($"{selectedAnime.response.name} - {selectedTheme.response.ToStringNoWarnings()}\n" +
                                                                         $"(this might take a little time to embed)\n" +
                                                                         warnings +
                                                                         $"{(nsfw || spoiler ? "|| " : "")}" +

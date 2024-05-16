@@ -263,6 +263,11 @@ public class AnimeThemeResource
             warnings = $"({labels.Humanize()}) ";
         }
 
+        return $"{warnings}{ToStringNoWarnings()}";
+    }
+
+    public string ToStringNoWarnings()
+    {
         var songInfo = "";
 
         if (song != null)
@@ -280,7 +285,7 @@ public class AnimeThemeResource
             songInfo = $" - {song.title}{artistInfo}";
         }
 
-        return $"{warnings}{slug}{songInfo}";
+        return $"{slug}{songInfo}";
     }
 }
 
