@@ -1,7 +1,13 @@
 ﻿using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+// ReSharper disable InconsistentNaming
+// ReSharper disable IdentifierTypo
+// ReSharper disable StringLiteralTypo
+
 namespace Asahi.Modules.AnimeThemes;
+
 
 public class SearchResponse
 {
@@ -23,6 +29,7 @@ public class AnimeResource
     /// <summary>
     /// The primary title of the anime
     /// </summary>
+
     public string name;
 
     /// <summary>
@@ -85,6 +92,7 @@ public class AnimeResource
         ONA
     }
 
+    // ReSharper disable once IdentifierTypo
     public AnimeThemeResource[]? animethemes;
     public ImageResource[]? images;
 }

@@ -60,20 +60,6 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
 
         logger.LogTrace("theme selection");
 
-        EmbedBuilder AnimeRichInfo(EmbedBuilder x)
-        {
-            x.WithTitle(selectedAnime.response.name.Truncate(256));
-            var thumbUrl = selectedAnime.response.images?.MinBy(y => y.facet.HasValue ? (int)y.facet.Value : int.MaxValue)
-                ?.link;
-
-            if (thumbUrl != null)
-            {
-                x.WithThumbnailUrl(thumbUrl);
-            }
-
-            return x;
-        }
-
         var selectedTheme = await SelectItemAsync(
             selectedAnime.response.animethemes.Order(new AnimeThemeResourceComparer()).ToArray(),
             maxPageLength,
@@ -94,7 +80,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
                 // instantly get banished to the depths of hell with this one easy trick
                 goto anime_selection;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new NotSupportedException();
         }
 
         if (selectedTheme.response?.animeThemeEntries == null)
@@ -122,7 +108,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             case ResultType.Back:
                 goto anime_selection;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new NotSupportedException();
         }
 
         if (selectedAnimeThemeEntry.response?.videos == null)
@@ -150,11 +136,16 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             case ResultType.Back:
                 goto anime_selection;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new NotSupportedException();
+        }
+
+        if (selectedVideo.response == null)
+        {
+            return;
         }
 
         var msg = await ModifyOriginalResponseAsync(new MessageContents($"(this might take a little time to embed)\n{selectedVideo.response.link}",
-            components: new ComponentBuilder().WithButton("Back", BACK_BUTTON, ButtonStyle.Secondary).WithRedButton()));
+        components: new ComponentBuilder().WithButton("Back", BACK_BUTTON, ButtonStyle.Secondary).WithRedButton()));
 
         var selectInteraction = await interactive.NextMessageComponentAsync(
             x => msg.Id == x.Message.Id &&
@@ -178,6 +169,22 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             }
             if (selectInteraction.Value.Data.CustomId == BaseModulePrefixes.RED_BUTTON)
             { }
+        }
+
+        return;
+
+        EmbedBuilder AnimeRichInfo(EmbedBuilder x)
+        {
+            x.WithTitle(selectedAnime.response.name.Truncate(256));
+            var thumbUrl = selectedAnime.response.images?.MinBy(y => y.facet.HasValue ? (int)y.facet.Value : int.MaxValue)
+                ?.link;
+
+            if (thumbUrl != null)
+            {
+                x.WithThumbnailUrl(thumbUrl);
+            }
+
+            return x;
         }
     }
 
@@ -251,7 +258,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             }
 
 
-            if(selectInteraction.Value.Data.CustomId != BaseModulePrefixes.RED_BUTTON)
+            if (selectInteraction.Value.Data.CustomId != BaseModulePrefixes.RED_BUTTON)
                 await selectInteraction.Value.DeferAsync();
 
             if (selectInteraction.Value.Data.Type == ComponentType.Button)

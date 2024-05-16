@@ -149,7 +149,7 @@ public class InteractiveService
     /// <param name="id">The ID of the callback.</param>
     /// <param name="callback">The callback, if found.</param>
     /// <returns>Whether the callback was removed.</returns>
-    public bool TryRemoveCallback(ulong id, out IInteractiveCallback callback)
+    public bool TryRemoveCallback(ulong id, out IInteractiveCallback? callback)
         => _callbacks.TryRemove(id, out callback);
 
     /// <summary>
