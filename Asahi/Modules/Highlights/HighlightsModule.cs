@@ -60,7 +60,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
     {
         return CommonConfig(name, async (context, cleanName, _) =>
         {
-            var board = await context.HighlightBoards.FirstOrDefaultAsync(x => x.Name == name);
+            var board = await context.HighlightBoards.FirstOrDefaultAsync(x => x.GuildId == Context.Guild.Id && x.Name == name);
             if (board == null)
             {
                 return new ConfigChangeResult(false, $"`{name}` does not exist already.");
@@ -1062,7 +1062,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             highlightBoards = highlightBoards.Include(x => x.SpoilerChannels);
         }
 
-        var board = await highlightBoards.FirstOrDefaultAsync(x => x.Name == name);
+        var board = await highlightBoards.FirstOrDefaultAsync(x => x.GuildId == Context.Guild.Id && x.Name == name);
 
         if (board == null)
         {
