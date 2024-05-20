@@ -12,14 +12,14 @@ public enum EmbedColorSource
     [ChoiceDisplay("Always use the fallback color.")]
     [Description("Always use the fallback color.")]
     AlwaysUseFallbackColor,
-    [ChoiceDisplay("Use the quoted user's role color.")]
-    [Description("Use the quoted user's role color.")]
+    [ChoiceDisplay("Use the user's role color.")]
+    [Description("Use the user's role color.")]
     UsersRoleColor,
-    [ChoiceDisplay("Use the quoted user's banner color.")]
-    [Description("Use the quoted user's banner color.")]
+    [ChoiceDisplay("Use the user's banner color.")]
+    [Description("Use the user's banner color.")]
     UsersBannerColor,
-    [ChoiceDisplay("Use the quoted user's accent color.")]
-    [Description("Use the quoted user's accent color.")]
+    [ChoiceDisplay("Use the user's accent color.")]
+    [Description("Use the user's accent color.")]
     UsersAccentColor
 }
 

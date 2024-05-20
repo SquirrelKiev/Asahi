@@ -19,4 +19,6 @@ public class GuildConfig
 
     [MaxLength(100)]
     public string SpoilerReactionEmote { get; set; } = "";
+
+    public BirthdayConfig? DefaultBirthdayConfig { get; set; }
 }

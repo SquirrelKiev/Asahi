@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Asahi.Database;
 using Asahi.Modules.CustomizeStatus;
+using Asahi.Modules.BirthdayRoles;
 using Asahi.Modules.Highlights;
 using Asahi.Modules.ModSpoilers;
 using Asahi.Modules.Seigen;
@@ -187,6 +188,9 @@ public class BotService(
         }
 
         hts.StartBackgroundTask(cts.Token);
+
+        var birthdayTimer = services.GetRequiredService<BirthdayTimerService>();
+        birthdayTimer.StartBackgroundTask(cts.Token);
 
         // see comment in ExecuteAsync
         var roleManagement = services.GetRequiredService<RoleManagementService>();

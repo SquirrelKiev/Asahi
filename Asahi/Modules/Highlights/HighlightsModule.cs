@@ -958,7 +958,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             [Summary(description: "The emote to replace with.")] [MaxLength(100)]
             IEmote emote)
         {
-            return CommonConfig(null, async (context, _, _) =>
+            return CommonConfig(async (context, _) =>
             {
                 emoteName = emoteName.ToLowerInvariant();
 
@@ -986,7 +986,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Autocomplete(typeof(AliasedEmoteAutocomplete))]
         string emoteName)
         {
-            return CommonConfig(null, async (context, _, _) =>
+            return CommonConfig(async (context, _) =>
             {
                 emoteName = emoteName.ToLowerInvariant();
 
@@ -1036,7 +1036,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
         name = name.ToLowerInvariant();
 
-        if (!HighlightsModuleUtility.IsValidId().IsMatch(name))
+        if (!ConfigUtilities.IsValidId().IsMatch(name))
         {
             await FollowupAsync(new MessageContents(new EmbedBuilder()
                 .WithColor(Color.Red)
@@ -1107,7 +1107,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
         name = name.ToLowerInvariant();
 
-        if (!HighlightsModuleUtility.IsValidId().IsMatch(name))
+        if (!ConfigUtilities.IsValidId().IsMatch(name))
         {
             await FollowupAsync(new MessageContents(new EmbedBuilder()
                 .WithColor(Color.Red)
@@ -1259,7 +1259,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     #endregion
 
-        #region Debug Commands
+    #region Debug Commands
 
 #if DEBUG
 
@@ -1319,17 +1319,6 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
     #endregion
 }
 
-public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraEmbeds)
-{
-    public bool wasSuccess = wasSuccess;
-    public string message = message;
-    public Embed[] extraEmbeds = extraEmbeds;
-
-    public ConfigChangeResult(bool wasSuccess, string message) : this(wasSuccess, message, [])
-    {
-    }
-}
-
 public struct ConfigChangeOptions(BotDbContext context, HighlightBoard board, string name, EmbedBuilder embedBuilder)
 {
     public BotDbContext context = context;
@@ -1341,37 +1330,20 @@ public struct ConfigChangeOptions(BotDbContext context, HighlightBoard board, st
 public static partial class HighlightsModuleUtility
 {
     public static async Task<bool> CommonConfig(IInteractionContext botContext, DbService dbService,
-        string? name,
+        string name,
         Func<BotDbContext, string, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
     {
-        await botContext.Interaction.DeferAsync();
-        if (name != null)
+        return await ConfigUtilities.CommonConfig(botContext, dbService, (context, eb) =>
         {
             name = name.ToLowerInvariant();
 
-            if (!IsValidId().IsMatch(name))
+            if (!ConfigUtilities.IsValidId().IsMatch(name))
             {
-                await botContext.Interaction.FollowupAsync($"`{name}` is not valid.");
-                return false;
+                return Task.FromResult(new ConfigChangeResult(false, $"`{name}` is not valid."));
             }
-        }
 
-        await using var context = dbService.GetDbContext();
-
-        var embedBuilder = new EmbedBuilder();
-        var message = await updateAction(context, name ?? "(N/A)", embedBuilder);
-
-        if (message.wasSuccess)
-            await context.SaveChangesAsync();
-
-        await botContext.Interaction.FollowupAsync(embeds: message.extraEmbeds.Prepend(
-            embedBuilder
-                .WithAuthor(name)
-                .WithDescription(message.message)
-                .WithColor(message.wasSuccess ? Color.Green : Color.Red)
-                .Build()
-            ).ToArray());
-        return message.wasSuccess;
+            return updateAction(context, name, eb);
+        });
     }
 
     public static Task<bool> CommonBoardConfig(IInteractionContext botContext, DbService dbService,
@@ -1419,21 +1391,23 @@ public static partial class HighlightsModuleUtility
             return await updateAction(options, threshold);
         }, x => x.Include(y => y.Thresholds));
     }
-
-    [GeneratedRegex(@"^[\w-]+$")]
-    public static partial Regex IsValidId();
 }
 
 public class HighlightsSubmodule(DbService dbService) : BotModule
 {
     protected readonly DbService dbService = dbService;
 
-    protected Task<bool> CommonConfig(string? name,
+    protected Task<bool> CommonConfig(Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
+    {
+        return ConfigUtilities.CommonConfig(Context, dbService, updateAction);
+    }
+
+    protected Task<bool> CommonConfig(string name,
         Func<BotDbContext, string, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
     {
         return HighlightsModuleUtility.CommonConfig(Context, dbService, name, updateAction);
     }
-
+    
     protected Task<bool> CommonBoardConfig(string userSetName,
         Func<ConfigChangeOptions, Task<ConfigChangeResult>> updateAction,
         Func<IQueryable<HighlightBoard>, IQueryable<HighlightBoard>>? highlightBoardModifier = null)
