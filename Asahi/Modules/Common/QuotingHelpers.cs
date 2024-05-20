@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.Contracts;
 using System.Text;
 using Asahi.Database.Models;
+using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 
@@ -13,9 +14,14 @@ public static class QuotingHelpers
     public const string ReplyingTo = "Replying to ";
 
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
-        bool showAuthor, bool spoilerAll = false, string? spoilerContext = "", IMessage? replyMessage = null, Action<EmbedBuilder>? modifyQuoteEmbed = null)
+        bool showAuthor, bool spoilerAll = false, string? spoilerContext = "", IMessage? replyMessage = null, Action<EmbedBuilder>? modifyQuoteEmbed = null,
+        string forbiddenUrl = "")
     {
-        var constantUrl = CatboxQts.GetRandomQtUrl();
+        string constantUrl = forbiddenUrl;
+        while (constantUrl == forbiddenUrl)
+        {
+            constantUrl = CatboxQts.GetRandomQtUrl();
+        }
 
         //var channelName = message.Channel is SocketThreadChannel threadChannel ? $"#{threadChannel.ParentChannel.Name} • " : "";
 
@@ -30,7 +36,7 @@ public static class QuotingHelpers
                 {
                     eb.WithFooter(new EmbedFooterBuilder());
                     eb.Timestamp = null;
-                });
+                }, forbiddenUrl: constantUrl);
         }
 
         if (message.Channel is SocketThreadChannel threadChannel)
@@ -55,7 +61,19 @@ public static class QuotingHelpers
 
         if (showAuthor)
         {
-            firstEmbed.WithAuthor(message.Author);
+            var user = message.Author as IGuildUser;
+
+            if (user == null)
+            {
+                firstEmbed.WithAuthor(message.Author);
+            }
+            else
+            {
+                var username = user is IWebhookUser webhookUser ? webhookUser.Username : user.DisplayName;
+                var avatar = user.GetDisplayAvatarUrl();
+
+                firstEmbed.WithAuthor(username, avatar);
+            }
         }
 
         List<EmbedBuilder> embeds = [firstEmbed];
