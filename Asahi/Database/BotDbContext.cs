@@ -17,9 +17,10 @@ public abstract class BotDbContext(string connectionString, ILoggerFactory? logg
 
     public DbSet<HighlightBoard> HighlightBoards { get; set; }
     public DbSet<CachedHighlightedMessage> CachedHighlightedMessages { get; set; }
+    public DbSet<EmoteAlias> EmoteAliases { get; set; }
+
     public DbSet<BotWideConfig> BotWideConfig { get; set; }
     public DbSet<TrustedId> TrustedIds { get; set; }
-    public DbSet<EmoteAlias> EmoteAliases { get; set; }
 
     public DbSet<BirthdayConfig> BirthdayConfigs { get; set; }
     public DbSet<BirthdayEntry> Birthdays { get; set; }

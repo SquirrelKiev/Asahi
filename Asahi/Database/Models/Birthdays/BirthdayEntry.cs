@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Newtonsoft.Json;
 using NodaTime;
 
 namespace Asahi.Database.Models;
@@ -19,8 +20,9 @@ public class BirthdayEntry
         }
     }
 
-
+    [JsonIgnore]
     public int Day { get; set; }
+    [JsonIgnore]
     public int Month { get; set; }
 
     /// <summary>
@@ -34,5 +36,6 @@ public class BirthdayEntry
     /// </summary>
     public required LocalDateTime TimeCreatedUtc { get; set; }
 
+    [JsonIgnore]
     public required BirthdayConfig BirthdayConfig { get; set; }
 }

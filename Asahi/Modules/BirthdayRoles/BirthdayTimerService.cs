@@ -1,13 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Asahi.Database;
+﻿using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NodaTime;
-using NodaTime.Calendars;
-using Serilog;
 
 namespace Asahi.Modules.BirthdayRoles;
 
@@ -165,8 +161,8 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
 
     private async Task<BirthdayEntry[]> GetCurrentBirthdays(BotDbContext context, LocalDate now)
     {
-        var yesterday = now.PlusDays(-1);
-        var tomorrow = now.PlusDays(1);
+        //var yesterday = now.PlusDays(-1);
+        //var tomorrow = now.PlusDays(1);
 
         //var unfilteredDates = await context.Birthdays
         //    .Where(entry => entry.BirthDayDateBacking >= yesterday && entry.BirthDayDateBacking <= tomorrow).ToArrayAsync();

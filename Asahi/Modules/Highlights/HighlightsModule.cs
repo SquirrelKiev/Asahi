@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using System.Text.RegularExpressions;
 using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
@@ -792,12 +791,6 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             });
         }
 
-        public enum AllowBlockList
-        {
-            BlockList,
-            AllowList
-        }
-
         [SlashCommand("set-filter-type",
             "Sets the channel filter type.")]
         public Task SetFilterChannelTypeSlash(
@@ -1317,6 +1310,12 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 #endif
 
     #endregion
+}
+
+public enum AllowBlockList
+{
+    BlockList,
+    AllowList
 }
 
 public struct ConfigChangeOptions(BotDbContext context, HighlightBoard board, string name, EmbedBuilder embedBuilder)

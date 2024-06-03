@@ -15,7 +15,7 @@ public static partial class ConfigUtilities
         var embedBuilder = new EmbedBuilder();
         var message = await updateAction(context, embedBuilder);
 
-        if (message.wasSuccess)
+        if (message.wasSuccess && message.shouldSave)
             await context.SaveChangesAsync();
 
         var embeds = message.extraEmbeds;
@@ -38,12 +38,13 @@ public static partial class ConfigUtilities
     public static partial Regex IsValidId();
 }
 
-public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraEmbeds, bool onlyExtraEmbeds = false)
+public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraEmbeds, bool onlyExtraEmbeds = false, bool shouldSave = true)
 {
     public bool wasSuccess = wasSuccess;
     public string message = message;
     public Embed[] extraEmbeds = extraEmbeds;
     public bool onlyExtraEmbeds = onlyExtraEmbeds;
+    public bool shouldSave = shouldSave;
 
     public ConfigChangeResult(bool wasSuccess, string message) : this(wasSuccess, message, [])
     {
