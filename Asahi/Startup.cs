@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Asahi.Database;
 using Asahi.Modules.AnimeThemes;
+using Asahi.Modules.Tatsu;
 using BotBase.Database;
 using BotBase.Modules.About;
 using BotBase.Modules.Help;
@@ -53,7 +54,7 @@ public static class Startup
         }
 
         var logger = logConfig.CreateLogger();
-        builder.ConfigureLogging(logging => 
+        builder.ConfigureLogging(logging =>
             logging
                 .AddSerilog(logger)
                 .AddFilter<SerilogLoggerProvider>("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.None));
@@ -101,7 +102,7 @@ public static class Startup
             // about command
             .AddSingleton<AboutService>()
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
-                .ConfigureHttpClient(x => x.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent));
+                .ConfigureHttpClient(x => AddDefaultProperties(x));
 
         serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
 
@@ -110,7 +111,10 @@ public static class Startup
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 
         serviceCollection.AddRefitClient<IAnimeThemesClient>(settings)
-            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.animethemes.moe/"));
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.animethemes.moe/"));
+
+        serviceCollection.AddRefitClient<ITatsuClient>(settings)
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.tatsu.gg/v1"));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
@@ -137,5 +141,11 @@ public static class Startup
         serviceCollection.AddHostedService<BotService>();
 
         return serviceCollection;
+
+        HttpClient AddDefaultProperties(HttpClient client)
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent);
+            return client;
+        }
     }
 }
