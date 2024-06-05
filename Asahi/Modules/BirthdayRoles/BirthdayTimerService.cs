@@ -154,7 +154,6 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to do birthday roles for guild {guild}.", guild.Id);
-                throw;
             }
         }
     }
