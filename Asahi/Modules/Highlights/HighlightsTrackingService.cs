@@ -310,9 +310,6 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var msg = await channel.GetMessageAsync(messageId);
 
-        if (msg.Author is not SocketGuildUser guildUser)
-            return;
-
         if (botConfig.BannedHighlightsUsers.Contains(msg.Author.Id))
             return;
 
@@ -338,7 +335,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             .Include(x => x.Thresholds)
             .Include(x => x.SpoilerChannels)
             .Include(x => x.LoggingChannelOverrides)
-            .ToArrayAsync()).Where(x => guildUser.Roles.All(y => y.Id != x.HighlightsMuteRole))
+            .ToArrayAsync()).Where(x => msg.Author is not SocketGuildUser || 
+                                        msg.Author is SocketGuildUser guildUser && guildUser.Roles.All(y => y.Id != x.HighlightsMuteRole))
             .ToArray();
 
         logger.LogTrace("Total non unique reactions is {nur}, found {bl} boards", nonUniqueReactions, boards.Length);

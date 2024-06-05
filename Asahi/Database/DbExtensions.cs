@@ -1,5 +1,6 @@
 ﻿using Asahi.Database.Models;
 using Microsoft.EntityFrameworkCore;
+using NodaTime;
 
 namespace Asahi.Database;
 
@@ -48,5 +49,36 @@ public static class DbExtensions
         context.Add(cfg);
 
         return cfg;
+    }
+
+    public static Task<BirthdayEntry?> GetBirthday(this BotDbContext context, BirthdayConfig config, ulong userId)
+    {
+        return context.Birthdays.FirstOrDefaultAsync(x => x.BirthdayConfig == config && x.UserId == userId);
+    }
+
+    public static async Task<BirthdayEntry> SetBirthday(this BotDbContext context, BirthdayConfig config, ulong userId, AnnualDate date, DateTimeZone tz, LocalDateTime now)
+    {
+        var birthday = await context.GetBirthday(config, userId);
+
+        if (birthday == null)
+        {
+            birthday = new BirthdayEntry()
+            {
+                BirthdayConfig = config,
+                BirthDayDate = date,
+                TimeZone = tz.Id,
+                UserId = userId,
+                TimeCreatedUtc = now
+            };
+
+            context.Add(birthday);
+        }
+        else
+        {
+            birthday.BirthDayDate = date;
+            birthday.TimeZone = tz.Id;
+        }
+
+        return birthday;
     }
 }

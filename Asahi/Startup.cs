@@ -13,6 +13,7 @@ using JsonApiSerializer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NodaTime;
 using Refit;
 using Serilog;
 using Serilog.Extensions.Logging;
@@ -57,7 +58,9 @@ public static class Startup
         builder.ConfigureLogging(logging =>
             logging
                 .AddSerilog(logger)
-                .AddFilter<SerilogLoggerProvider>("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.None));
+                .AddFilter<SerilogLoggerProvider>("Microsoft.Extensions.Http.DefaultHttpClientFactory", LogLevel.Warning)
+                .AddFilter<SerilogLoggerProvider>("Microsoft.EntityFrameworkCore.*", LogLevel.Warning))
+            ;
 
         builder.ConfigureServices(x => x.AddBotServices(botConfig));
         builder.ConfigureHostConfiguration(configBuilder => configBuilder.AddEnvironmentVariables(prefix: "DOTNET_"));
@@ -99,6 +102,7 @@ public static class Startup
             .AddSingleton(new InteractiveConfig(){ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true})
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()
+            .AddSingleton<IClock>(SystemClock.Instance)
             // about command
             .AddSingleton<AboutService>()
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)

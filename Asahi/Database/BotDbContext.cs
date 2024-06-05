@@ -1,10 +1,11 @@
 ﻿using Asahi.Database.Models;
 using BotBase.Database;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Asahi.Database;
 
-public abstract class BotDbContext(string connectionString) : BotDbContextBase(connectionString)
+public abstract class BotDbContext(string connectionString, ILoggerFactory? loggerFactory) : BotDbContextBase(connectionString)
 {
     public DbSet<GuildConfig> GuildConfigs { get; set; }
 
@@ -16,9 +17,20 @@ public abstract class BotDbContext(string connectionString) : BotDbContextBase(c
 
     public DbSet<HighlightBoard> HighlightBoards { get; set; }
     public DbSet<CachedHighlightedMessage> CachedHighlightedMessages { get; set; }
+    public DbSet<EmoteAlias> EmoteAliases { get; set; }
+
     public DbSet<BotWideConfig> BotWideConfig { get; set; }
     public DbSet<TrustedId> TrustedIds { get; set; }
-    public DbSet<EmoteAlias> EmoteAliases { get; set; }
+
+    public DbSet<BirthdayConfig> BirthdayConfigs { get; set; }
+    public DbSet<BirthdayEntry> Birthdays { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseLoggerFactory(loggerFactory);
+
+        base.OnConfiguring(optionsBuilder);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -58,5 +70,13 @@ public abstract class BotDbContext(string connectionString) : BotDbContextBase(c
             .HasKey(nameof(LoggingChannelOverride.OverriddenChannelId),
                 $"{nameof(LoggingChannelOverride.HighlightBoard)}{nameof(HighlightBoard.GuildId)}",
                 $"{nameof(LoggingChannelOverride.HighlightBoard)}{nameof(HighlightBoard.Name)}");
+
+        modelBuilder.Entity<BirthdayConfig>()
+            .HasKey(x => new { x.Name, x.GuildId });
+
+        modelBuilder.Entity<BirthdayEntry>()
+            .HasKey(nameof(BirthdayEntry.UserId),
+                $"{nameof(BirthdayEntry.BirthdayConfig)}{nameof(BirthdayConfig.GuildId)}",
+                $"{nameof(BirthdayEntry.BirthdayConfig)}{nameof(BirthdayConfig.Name)}");
     }
 }
