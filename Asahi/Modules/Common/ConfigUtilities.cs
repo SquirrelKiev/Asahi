@@ -1,4 +1,5 @@
 ﻿using Asahi.Database;
+using Serilog.Context;
 using System.Text.RegularExpressions;
 
 namespace Asahi.Modules;
@@ -18,9 +19,17 @@ public static partial class ConfigUtilities
         if (message.wasSuccess && message.shouldSave)
             await context.SaveChangesAsync();
 
+        var embeds = await CreateEmbeds(await botContext.Guild.GetUserAsync(botContext.Client.CurrentUser.Id), embedBuilder, message);
+
+        await botContext.Interaction.FollowupAsync(embeds: embeds);
+        return message.wasSuccess;
+    }
+
+    public static async Task<Embed[]> CreateEmbeds(IGuildUser botUser, EmbedBuilder embedBuilder, ConfigChangeResult message)
+    {
         var embeds = message.extraEmbeds;
 
-        var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(await botContext.Guild.GetUserAsync(botContext.Client.CurrentUser.Id), Color.Green);
+        var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(botUser, Color.Green);
 
         if (!message.onlyExtraEmbeds)
         {
@@ -32,8 +41,7 @@ public static partial class ConfigUtilities
             ).ToArray();
         }
 
-        await botContext.Interaction.FollowupAsync(embeds: embeds);
-        return message.wasSuccess;
+        return embeds;
     }
 
     [GeneratedRegex(@"^[\w-]+$")]

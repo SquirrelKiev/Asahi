@@ -10,9 +10,24 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NodaTime;
 using NodaTime.Text;
-using static Asahi.Modules.BirthdayRoles.UserFacingBirthdayConfigModule;
 
 namespace Asahi.Modules.BirthdayRoles;
+
+public enum Months
+{
+    January = 1,
+    February = 2,
+    March = 3,
+    April = 4,
+    May = 5,
+    June = 6,
+    July = 7,
+    August = 8,
+    September = 9,
+    October = 10,
+    November = 11,
+    December = 12
+}
 
 // dumb I have to do this
 public class UserFacingBirthdayConfigModule(DbService dbService,
@@ -20,29 +35,12 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
     IClock clock,
     ILogger<BirthdayConfigModule> logger) : BotModule
 {
-    public enum Months
-    {
-        January = 1,
-        February = 2,
-        March = 3,
-        April = 4,
-        May = 5,
-        June = 6,
-        July = 7,
-        August = 8,
-        September = 9,
-        October = 10,
-        November = 11,
-        December = 12
-    }
-
-
     // User facing birthday-setting command
     [SlashCommand("birthday", "Sets your birthday.", true)]
     public async Task UserFacingSetBirthdaySlash([Summary(description: "The day of the month your birthday is on.")] int day,
         [Summary(description: "The month your birthday is in.")] Months month,
         [Summary(description: "Your timezone.")][Autocomplete(typeof(TimeZoneAutocomplete))] string timeZone,
-        [Summary(description: "The name/ID of the config.")] string? name = null)
+        [Summary(description: BirthdayConfigModule.NameDescription)] string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -162,8 +160,10 @@ public class BirthdayConfigModule(
     IClock clock,
     ILogger<BirthdayConfigModule> logger) : BotModule
 {
+    public const string NameDescription = "The name/ID of the config.";
+
     [SlashCommand("create", "Creates a birthday config.")]
-    public async Task CreateBirthdayConfigSlash([Summary(description: "The name/ID of the config.")] string name,
+    public async Task CreateBirthdayConfigSlash([Summary(description: NameDescription)] string name,
         [Summary(description: "The role to assign if its a user's birthday.")] IRole role)
     {
         await CommonConfig(async (context, eb) =>
@@ -192,19 +192,19 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("get", "Gets the config.")]
-    public async Task GetConfigSlash([Summary(description: "The name/ID of the config.")] string? name = null)
+    public async Task GetConfigSlash([Summary(description: NameDescription)] string? name = null)
     {
-        await CommonBirthdayConfig(name, Context.Guild.Id, async x => 
-            new ConfigChangeResult(true, 
+        await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
+            new ConfigChangeResult(true,
                 $"```json\n{JsonConvert.SerializeObject(x.Config, Formatting.Indented)}\n```", [], shouldSave: false));
     }
 
     [SlashCommand("set-user", "Sets a user's birthday.")]
-    public async Task SetUserBirthdaySlash([Summary(description: "The user to change the birthday of.")] IGuildUser user, 
+    public async Task SetUserBirthdaySlash([Summary(description: "The user to change the birthday of.")] IGuildUser user,
         [Summary(description: "The day of the month their birthday is on.")] int day,
         [Summary(description: "The month their birthday is in.")] Months month,
         [Summary(description: "Their timezone.")][Autocomplete(typeof(TimeZoneAutocomplete))] string timeZone,
-        [Summary(description: "The name/ID of the config.")] string? name = null)
+        [Summary(description: NameDescription)] string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -232,7 +232,7 @@ public class BirthdayConfigModule(
 
     [SlashCommand("rm-user", "Removes a user's birthday entry.")]
     public async Task RemoveBirthdayUserSlash([Summary(description: "The user to remove the entry of.")] IGuildUser user,
-        [Summary(description: "The name/ID of the config.")] string? name = null)
+        [Summary(description: NameDescription)] string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -249,7 +249,7 @@ public class BirthdayConfigModule(
 
     [SlashCommand("get-user", "Gets a user's set birthday.")]
     public async Task GetBirthdayUserSlash([Summary(description: "The user to get the entry of.")] IGuildUser user,
-        [Summary(description: "The name/ID of the config.")]
+        [Summary(description: NameDescription)]
         string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
@@ -265,7 +265,7 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("set-default", "Sets the default config for the Guild.")]
-    public async Task SetDefaultConfigSlash([Summary(description: "The name/ID of the config.")] string name)
+    public async Task SetDefaultConfigSlash([Summary(description: NameDescription)] string name)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -279,12 +279,12 @@ public class BirthdayConfigModule(
 
     [SlashCommand("add-filtered-role", "Dictates whether a user can add/change their birthday. Does not affect existing entries.")]
     public async Task AddRoleToListSlash([Summary(description: "The role to add.")] IRole role,
-        [Summary(description: "The list to add the role to.")] AllowBlockList list, 
-        [Summary(description: "The name/ID of the config.")] string? name = null)
+        [Summary(description: "The list to add the role to.")] AllowBlockList list,
+        [Summary(description: NameDescription)] string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
-            List<ulong> roles; 
+            List<ulong> roles;
 
             switch (list)
             {
@@ -309,8 +309,8 @@ public class BirthdayConfigModule(
 
     [SlashCommand("rm-filtered-role", "Removes a role from the allowlist or blocklist.")]
     public async Task RemoveRoleFromListSlash([Summary(description: "The role to remove.")] IRole role,
-        [Summary(description: "The list to remove the role from.")] AllowBlockList list, 
-        [Summary(description: "The name/ID of the config.")] string? name = null)
+        [Summary(description: "The list to remove the role from.")] AllowBlockList list,
+        [Summary(description: NameDescription)] string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -337,6 +337,75 @@ public class BirthdayConfigModule(
         });
     }
 
+    public class BirthdayTextModal : IModal
+    {
+        public string Title => "Text";
+
+        [InputLabel("Embed Title Text")]
+        [ModalTextInput("embed_title_text", maxLength: BirthdayConfig.MaxStringLength)]
+        public required string EmbedTitleText { get; set; }
+
+        [InputLabel("Embed Description Text")]
+        [ModalTextInput("embed_description_text", TextInputStyle.Paragraph, maxLength: BirthdayConfig.MaxStringLength)]
+        public required string EmbedDescriptionText { get; set; }
+
+        [InputLabel("Embed Footer Text")]
+        [ModalTextInput("embed_footer_text", TextInputStyle.Paragraph, maxLength: BirthdayConfig.MaxStringLength)]
+        public required string EmbedFooterText { get; set; }
+
+        [InputLabel("Denied for Reason Edit Window Text")]
+        [ModalTextInput("denied_edit_window_text", TextInputStyle.Paragraph, maxLength: BirthdayConfig.MaxStringLength)]
+        public required string DeniedForReasonEditWindowText { get; set; }
+
+        [InputLabel("Denied for Reason Permissions Text")]
+        [ModalTextInput("denied_permissions_text", TextInputStyle.Paragraph, maxLength: BirthdayConfig.MaxStringLength)]
+        public required string DeniedForReasonPermissionsText { get; set; }
+    }
+
+    [SlashCommand("change-text", "Change the text used in the /birthday command.")]
+    public async Task ChangeStringSlash([Summary(description: NameDescription)] string? name = null)
+    {
+        await using var context = dbService.GetDbContext();
+
+        BirthdayConfig config;
+        try
+        {
+            config = await ResolveConfig(context, name, Context.Guild.Id);
+        }
+        catch (ConfigException ex)
+        {
+            await FollowupAsync(embeds: await ConfigUtilities.CreateEmbeds(await Context.Guild.GetUserAsync(Context.Client.CurrentUser.Id), new EmbedBuilder(),
+                new ConfigChangeResult(false, ex.Message)));
+            return;
+        }
+
+        var modal = new BirthdayTextModal
+        {
+            //DisplayName = config.DisplayName,
+            EmbedTitleText = config.EmbedTitleText,
+            EmbedDescriptionText = config.EmbedDescriptionText,
+            EmbedFooterText = config.EmbedFooterText,
+            DeniedForReasonEditWindowText = config.DeniedForReasonEditWindowText,
+            DeniedForReasonPermissionsText = config.DeniedForReasonPermissionsText
+        };
+
+        await RespondWithModalAsync($"{ModulePrefixes.BIRTHDAY_TEXT_MODAL}{config.Name}", modal);
+    }
+
+    [ModalInteraction($"{ModulePrefixes.BIRTHDAY_TEXT_MODAL}*", true)]
+    public async Task TextModal(string name, BirthdayTextModal modal)
+    {
+        await CommonBirthdayConfig(name, Context.Guild.Id, context =>
+        {
+            context.Config.EmbedTitleText = modal.EmbedTitleText;
+            context.Config.EmbedDescriptionText = modal.EmbedDescriptionText;
+            context.Config.EmbedFooterText = modal.EmbedFooterText;
+            context.Config.DeniedForReasonEditWindowText = modal.DeniedForReasonEditWindowText;
+            context.Config.DeniedForReasonPermissionsText = modal.DeniedForReasonPermissionsText;
+
+            return Task.FromResult(new ConfigChangeResult(true, "Set text successfully."));
+        });
+    }
 
 #if DEBUG
     [SlashCommand("debug-test-date", "[DEBUG] Runs a birthday check for the specified date (DD/MM/YYYY) at the specified time (UTC).")]
@@ -374,46 +443,64 @@ public class BirthdayConfigModule(
 
     public record ConfigContext(BotDbContext Context, BirthdayConfig Config, EmbedBuilder EmbedBuilder);
 
-    private Task<bool> CommonBirthdayConfig(string? name, ulong guildId, Func<ConfigContext, Task<ConfigChangeResult>> updateAction, 
+    private async Task<BirthdayConfig> ResolveConfig(BotDbContext context, string? name, ulong guildId, Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
+    {
+        BirthdayConfig? config = null;
+
+        if (name == null)
+        {
+            config = (await context.GetGuildConfig(guildId, x => 
+                x.Include(y => y.DefaultBirthdayConfig))).DefaultBirthdayConfig;
+
+            if (config == null)
+            {
+                throw new ConfigException("No default config set. Please manually specify the config name.");
+            }
+
+            name = config.Name;
+        }
+
+        name = name.ToLowerInvariant();
+
+        if (!ConfigUtilities.IsValidId().IsMatch(name))
+        {
+            throw new ConfigException($"`{name}` is not valid.");
+        }
+
+        modifyQuery ??= x => x;
+
+        var query = modifyQuery(context.BirthdayConfigs);
+
+        config ??= await query.FirstOrDefaultAsync(x => x.GuildId == guildId && x.Name == name);
+
+        if (config == null)
+        {
+            throw new ConfigException("Could not find config.");
+        }
+
+        return config;
+    }
+
+    private Task<bool> CommonBirthdayConfig(string? name, ulong guildId, Func<ConfigContext, Task<ConfigChangeResult>> updateAction,
         Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
     {
         return CommonConfig(async (context, eb) =>
         {
-            BirthdayConfig? config = null;
-
-            if (name == null)
+            try
             {
-                config = (await context.GetGuildConfig(guildId, x => x.Include(y => y.DefaultBirthdayConfig))).DefaultBirthdayConfig;
+                var config = await ResolveConfig(context, name, guildId, modifyQuery);
 
-                if (config == null)
-                {
-                    return new ConfigChangeResult(false, "No default config set. Please manually specify the config name.");
-                }
+                eb.WithAuthor(config.Name);
 
-                name = config.Name;
+                return await updateAction(new ConfigContext(context, config, eb));
             }
-
-            name = name.ToLowerInvariant();
-
-            if (!ConfigUtilities.IsValidId().IsMatch(name))
+            catch (ConfigException ex)
             {
-                return new ConfigChangeResult(false, $"`{name}` is not valid.");
+                return new ConfigChangeResult(false, ex.Message);
             }
-
-            eb.WithAuthor(name);
-
-            modifyQuery ??= x => x;
-
-            var query = modifyQuery(context.BirthdayConfigs);
-
-            config ??= await query.FirstOrDefaultAsync(x => x.GuildId == Context.Guild.Id && x.Name == name);
-
-            if (config == null)
-            {
-                return new ConfigChangeResult(false, "Could not find config.");
-            }
-
-            return await updateAction(new ConfigContext(context, config, eb));
         });
     }
+
+    // a little dumb
+    public class ConfigException(string message) : Exception(message);
 }
