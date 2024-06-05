@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Asahi.Database;
+﻿using Asahi.Database;
 using Asahi.Database.Models;
 using Asahi.Modules.Highlights;
 using Discord.Interactions;
@@ -33,17 +32,23 @@ public enum Months
 }
 
 // dumb I have to do this
-public class UserFacingBirthdayConfigModule(DbService dbService,
+public class UserFacingBirthdayConfigModule(
+    DbService dbService,
     BirthdayTimerService bts,
     IClock clock,
     ILogger<BirthdayConfigModule> logger) : BotModule
 {
     // User facing birthday-setting command
     [SlashCommand("birthday", "Sets your birthday.", true)]
-    public async Task UserFacingSetBirthdaySlash([Summary(description: "The day of the month your birthday is on.")] int day,
-        [Summary(description: "The month your birthday is in.")] Months month,
-        [Summary(description: "Your timezone.")][Autocomplete(typeof(TimeZoneAutocomplete))] string timeZone,
-        [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task UserFacingSetBirthdaySlash(
+        [Summary(description: "The day of the month your birthday is on.")] int day,
+        [Summary(description: "The month your birthday is in.")]
+        Months month,
+        [Summary(description: "Your timezone.")] [Autocomplete(typeof(TimeZoneAutocomplete))]
+        string timeZone,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -67,7 +72,7 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
                 return new ConfigChangeResult(false, $"Not a valid date. {ex.Message}");
             }
 
-            if(!TzdbDateTimeZoneSource.Default.CanonicalIdMap.TryGetValue(timeZone, out string? canonicalTimeZone))
+            if (!TzdbDateTimeZoneSource.Default.CanonicalIdMap.TryGetValue(timeZone, out string? canonicalTimeZone))
             {
                 return new ConfigChangeResult(false, $"`{timeZone}` is not a valid/supported timezone.");
             }
@@ -78,11 +83,17 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
 
             var existingBirthday = await x.Context.SetBirthday(x.Config, user.Id, date, tz, now.LocalDateTime);
 
+            //logger.LogTrace("edit window is {window} now is {now} tcutc is {tcutc}, added is {added}, evals to {res}", 
+            //    x.Config.EditWindowSeconds, now.LocalDateTime, existingBirthday.TimeCreatedUtc, existingBirthday.TimeCreatedUtc.PlusSeconds(x.Config.EditWindowSeconds),
+            //    x.Config.EditWindowSeconds != 0 &&
+            //    existingBirthday.TimeCreatedUtc.PlusSeconds(x.Config.EditWindowSeconds) < now.LocalDateTime);
+
             if (x.Config.EditWindowSeconds != 0 &&
                 existingBirthday.TimeCreatedUtc.PlusSeconds(x.Config.EditWindowSeconds) < now.LocalDateTime)
             {
                 return new ConfigChangeResult(false,
-                    x.Config.DeniedForReasonEditWindowText.Replace(BirthdayConfig.UsernamePlaceholder, user.DisplayName));
+                    x.Config.DeniedForReasonEditWindowText.Replace(BirthdayConfig.UsernamePlaceholder,
+                        user.DisplayName));
             }
 
             var eb = new EmbedBuilder()
@@ -94,7 +105,7 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
                     new Color(x.Config.FallbackEmbedColor), user,
                     (DiscordSocketClient)Context.Client))
                 .WithThumbnailUrl(user.GetDisplayAvatarUrl())
-                .AddField(x.Config.Name.Titleize(), $"{date.Day.Ordinalize()} {date.ToString("MMMM", CultureInfo.InvariantCulture)}");
+                .AddField(x.Config.Name.Titleize(), date.ToStringOrdinalized());
 
             await Context.Channel.SendMessageAsync(embed: eb.Build());
 
@@ -102,12 +113,14 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
         }, ephemeral: true);
     }
 
-    private Task<bool> CommonConfig(Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction, bool ephemeral = false)
+    private Task<bool> CommonConfig(Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction,
+        bool ephemeral = false)
     {
         return ConfigUtilities.CommonConfig(Context, dbService, updateAction, ephemeral);
     }
 
-    private Task<bool> CommonBirthdayConfig(string? name, ulong guildId, Func<BirthdayConfigModule.ConfigContext, Task<ConfigChangeResult>> updateAction,
+    private Task<bool> CommonBirthdayConfig(string? name, ulong guildId,
+        Func<BirthdayConfigModule.ConfigContext, Task<ConfigChangeResult>> updateAction,
         Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null, bool ephemeral = false)
     {
         return CommonConfig(async (context, eb) =>
@@ -116,11 +129,13 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
 
             if (name == null)
             {
-                config = (await context.GetGuildConfig(guildId, x => x.Include(y => y.DefaultBirthdayConfig))).DefaultBirthdayConfig;
+                config = (await context.GetGuildConfig(guildId, x => x.Include(y => y.DefaultBirthdayConfig)))
+                    .DefaultBirthdayConfig;
 
                 if (config == null)
                 {
-                    return new ConfigChangeResult(false, "No default config set. Please manually specify the config name.");
+                    return new ConfigChangeResult(false,
+                        "No default config set. Please manually specify the config name.");
                 }
 
                 name = config.Name;
@@ -154,11 +169,11 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
 [Group("birthday-config", "Commands relating to birthday management.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 public class BirthdayConfigModule(
-    DbService dbService,
-    BirthdayTimerService bts,
-    IClock clock,
-    InteractiveService interactive,
-    ILogger<BirthdayConfigModule> logger) : BotModule
+        DbService dbService,
+        BirthdayTimerService bts,
+        IClock clock,
+        InteractiveService interactive,
+        ILogger<BirthdayConfigModule> logger) : BotModule
 {
     public const string NameDescription = "The name/ID of the config.";
 
@@ -265,9 +280,10 @@ public class BirthdayConfigModule(
             await x.Context.SetBirthday(x.Config, user.Id, date, tz, clock.GetCurrentInstant().InUtc().LocalDateTime);
 
             return new ConfigChangeResult(true,
-                $"Set <@{user.Id}>'s birthday to the {date.Day.Ordinalize()} of {date.ToString("MMMM", CultureInfo.InvariantCulture)}. ({tz.Id})");
+                $"Set <@{user.Id}>'s birthday to the {date.ToStringOrdinalized()}");
         });
     }
+
 
     [SlashCommand("rm-user", "Removes a user's birthday entry.")]
     public async Task RemoveBirthdayUserSlash([Summary(description: "The user to remove the entry of.")] IGuildUser user,
@@ -415,7 +431,7 @@ public class BirthdayConfigModule(
         });
     }
 
-    [SlashCommand("get-birthdays", "Lists all the users with a birthday set.")]
+    [SlashCommand("list-users", "Lists all the users with a birthday set.")]
     public async Task GetBirthdaysSlash(
         [Summary(description: BirthdayConfigModule.NameDescription),
          Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
@@ -451,11 +467,12 @@ public class BirthdayConfigModule(
         }
 
         var pages = bdays
-            .Select(x => $"* <@{x.UserId}> - `{x.BirthDayDate}` (`{x.TimeZone}`)")
+            .Select(x => $"* <@{x.UserId}> - {x.BirthDayDate.ToStringOrdinalized()}")
             .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor).WithDescription(string.Join('\n', x)));
 
         var paginator = new StaticPaginatorBuilder()
             .WithDefaultEmotes()
+            .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithUsers(Context.User)
             .WithPages(pages);
 
@@ -574,7 +591,7 @@ public class BirthdayConfigModule(
 
         if (name == null)
         {
-            config = (await context.GetGuildConfig(guildId, x => 
+            config = (await context.GetGuildConfig(guildId, x =>
                 x.Include(y => y.DefaultBirthdayConfig))).DefaultBirthdayConfig;
 
             if (config == null)
