@@ -16,6 +16,6 @@ public class SqliteContext : BotDbContext
 
         var builder = new SqliteConnectionStringBuilder(connectionString);
         builder.DataSource = Path.Combine(AppContext.BaseDirectory, builder.DataSource);
-        optionsBuilder.UseSqlite(builder.ToString(), x => x.UseNodaTime());
+        optionsBuilder.UseSqlite(builder.ToString(), x => x.UseNodaTime().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     }
 }

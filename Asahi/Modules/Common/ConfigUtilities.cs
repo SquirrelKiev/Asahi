@@ -20,12 +20,14 @@ public static partial class ConfigUtilities
 
         var embeds = message.extraEmbeds;
 
+        var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(await botContext.Guild.GetUserAsync(botContext.Client.CurrentUser.Id), Color.Green);
+
         if (!message.onlyExtraEmbeds)
         {
             embeds = embeds.Prepend(
                 embedBuilder
                     .WithDescription(message.message)
-                    .WithColor(message.wasSuccess ? Color.Green : Color.Red)
+                    .WithColor(message.wasSuccess ? roleColor : Color.Red)
                     .Build()
             ).ToArray();
         }

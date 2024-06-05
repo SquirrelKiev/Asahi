@@ -48,7 +48,7 @@ public class BirthdayConfig
     [MaxLength(MaxStringLength)]
     public string DeniedForReasonPermissionsText { get; set; } = "You do not have the correct permissions to set/change your birthday.";
 
-    public EmbedColorSource EmbedColorSource { get; set; } = EmbedColorSource.UsersRoleColor;
+    public EmbedColorSource EmbedColorSource { get; set; } = EmbedColorSource.BotsRoleColor;
 
     /// <remarks>0 means no embed color.</remarks>>
     public uint FallbackEmbedColor { get; set; } = 0u;

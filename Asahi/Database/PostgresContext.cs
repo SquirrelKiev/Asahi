@@ -14,6 +14,6 @@ public class PostgresContext : BotDbContext
         base.OnConfiguring(optionsBuilder);
 
         optionsBuilder
-            .UseNpgsql(connectionString, x => x.UseNodaTime());
+            .UseNpgsql(connectionString, x => x.UseNodaTime().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     }
 }

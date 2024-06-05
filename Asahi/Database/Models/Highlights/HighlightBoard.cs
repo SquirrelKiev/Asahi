@@ -20,7 +20,16 @@ public enum EmbedColorSource
     UsersBannerColor,
     [ChoiceDisplay("Use the user's accent color.")]
     [Description("Use the user's accent color.")]
-    UsersAccentColor
+    UsersAccentColor,
+    [ChoiceDisplay("Use the bot's role color.")]
+    [Description("Use the bot's role color.")]
+    BotsRoleColor,
+    [ChoiceDisplay("Use the bot's banner color.")]
+    [Description("Use the bot's banner color.")]
+    BotsBannerColor,
+    [ChoiceDisplay("Use the bot's accent color.")]
+    [Description("Use the bot's accent color.")]
+    BotsAccentColor
 }
 
 [JsonConverter(typeof(StringEnumConverter))]

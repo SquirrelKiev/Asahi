@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NodaTime;
 using NodaTime.Text;
+using static Asahi.Modules.BirthdayRoles.UserFacingBirthdayConfigModule;
 
 namespace Asahi.Modules.BirthdayRoles;
 
@@ -19,10 +20,27 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
     IClock clock,
     ILogger<BirthdayConfigModule> logger) : BotModule
 {
+    public enum Months
+    {
+        January = 1,
+        February = 2,
+        March = 3,
+        April = 4,
+        May = 5,
+        June = 6,
+        July = 7,
+        August = 8,
+        September = 9,
+        October = 10,
+        November = 11,
+        December = 12
+    }
+
+
     // User facing birthday-setting command
     [SlashCommand("birthday", "Sets your birthday.", true)]
     public async Task UserFacingSetBirthdaySlash([Summary(description: "The day of the month your birthday is on.")] int day,
-        [Summary(description: "The month your birthday is in.")][Autocomplete(typeof(MonthAutocomplete))] int month,
+        [Summary(description: "The month your birthday is in.")] Months month,
         [Summary(description: "Your timezone.")][Autocomplete(typeof(TimeZoneAutocomplete))] string timeZone,
         [Summary(description: "The name/ID of the config.")] string? name = null)
     {
@@ -41,7 +59,7 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
             AnnualDate date;
             try
             {
-                date = new AnnualDate(month, day);
+                date = new AnnualDate((int)month, day);
             }
             catch (ArgumentOutOfRangeException ex)
             {
@@ -184,7 +202,7 @@ public class BirthdayConfigModule(
     [SlashCommand("set-user", "Sets a user's birthday.")]
     public async Task SetUserBirthdaySlash([Summary(description: "The user to change the birthday of.")] IGuildUser user, 
         [Summary(description: "The day of the month their birthday is on.")] int day,
-        [Summary(description: "The month their birthday is in.")][Autocomplete(typeof(MonthAutocomplete))] int month,
+        [Summary(description: "The month their birthday is in.")] Months month,
         [Summary(description: "Their timezone.")][Autocomplete(typeof(TimeZoneAutocomplete))] string timeZone,
         [Summary(description: "The name/ID of the config.")] string? name = null)
     {
@@ -193,7 +211,7 @@ public class BirthdayConfigModule(
             AnnualDate date;
             try
             {
-                date = new AnnualDate(month, day);
+                date = new AnnualDate((int)month, day);
             }
             catch (ArgumentOutOfRangeException ex)
             {
@@ -321,24 +339,29 @@ public class BirthdayConfigModule(
 
 
 #if DEBUG
-    [SlashCommand("debug-test-date", "[DEBUG] Runs a birthday check for the specified date (DD/MM/YYYY) at 12:00 UTC.")]
-    public async Task DebugRunForDateSlash(string date)
+    [SlashCommand("debug-test-date", "[DEBUG] Runs a birthday check for the specified date (DD/MM/YYYY) at the specified time (UTC).")]
+    public async Task DebugRunForDateSlash(string date, string time)
     {
         await DeferAsync();
 
         var pattern = LocalDatePattern.CreateWithInvariantCulture("dd/MM/yyyy");
+        var pattern2 = LocalTimePattern.GeneralIso;
 
         var parseResult = pattern.Parse(date);
+        var parseResult2 = pattern2.Parse(time);
 
         if (!parseResult.Success)
         {
             throw parseResult.Exception;
         }
+        if (!parseResult2.Success)
+        {
+            throw parseResult2.Exception;
+        }
 
-        var zone = DateTimeZone.Utc;
-        var time = parseResult.Value.AtStartOfDayInZone(zone).PlusHours(12);
+        var currentMoment = parseResult.Value.At(parseResult2.Value).InUtc();
 
-        await bts.CheckForBirthdays(time.ToInstant());
+        await bts.CheckForBirthdays(currentMoment.ToInstant());
 
         await FollowupAsync("Done, check logs for more info.");
     }

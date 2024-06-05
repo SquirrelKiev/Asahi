@@ -17,11 +17,13 @@ namespace Asahi.Modules.Highlights;
 [Group("highlights", "Commands relating to the highlights system.")]
 public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger, InteractiveService interactive) : HighlightsSubmodule(dbService)
 {
+    public const string NameDescription = "The name of the board.";
+
     #region Create/Remove board
 
     [SlashCommand("create", "Creates a new highlight board.")]
     public Task CreateSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")] [MaxLength(HighlightBoard.MaxNameLength)]
+        [Summary(description: NameDescription)] [MaxLength(HighlightBoard.MaxNameLength)]
         string name,
         [Summary(description: "The channel to log highlights to. Can be changed later.")]
         ITextChannel channel)
@@ -52,7 +54,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("remove", "Removes a highlight board.")]
     public Task RemoveSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name)
@@ -79,7 +81,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
     {
         [SlashCommand("add", "Adds a new threshold override for the specified channel.")]
         public Task ThresholdAddOverrideSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -131,7 +133,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
         [SlashCommand("remove", "Removes the threshold override.")]
         public Task ThresholdSetBaseSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -156,7 +158,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
         [SlashCommand("set-base", "Sets the base threshold.")]
         public Task ThresholdSetBaseSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -177,7 +179,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
         [SlashCommand("set-max", "Sets the max threshold.")]
         public Task ThresholdSetMaxSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -198,7 +200,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
         [SlashCommand("set-rounding", "If the threshold goes higher than this, it's rounded up instead of down.")]
         public Task ThresholdSetRoundingSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -220,7 +222,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("set-max-age",
             "Any messages older than this will not be considered when calculating unique users.")]
         public Task ThresholdSetMaxMessageAgeSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -242,7 +244,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("set-unique-mult",
             "The total unique users in a convo will be multiplied by this before being added to the threshold.")]
         public Task ThresholdSetUniqueUserMultiplierSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -264,7 +266,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("set-unique-decay",
             "A user's contribution to the threshold will decay once their latest message is this old.")]
         public Task ThresholdSetUniqueUserAgeDecaySlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -286,7 +288,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("set-active-lookback",
             "Which message to check the age of for checking high activity. (e.g. 50th message)")]
         public Task ThresholdSetHighActivityLookbackSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -308,7 +310,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("set-active-max-age",
             "If the look-back message is this old or less, we deem the channel as \"high activity\".")]
         public Task ThresholdSetHighActivityMaxAgeSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -330,7 +332,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("set-active-mult",
             "If the channel is deemed high activity, threshold will be multiplied by this.")]
         public Task ThresholdSetHighActivityMultiplierSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -357,7 +359,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("add-spoiler-channel", "Any channel added here will always have its messages spoiler tagged.")]
     public Task AddSpoilerChannelSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -392,7 +394,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("rm-spoiler-channel", "Removes a spoiler channel.")]
     public Task RemoveSpoilerChannelSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -418,7 +420,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("add-log-override", "Highlighted messages from the overridden channel will be sent to a different highlight channel.")]
     public Task AddLogOverrideSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -454,7 +456,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("rm-log-override", "Removes a logging channel override.")]
     public Task RemoveLogOverrideSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -480,7 +482,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("set-mute-role", "Any users with the role specified will not make it into highlights.")]
     public Task SetMuteRoleSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -497,7 +499,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("set-channel", "Sets the channel where highlighted messages are sent to.")]
     public Task SetChannelSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -515,7 +517,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
     [SlashCommand("max-message-age",
         "The maximum age (in seconds) a message is allowed to be to be added as a highlight. 0 = any age.")]
     public Task SetMessageAgeSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -532,7 +534,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("set-embed-color", "Sets the embed color of the message sent to the board channel.")]
     public Task SetEmbedColorSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -584,7 +586,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("add",
         "Adds the channel to the channel filter. Channel filter is blocklist by default.")]
         public Task AddFilterChannelSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -608,7 +610,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("remove",
             "Removes the channel from the channel filter. Channel filter is blocklist by default.")]
         public Task RemoveFilterChannelSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -630,9 +632,9 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         }
 
         [SlashCommand("add-raw",
-            "Add multiple channels to the channel filter. This takes channel IDs. Comma separated.")]
+            "Add multiple channels to the channel filter. Comma separated channel IDs.")]
         public Task AddFilterChannelsRawSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -713,7 +715,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("remove-raw",
             "Remove multiple channels to the channel filter. This takes channel IDs. Comma separated.")]
         public Task RemoveFilterChannelsRawSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -794,7 +796,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("set-filter-type",
             "Sets the channel filter type.")]
         public Task SetFilterChannelTypeSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -818,7 +820,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
     [SlashCommand("filter-self-reactions",
         "Changes whether reactions from the message author will count or not.")]
     public Task SelfReactionsToggleSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -845,7 +847,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("max-attempts",
         "Sets how many times the bot will try to react to the highlight before using fallback.")]
         public Task AutoReactMaxAttemptsSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -871,7 +873,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("max-reactions",
             "Sets how many attempts the bot will make to react to the message sent in the highlights channel.")]
         public Task AutoReactMaxReactionsSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -895,7 +897,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [SlashCommand("fallback",
             "Sets the emote to react with if the bot can't react with the attempted emote.")]
         public Task AutoReactFallbackSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
@@ -928,7 +930,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
         [SlashCommand("emote-preference", "Sets how the bot decides what to react with.")]
         public Task AutoReactEmotePreferenceSlash(
-            [Summary(description: "The name/ID of the board. Case insensitive.")]
+            [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -1012,7 +1014,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("get-board", "Retrieves a board config.")]
     public async Task GetBoardSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -1086,7 +1088,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("get-override", "Retrieves a board's threshold.")]
     public async Task GetThresholdSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -1157,7 +1159,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("get-threshold", "Gets the current calculated threshold for a channel.")]
     public Task GetCurrentChannelsThresholdSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
@@ -1260,7 +1262,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
 
     [SlashCommand("debug-log-threshold", "[DEBUG] Logs the current channel's threshold in console eternally.")]
     public async Task DebugLogThresholdSlash(
-        [Summary(description: "The name/ID of the board. Case insensitive.")]
+        [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,

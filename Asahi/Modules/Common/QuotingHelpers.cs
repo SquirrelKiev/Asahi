@@ -309,27 +309,48 @@ public static class QuotingHelpers
     {
         Color embedColor = fallbackColor;
 
+        var user = embedAuthor;
+
         switch (colorSource)
         {
             case EmbedColorSource.UsersRoleColor:
-                embedColor = embedAuthor?.RoleIds.Select(x => embedAuthor.Guild.GetRole(x))
-                    .OrderByDescending(x => x.Position)
-                    .FirstOrDefault(x => x.Color != Color.Default)?.Color ?? embedColor;
+                embedColor = GetUserRoleColorWithFallback(user, embedColor);
                 break;
             case EmbedColorSource.UsersBannerColor:
-                if (embedAuthor != null)
+                if (user != null)
                 {
-                    var restUser = await client.Rest.GetUserAsync(embedAuthor.Id);
+                    var restUser = await client.Rest.GetUserAsync(user.Id);
 
                     embedColor = restUser.BannerColor ?? embedColor;
                 }
                 break;
             case EmbedColorSource.UsersAccentColor:
-                if (embedAuthor != null)
+                if (user != null)
                 {
-                    var restUser = await client.Rest.GetUserAsync(embedAuthor.Id);
+                    var restUser = await client.Rest.GetUserAsync(user.Id);
 
                     embedColor = restUser.AccentColor ?? embedColor;
+                }
+                break;
+            case EmbedColorSource.BotsRoleColor:
+                if (embedAuthor != null)
+                {
+                    user = await embedAuthor.Guild.GetUserAsync(client.CurrentUser.Id);
+                    goto case EmbedColorSource.UsersRoleColor;
+                }
+                break;
+            case EmbedColorSource.BotsBannerColor:
+                if (embedAuthor != null)
+                {
+                    user = await embedAuthor.Guild.GetUserAsync(client.CurrentUser.Id);
+                    goto case EmbedColorSource.UsersBannerColor;
+                }
+                break;
+            case EmbedColorSource.BotsAccentColor:
+                if (embedAuthor != null)
+                {
+                    user = await embedAuthor.Guild.GetUserAsync(client.CurrentUser.Id);
+                    goto case EmbedColorSource.UsersAccentColor;
                 }
                 break;
             case EmbedColorSource.AlwaysUseFallbackColor:
@@ -338,6 +359,13 @@ public static class QuotingHelpers
         }
 
         return embedColor;
+    }
+
+    public static Color GetUserRoleColorWithFallback(IGuildUser? embedAuthor, Color fallbackColor)
+    {
+        return embedAuthor?.RoleIds.Select(x => embedAuthor.Guild.GetRole(x))
+            .OrderByDescending(x => x.Position)
+            .FirstOrDefault(x => x.Color != Color.Default)?.Color ?? fallbackColor;
     }
 
     // TODO: Spoiler handling

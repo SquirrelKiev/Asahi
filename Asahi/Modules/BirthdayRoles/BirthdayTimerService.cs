@@ -24,7 +24,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
         {
             logger.LogTrace("Birthday timer task started");
             await CheckForBirthdays();
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(30));
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
                 try
@@ -61,7 +61,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
 
         logger.LogTrace("checking birthdays for time {date}.", now);
 
-        var birthdays = await GetCurrentBirthdays(context, now.InUtc().Date);
+        var birthdays = await GetCurrentBirthdays(context, now);
         var groupedBirthdays = birthdays.GroupBy(x => x.BirthdayConfig);
 
         logger.LogTrace("got {count} birthdays", birthdays.Length);
@@ -159,7 +159,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
         }
     }
 
-    private async Task<BirthdayEntry[]> GetCurrentBirthdays(BotDbContext context, LocalDate now)
+    private async Task<BirthdayEntry[]> GetCurrentBirthdays(BotDbContext context, Instant now)
     {
         //var yesterday = now.PlusDays(-1);
         //var tomorrow = now.PlusDays(1);
@@ -178,13 +178,14 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
             if (timezone == null)
                 return false;
 
-            var birthdayInCurrentYear = entry.BirthDayDate.InYear(now.Year);
+            var localNow = now.InZone(timezone);
 
-            var birthdayStart = birthdayInCurrentYear.AtStartOfDayInZone(timezone);
+            var birthdayInCurrentYear = entry.BirthDayDate.InYear(localNow.Year);
 
-            var localNow = now.AtStartOfDayInZone(timezone);
+            logger.LogTrace("(u:{user}, g:{guild}, c:{config}) now is {now}, birthday is {birthday}.", 
+                entry.UserId, entry.BirthdayConfig.GuildId, entry.BirthdayConfig.Name, localNow, birthdayInCurrentYear);
 
-            return localNow.Date == birthdayStart.Date;
+            return localNow.Date == birthdayInCurrentYear;
         }).ToArray();
 
         return filteredDates;

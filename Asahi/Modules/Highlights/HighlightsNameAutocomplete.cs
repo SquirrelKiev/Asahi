@@ -18,7 +18,8 @@ public class HighlightsNameAutocomplete : AutocompleteHandler
         await using var dbContext = dbService.GetDbContext();
 
         var boards = dbContext.HighlightBoards.Where(x => x.GuildId == context.Guild.Id && 
-                                                          x.Name.StartsWith((string)autocompleteInteraction.Data.Current.Value)).Take(25);
+                                                          x.Name.StartsWith((string)autocompleteInteraction.Data.Current.Value))
+                                                                .OrderBy(x => x.Name).Take(25);
 
         foreach (var board in await boards.ToArrayAsync())
         {

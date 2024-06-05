@@ -13,10 +13,10 @@ public class TimeZoneAutocomplete : AutocompleteHandler
 
         var ids = TzdbDateTimeZoneSource.Default.GetIds();
 
-        var userInput = autocompleteInteraction.Data.Current.Value.ToString()!.ToLowerInvariant();
+        var userInput = autocompleteInteraction.Data.Current.Value.ToString()!.ToLowerInvariant().Replace(' ', '_');
 
         return AutocompletionResult.FromSuccess(ids
-            .Where(x => x.Contains(userInput, StringComparison.InvariantCultureIgnoreCase))
+            .Where(x => x.Replace(' ','_').Contains(userInput, StringComparison.InvariantCultureIgnoreCase))
             .Take(25)
             .Select(x => new AutocompleteResult(x, x)));
     }
