@@ -24,7 +24,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
         {
             logger.LogTrace("Birthday timer task started");
             await CheckForBirthdays();
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
                 try
@@ -59,12 +59,13 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
 
         var now = currentInstant.Value;
 
-        logger.LogTrace("checking birthdays for time {date}.", now);
+        //logger.LogTrace("checking birthdays for time {date}.", now);
 
         var birthdays = await GetCurrentBirthdays(context, now);
         var groupedBirthdays = birthdays.GroupBy(x => x.BirthdayConfig);
 
-        logger.LogTrace("got {count} birthdays", birthdays.Length);
+        if(birthdays.Length != 0)
+            logger.LogTrace("got {count} birthdays", birthdays.Length);
 
         List<BirthdayAndy> birthdayAndys = [];
 
@@ -143,14 +144,14 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
                 andysToAdd.AddRange(andysRoleGroup.Where(x => andysRoleGroup.Key.Members.All(y => y.Id != x.User.Id)));
             }
 
-            logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count, guild.Name);
+            //logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count, guild.Name);
 
             foreach (var andy in andysToRemove)
             {
                 await andy.User.RemoveRoleAsync(andy.Role, new RequestOptions { AuditLogReason = "It's no longer their birthday :(" });
             }
 
-            logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count, guild.Name);
+            //logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count, guild.Name);
 
             foreach (var andy in andysToAdd)
             {
@@ -182,8 +183,8 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
 
             var birthdayInCurrentYear = entry.BirthDayDate.InYear(localNow.Year);
 
-            logger.LogTrace("(u:{user}, g:{guild}, c:{config}) now is {now}, birthday is {birthday}.", 
-                entry.UserId, entry.BirthdayConfig.GuildId, entry.BirthdayConfig.Name, localNow, birthdayInCurrentYear);
+            //logger.LogTrace("(u:{user}, g:{guild}, c:{config}) now is {now}, birthday is {birthday}.", 
+            //    entry.UserId, entry.BirthdayConfig.GuildId, entry.BirthdayConfig.Name, localNow, birthdayInCurrentYear);
 
             return localNow.Date == birthdayInCurrentYear;
         }).ToArray();

@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Newtonsoft.Json;
 
 namespace Asahi.Database.Models;
 
@@ -7,8 +6,6 @@ namespace Asahi.Database.Models;
 // overengineered I know
 // edit: maybe celebrating general anniversaries
 //       "my discord account was created xyz date woo" type thing
-
-// Note to future me: Don't add a navigational property to BirthdayEntry, cuz that's gonna be a lot of data to transfer
 public class BirthdayConfig
 {
     public const int MaxStringLength = 200;
@@ -29,9 +26,6 @@ public class BirthdayConfig
     /// How long users are allowed to edit their birthday for once they set it. Set to zero for infinite time.
     /// </summary>
     public int EditWindowSeconds { get; set; } = 1800; // 30 minutes
-
-    [MaxLength(MaxNameLength)]
-    public string DisplayName { get; set; } = "birthday";
 
     [MaxLength(MaxStringLength)]
     public string EmbedTitleText { get; set; } = $"{UsernamePlaceholder}, your birthday has been set!";

@@ -19,13 +19,13 @@ public static partial class ConfigUtilities
         if (message.wasSuccess && message.shouldSave)
             await context.SaveChangesAsync();
 
-        var embeds = await CreateEmbeds(await botContext.Guild.GetUserAsync(botContext.Client.CurrentUser.Id), embedBuilder, message);
+        var embeds = CreateEmbeds(await botContext.Guild.GetCurrentUserAsync(), embedBuilder, message);
 
         await botContext.Interaction.FollowupAsync(embeds: embeds);
         return message.wasSuccess;
     }
 
-    public static async Task<Embed[]> CreateEmbeds(IGuildUser botUser, EmbedBuilder embedBuilder, ConfigChangeResult message)
+    public static Embed[] CreateEmbeds(IGuildUser botUser, EmbedBuilder embedBuilder, ConfigChangeResult message)
     {
         var embeds = message.extraEmbeds;
 
