@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Asahi.Modules.Seigen;
 
-[InteractionsModCommand]
 [CommandContextType(InteractionContextType.Guild)]
+[DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [Group("trackables", "Commands relating to managing trackables and their users.")]
 public class TrackablesModule(DbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {

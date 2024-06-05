@@ -4,6 +4,7 @@ using Discord.Interactions;
 namespace Asahi.Modules.ModSpoilers;
 
 [Group("spoiler", "Commands relating to mod spoiler tagging.")]
+[DefaultMemberPermissions(GuildPermission.ManageMessages)]
 public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotModule
 {
     public class SetContextModal : IModal
@@ -21,7 +22,6 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
     }
 
     [MessageCommand("Spoiler Message")]
-    [DefaultMemberPermissions(GuildPermission.ManageMessages)]
     public async Task SpoilerMessageSlash(IMessage message)
     {
         if (message.Channel is not ITextChannel channel)
@@ -41,7 +41,6 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
             ModulePrefixes.SPOILER_MODAL));
     }
 
-    [InteractionsModCommand]
     [SlashCommand("spoiler-emote", "Sets the reaction emote that mods use to mark a message as spoiler.")]
     public async Task SetSpoilerEmoteSlash(IEmote emote)
     {
@@ -58,7 +57,6 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
         await FollowupAsync($"Set spoiler emote to {emote}", allowedMentions: AllowedMentions.None);
     }
 
-    [InteractionsModCommand]
     [SlashCommand("delete-og", "Whether the bot should delete the message being tagged or not.")]
     public async Task SetDeleteOgSlash(bool delete)
     {
@@ -75,7 +73,6 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
         await FollowupAsync($"Bot will now {(delete ? "delete" : "not delete")} the message being tagged.", allowedMentions: AllowedMentions.None);
     }
 
-    [InteractionsModCommand]
     [SlashCommand("delete-context", "Whether the bot should delete the messages for setting context or not. (Reaction only)")]
     public async Task SetDeleteContextSlash(bool delete)
     {

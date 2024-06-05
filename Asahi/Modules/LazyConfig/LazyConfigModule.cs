@@ -5,7 +5,7 @@ using Discord.Interactions;
 namespace Asahi.Modules.LazyConfig;
 
 [CommandContextType(InteractionContextType.Guild)]
-[InteractionsModCommand]
+[DefaultMemberPermissions(GuildPermission.ManageGuild)]
 // [Group("config", "Configuration commands.")]
 public class LazyConfigModule(DbService dbService) : BotModule
 {

@@ -12,8 +12,8 @@ using Newtonsoft.Json;
 
 namespace Asahi.Modules.Highlights;
 
-[InteractionsModCommand]
 [CommandContextType(InteractionContextType.Guild)]
+[DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [Group("highlights", "Commands relating to the highlights system.")]
 public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger, InteractiveService interactive) : HighlightsSubmodule(dbService)
 {
