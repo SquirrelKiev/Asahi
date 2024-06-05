@@ -220,7 +220,7 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("set-role", "Set the role to assign users when its their birthday.")]
-    public async Task SetRoleSlash(IRole role, [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task SetRoleSlash([Summary(description: "The role to assign if its a user's birthday.")] IRole role, [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async context =>
         {
