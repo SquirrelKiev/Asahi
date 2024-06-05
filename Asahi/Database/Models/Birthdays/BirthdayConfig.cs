@@ -27,6 +27,9 @@ public class BirthdayConfig
     /// </summary>
     public int EditWindowSeconds { get; set; } = 1800; // 30 minutes
 
+    [MaxLength(MaxNameLength)]
+    public string DisplayName { get; set; } = "birthday";
+
     [MaxLength(MaxStringLength)]
     public string EmbedTitleText { get; set; } = $"{UsernamePlaceholder}, your birthday has been set!";
 
