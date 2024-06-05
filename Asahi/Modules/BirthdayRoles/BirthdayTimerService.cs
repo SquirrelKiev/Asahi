@@ -23,7 +23,14 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
         try
         {
             logger.LogTrace("Birthday timer task started");
-            await CheckForBirthdays();
+            try
+            {
+                await CheckForBirthdays();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled exception in TimerTask! {message}", ex.Message);
+            }
             using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
@@ -80,26 +87,6 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
             {
                 birthdayAndys.Add(new BirthdayAndy(role, guild.GetUser(entry.UserId)));
             }
-
-            //var usersWithRole = role.Members.ToArray();
-            //var birthdayUsers = group.Select(birthday => guild.GetUser(birthday.UserId)).ToArray();
-
-            //var membersToRemove = usersWithRole.Where(x => birthdayUsers.All(y => y.Id != x.Id)).ToArray();
-            //var membersToAdd = birthdayUsers.Where(x => usersWithRole.All(y => y.Id != x.Id)).ToArray();
-
-            //logger.LogTrace("removing {count} members from birthday role", membersToRemove.Length);
-
-            //foreach (var user in membersToRemove)
-            //{
-            //    await user.RemoveRoleAsync(role, new RequestOptions() {AuditLogReason = "It's no longer their birthday :("});
-            //}
-
-            //logger.LogTrace("adding {count} members to birthday role", membersToAdd.Length);
-
-            //foreach (var user in membersToAdd)
-            //{
-            //    await user.AddRoleAsync(role, new RequestOptions {AuditLogReason = "It's their birthday! :D"});
-            //}
         }
 
         var birthdaysInGuild = birthdayAndys
@@ -109,53 +96,65 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
 
         foreach (var guild in client.Guilds)
         {
-            if (!birthdaysInGuild.TryGetValue(guild, out var guildBirthdayAndys))
+            try
             {
-                guildBirthdayAndys = [];
-            }
-
-            var configsForGuild = configs.Where(x => x.GuildId == guild.Id);
-
-            List<BirthdayAndy> andysToRemove = [];
-            List<BirthdayAndy> andysToAdd = [];
-
-            foreach (var config in configsForGuild)
-            {
-                var role = guild.GetRole(config.BirthdayRole);
-
-                andysToRemove.AddRange(role.Members.Select(user => new BirthdayAndy(role, user)));
-            }
-
-            var birthdayAndysGroupedRole = guildBirthdayAndys.GroupBy(x => x.Role);
-            foreach (var andysRoleGroup in birthdayAndysGroupedRole)
-            {
-                foreach (var birthdayAndy in (andysRoleGroup.Key.Members.Where(x => andysRoleGroup.Any(y => y.User.Id == x.Id))
-                             .Select(x => new BirthdayAndy(andysRoleGroup.Key, x))))
+                if (!birthdaysInGuild.TryGetValue(guild, out var guildBirthdayAndys))
                 {
-                    //var memberToRemove = membersToRemove.FirstOrDefault(x =>
-                    //    x.user.Id == birthdayAndy.user.Id && x.role.Id == birthdayAndy.role.Id);
-
-                    //if(!memberToRemove.Equals(default))
-                    //    membersToRemove.Remove(memberToRemove);
-
-                    andysToRemove.Remove(birthdayAndy);
+                    guildBirthdayAndys = [];
                 }
-                
-                andysToAdd.AddRange(andysRoleGroup.Where(x => andysRoleGroup.Key.Members.All(y => y.Id != x.User.Id)));
+
+                var configsForGuild = configs.Where(x => x.GuildId == guild.Id);
+
+                List<BirthdayAndy> andysToRemove = [];
+                List<BirthdayAndy> andysToAdd = [];
+
+                foreach (var config in configsForGuild)
+                {
+                    var role = guild.GetRole(config.BirthdayRole);
+
+                    andysToRemove.AddRange(role.Members.Select(user => new BirthdayAndy(role, user)));
+                }
+
+                var birthdayAndysGroupedRole = guildBirthdayAndys.GroupBy(x => x.Role);
+                foreach (var andysRoleGroup in birthdayAndysGroupedRole)
+                {
+                    foreach (var birthdayAndy in (andysRoleGroup.Key.Members
+                                 .Where(x => andysRoleGroup.Any(y => y.User.Id == x.Id))
+                                 .Select(x => new BirthdayAndy(andysRoleGroup.Key, x))))
+                    {
+                        //var memberToRemove = membersToRemove.FirstOrDefault(x =>
+                        //    x.user.Id == birthdayAndy.user.Id && x.role.Id == birthdayAndy.role.Id);
+
+                        //if(!memberToRemove.Equals(default))
+                        //    membersToRemove.Remove(memberToRemove);
+
+                        andysToRemove.Remove(birthdayAndy);
+                    }
+
+                    andysToAdd.AddRange(
+                        andysRoleGroup.Where(x => andysRoleGroup.Key.Members.All(y => y.Id != x.User.Id)));
+                }
+
+                //logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count, guild.Name);
+
+                foreach (var andy in andysToRemove)
+                {
+                    await andy.User.RemoveRoleAsync(andy.Role,
+                        new RequestOptions { AuditLogReason = "It's no longer their birthday :(" });
+                }
+
+                //logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count, guild.Name);
+
+                foreach (var andy in andysToAdd)
+                {
+                    await andy.User.AddRoleAsync(andy.Role,
+                        new RequestOptions { AuditLogReason = "It's their birthday! :D" });
+                }
             }
-
-            //logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count, guild.Name);
-
-            foreach (var andy in andysToRemove)
+            catch (Exception ex)
             {
-                await andy.User.RemoveRoleAsync(andy.Role, new RequestOptions { AuditLogReason = "It's no longer their birthday :(" });
-            }
-
-            //logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count, guild.Name);
-
-            foreach (var andy in andysToAdd)
-            {
-                await andy.User.AddRoleAsync(andy.Role, new RequestOptions { AuditLogReason = "It's their birthday! :D" });
+                logger.LogError(ex, "Failed to do birthday roles for guild {guild}.", guild.Id);
+                throw;
             }
         }
     }
