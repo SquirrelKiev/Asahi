@@ -7,9 +7,9 @@ namespace Asahi.Modules;
 public static partial class ConfigUtilities
 {
     public static async Task<bool> CommonConfig(IInteractionContext botContext, DbService dbService,
-        Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
+        Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction, bool ephemeral = false)
     {
-        await botContext.Interaction.DeferAsync();
+        await botContext.Interaction.DeferAsync(ephemeral);
 
         await using var context = dbService.GetDbContext();
 
@@ -21,7 +21,7 @@ public static partial class ConfigUtilities
 
         var embeds = CreateEmbeds(await botContext.Guild.GetCurrentUserAsync(), embedBuilder, message);
 
-        await botContext.Interaction.FollowupAsync(embeds: embeds);
+        await botContext.Interaction.FollowupAsync(embeds: embeds, ephemeral: ephemeral);
         return message.wasSuccess;
     }
 

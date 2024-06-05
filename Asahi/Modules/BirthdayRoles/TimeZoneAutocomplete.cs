@@ -6,7 +6,7 @@ namespace Asahi.Modules.BirthdayRoles;
 
 public class TimeZoneAutocomplete : AutocompleteHandler
 {
-    public override async Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context, IAutocompleteInteraction autocompleteInteraction,
+    public override Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context, IAutocompleteInteraction autocompleteInteraction,
         IParameterInfo parameter, IServiceProvider services)
     {
         var logger = services.GetRequiredService<ILogger<TimeZoneAutocomplete>>();
@@ -15,9 +15,9 @@ public class TimeZoneAutocomplete : AutocompleteHandler
 
         var userInput = autocompleteInteraction.Data.Current.Value.ToString()!.ToLowerInvariant().Replace(' ', '_');
 
-        return AutocompletionResult.FromSuccess(ids
+        return Task.FromResult(AutocompletionResult.FromSuccess(ids
             .Where(x => x.Replace(' ','_').Contains(userInput, StringComparison.InvariantCultureIgnoreCase))
             .Take(25)
-            .Select(x => new AutocompleteResult(x, x)));
+            .Select(x => new AutocompleteResult(x, x))));
     }
 }

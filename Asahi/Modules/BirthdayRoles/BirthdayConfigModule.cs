@@ -85,15 +85,6 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
                     x.Config.DeniedForReasonEditWindowText.Replace(BirthdayConfig.UsernamePlaceholder, user.DisplayName));
             }
 
-            // there's probably some weird edge condition here
-            var localDate = date.InYear(now.Year);
-            if (localDate.CompareTo(now.LocalDateTime.Date) < 0)
-            {
-                localDate = date.InYear(now.Year + 1);
-            }
-
-            var dateTime = localDate.AtStartOfDayInZone(tz).ToInstant();
-
             var eb = new EmbedBuilder()
                 .WithTitle(x.Config.EmbedTitleText.Replace(BirthdayConfig.UsernamePlaceholder, user.DisplayName))
                 .WithDescription(
@@ -103,19 +94,21 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
                     new Color(x.Config.FallbackEmbedColor), user,
                     (DiscordSocketClient)Context.Client))
                 .WithThumbnailUrl(user.GetDisplayAvatarUrl())
-                .AddField(x.Config.Name.Titleize(), $"<t:{dateTime.ToUnixTimeSeconds()}:f>");
+                .AddField(x.Config.Name.Titleize(), $"{date.Day.Ordinalize()} {date.ToString("MMMM", CultureInfo.InvariantCulture)}");
 
-            return new ConfigChangeResult(true, string.Empty, [eb.Build()], true);
-        });
+            await Context.Channel.SendMessageAsync(embed: eb.Build());
+
+            return new ConfigChangeResult(true, "Set successfully!");
+        }, ephemeral: true);
     }
 
-    private Task<bool> CommonConfig(Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
+    private Task<bool> CommonConfig(Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction, bool ephemeral = false)
     {
-        return ConfigUtilities.CommonConfig(Context, dbService, updateAction);
+        return ConfigUtilities.CommonConfig(Context, dbService, updateAction, ephemeral);
     }
 
     private Task<bool> CommonBirthdayConfig(string? name, ulong guildId, Func<BirthdayConfigModule.ConfigContext, Task<ConfigChangeResult>> updateAction,
-        Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
+        Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null, bool ephemeral = false)
     {
         return CommonConfig(async (context, eb) =>
         {
@@ -154,7 +147,7 @@ public class UserFacingBirthdayConfigModule(DbService dbService,
             }
 
             return await updateAction(new BirthdayConfigModule.ConfigContext(context, config, eb));
-        });
+        }, ephemeral);
     }
 }
 
@@ -238,9 +231,9 @@ public class BirthdayConfigModule(
     [SlashCommand("get", "Gets the config.")]
     public async Task GetConfigSlash([Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
     {
-        await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
-            new ConfigChangeResult(true,
-                $"```json\n{JsonConvert.SerializeObject(x.Config, Formatting.Indented)}\n```", [], shouldSave: false));
+        await CommonBirthdayConfig(name, Context.Guild.Id, x =>
+            Task.FromResult(new ConfigChangeResult(true,
+                $"```json\n{JsonConvert.SerializeObject(x.Config, Formatting.Indented)}\n```", [], shouldSave: false)));
     }
 
     [SlashCommand("set-user", "Sets a user's birthday.")]
@@ -344,7 +337,7 @@ public class BirthdayConfigModule(
         [Summary(description: "The list to add the role to.")] AllowBlockList list,
         [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
     {
-        await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
+        await CommonBirthdayConfig(name, Context.Guild.Id, x =>
         {
             List<ulong> roles;
 
@@ -361,11 +354,11 @@ public class BirthdayConfigModule(
             }
 
             if (roles.Contains(role.Id))
-                return new ConfigChangeResult(false, $"Role already in {list.Humanize()}.");
+                return Task.FromResult(new ConfigChangeResult(false, $"Role already in {list.Humanize()}."));
 
             roles.Add(role.Id);
 
-            return new ConfigChangeResult(true, $"Added <@&{role.Id}> to {list.Humanize()}.");
+            return Task.FromResult(new ConfigChangeResult(true, $"Added <@&{role.Id}> to {list.Humanize()}."));
         });
     }
 
@@ -374,7 +367,7 @@ public class BirthdayConfigModule(
         [Summary(description: "The list to remove the role from.")] AllowBlockList list,
         [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
     {
-        await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
+        await CommonBirthdayConfig(name, Context.Guild.Id, x =>
         {
             List<ulong> roles;
 
@@ -391,11 +384,11 @@ public class BirthdayConfigModule(
             }
 
             if (!roles.Contains(role.Id))
-                return new ConfigChangeResult(false, $"Role not found in {list.Humanize()}.");
+                return Task.FromResult(new ConfigChangeResult(false, $"Role not found in {list.Humanize()}."));
 
             roles.Remove(role.Id);
 
-            return new ConfigChangeResult(true, $"Removed <@&{role.Id}> from {list.Humanize()}.");
+            return Task.FromResult(new ConfigChangeResult(true, $"Removed <@&{role.Id}> from {list.Humanize()}."));
         });
     }
 
