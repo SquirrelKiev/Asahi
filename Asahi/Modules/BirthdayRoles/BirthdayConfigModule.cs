@@ -8,10 +8,12 @@ using Fergun.Interactive.Pagination;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using NodaTime;
 using NodaTime.Text;
 using NodaTime.TimeZones;
+using static Asahi.Modules.BirthdayRoles.BirthdayConfigModule;
 
 namespace Asahi.Modules.BirthdayRoles;
 
@@ -34,8 +36,8 @@ public enum Months
 // dumb I have to do this
 public class UserFacingBirthdayConfigModule(
     DbService dbService,
-    BirthdayTimerService bts,
     IClock clock,
+    InteractiveService interactive,
     ILogger<BirthdayConfigModule> logger) : BotModule
 {
     // User facing birthday-setting command
@@ -113,6 +115,76 @@ public class UserFacingBirthdayConfigModule(
         }, ephemeral: true);
     }
 
+    [SlashCommand("list-birthdays", "Lists all the users with a birthday set.")]
+    public async Task GetBirthdaysSlash(
+    [Summary(description: "How to sort the list.")] SortingOptions sortingOption = SortingOptions.AscendingUpcoming,
+    [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+    string? name = null)
+    {
+        await DeferAsync();
+
+        await using var context = dbService.GetDbContext();
+
+        var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(await Context.Guild.GetCurrentUserAsync(), Color.Green);
+
+        BirthdayConfig bday;
+        try
+        {
+            bday = await ResolveConfig(context, name, Context.Guild.Id);
+        }
+        catch (ConfigException ex)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
+                new EmbedBuilder(),
+                new ConfigChangeResult(false, ex.Message)));
+            return;
+        }
+
+        var bdays = await context.Birthdays.Where(x => x.BirthdayConfig == bday).ToArrayAsync();
+
+        if (bdays.Length == 0)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
+                new EmbedBuilder(),
+                new ConfigChangeResult(false, "No one has a birthday :(")));
+            return;
+        }
+
+        var now = LocalDate.FromDateTime(DateTime.UtcNow);
+
+        IEnumerable<BirthdayEntry> sortedBdays = sortingOption switch
+        {
+            SortingOptions.DateAdded => bdays.OrderBy(x => x.TimeCreatedUtc),
+            SortingOptions.Ascending => bdays.OrderBy(x => x.BirthDayDate),
+            SortingOptions.AscendingUpcoming => bdays.OrderBy(x => GetDaysUntilBirthday(x.BirthDayDate, now)),
+            _ => bdays
+        };
+
+        var pages = sortedBdays
+            .Select(x => $"* <@{x.UserId}> - {x.BirthDayDate.ToStringOrdinalized()}")
+            .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor).WithTitle($"Sort: `{sortingOption.Humanize()}`")
+                .WithDescription(string.Join('\n', x)));
+
+        var paginator = new StaticPaginatorBuilder()
+            .WithDefaultEmotes()
+            .WithActionOnCancellation(ActionOnStop.DeleteMessage)
+        .WithUsers(Context.User)
+        .WithPages(pages);
+
+        await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(1), InteractionResponseType.DeferredChannelMessageWithSource);
+    }
+
+    private int GetDaysUntilBirthday(AnnualDate birthday, LocalDate today)
+    {
+        var nextBirthday = birthday.InYear(today.Year);
+        if (nextBirthday < today)
+        {
+            nextBirthday = birthday.InYear(today.Year + 1);
+        }
+
+        return Period.Between(today, nextBirthday, PeriodUnits.Days).Days;
+    }
+
     private Task<bool> CommonConfig(Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction,
         bool ephemeral = false)
     {
@@ -172,7 +244,6 @@ public class BirthdayConfigModule(
         DbService dbService,
         BirthdayTimerService bts,
         IClock clock,
-        InteractiveService interactive,
         ILogger<BirthdayConfigModule> logger) : BotModule
 {
     public const string NameDescription = "The name/ID of the config.";
@@ -280,7 +351,7 @@ public class BirthdayConfigModule(
             await x.Context.SetBirthday(x.Config, user.Id, date, tz, clock.GetCurrentInstant().InUtc().LocalDateTime);
 
             return new ConfigChangeResult(true,
-                $"Set <@{user.Id}>'s birthday to the {date.ToStringOrdinalized()}");
+                $"Set <@{user.Id}>'s birthday to the {date.ToStringOrdinalized()}.");
         });
     }
 
@@ -431,52 +502,14 @@ public class BirthdayConfigModule(
         });
     }
 
-    [SlashCommand("list-users", "Lists all the users with a birthday set.")]
-    public async Task GetBirthdaysSlash(
-        [Summary(description: BirthdayConfigModule.NameDescription),
-         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
-        string? name = null)
+    public enum SortingOptions
     {
-        await DeferAsync();
-
-        await using var context = dbService.GetDbContext();
-
-        var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(await Context.Guild.GetCurrentUserAsync(), Color.Green);
-
-        BirthdayConfig bday;
-        try
-        {
-            bday = await ResolveConfig(context, name, Context.Guild.Id);
-        }
-        catch (ConfigException ex)
-        {
-            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
-                new EmbedBuilder(),
-                new ConfigChangeResult(false, ex.Message)));
-            return;
-        }
-
-        var bdays = await context.Birthdays.Where(x => x.BirthdayConfig == bday).ToArrayAsync();
-
-        if (bdays.Length == 0)
-        {
-            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
-                new EmbedBuilder(),
-                new ConfigChangeResult(false, "No one has a birthday :(")));
-            return;
-        }
-
-        var pages = bdays
-            .Select(x => $"* <@{x.UserId}> - {x.BirthDayDate.ToStringOrdinalized()}")
-            .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor).WithDescription(string.Join('\n', x)));
-
-        var paginator = new StaticPaginatorBuilder()
-            .WithDefaultEmotes()
-            .WithActionOnCancellation(ActionOnStop.DeleteMessage)
-            .WithUsers(Context.User)
-            .WithPages(pages);
-
-        await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(1), InteractionResponseType.DeferredChannelMessageWithSource);
+        // Sort by date added, ascending.
+        DateAdded,
+        // Sort by birthday date.
+        Ascending,
+        // Sort by birthday date relative to now, aka the closest birthday to the furthest.
+        AscendingUpcoming
     }
 
     public class BirthdayTextModal : IModal
@@ -585,7 +618,7 @@ public class BirthdayConfigModule(
 
     public record ConfigContext(BotDbContext Context, BirthdayConfig Config, EmbedBuilder EmbedBuilder);
 
-    private async Task<BirthdayConfig> ResolveConfig(BotDbContext context, string? name, ulong guildId, Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
+    public static async Task<BirthdayConfig> ResolveConfig(BotDbContext context, string? name, ulong guildId, Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
     {
         BirthdayConfig? config = null;
 
