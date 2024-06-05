@@ -532,7 +532,7 @@ public class BirthdayConfigModule(
         });
     }
 
-//#if DEBUG
+#if DEBUG
     [SlashCommand("debug-test-date", "[DEBUG] Runs a birthday check for the specified date (DD/MM/YYYY) at the specified time (UTC).")]
     public async Task DebugRunForDateSlash(string date, string time)
     {
@@ -559,7 +559,7 @@ public class BirthdayConfigModule(
 
         await FollowupAsync("Done, check logs for more info.");
     }
-//#endif
+#endif
 
     private Task<bool> CommonConfig(Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction)
     {
