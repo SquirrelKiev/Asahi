@@ -110,7 +110,7 @@ public static class Startup
 
         serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
 
-        // it says its implementing the JSON:API spec but it's so different lol
+        // Anime themes says its implementing the JSON:API spec but it's so different lol
         // new JsonApiSerializerSettings()
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 

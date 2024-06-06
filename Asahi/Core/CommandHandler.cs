@@ -23,12 +23,6 @@ namespace Asahi
         InteractiveService interactiveService,
         ILogger<CommandHandler> logger)
     {
-        protected readonly InteractionService interactionService = interactionService;
-        protected readonly CommandService commandService = commandService;
-        protected readonly DiscordSocketClient client = client;
-        protected readonly BotConfigBase botConfig = botConfig;
-        protected readonly IServiceProvider services = services;
-
         public async Task OnReady(params Assembly[] assemblies)
         {
             await InitializeInteractionService(assemblies);
@@ -108,8 +102,8 @@ namespace Asahi
 
             if (res.IsSuccess)
             {
-                logger.LogTrace("Command {ModuleName}.{MethodName} successfully executed. Message contents: {contents}",
-                    cmdInfo?.Module.Name, cmdInfo?.Name, ctx.Message.CleanContent);
+                //logger.LogTrace("Command {ModuleName}.{MethodName} successfully executed. Message contents: {contents}",
+                //    cmdInfo?.Module.Name, cmdInfo?.Name, ctx.Message.CleanContent);
             }
             else
             {
@@ -118,13 +112,13 @@ namespace Asahi
 
                 if (res is Discord.Commands.ExecuteResult executeResult)
                 {
-                    logger.LogError(executeResult.Exception, "Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
-                        cmdInfo?.Module?.Name, cmdInfo?.Name, executeResult.Error, executeResult.ErrorReason, ctx.Message.CleanContent);
+                    //logger.LogError(executeResult.Exception, "Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
+                    //    cmdInfo?.Module?.Name, cmdInfo?.Name, executeResult.Error, executeResult.ErrorReason, ctx.Message.CleanContent);
                 }
                 else
                 {
-                    logger.LogError("Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
-                        cmdInfo?.Module?.Name, cmdInfo?.Name, res.Error, res.ErrorReason, ctx.Message.CleanContent);
+                    //logger.LogError("Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
+                    //    cmdInfo?.Module?.Name, cmdInfo?.Name, res.Error, res.ErrorReason, ctx.Message.CleanContent);
                 }
 
                 try
@@ -166,20 +160,20 @@ namespace Asahi
         {
             if (res.IsSuccess)
             {
-                logger.LogTrace("Interaction {ModuleName}.{MethodName} successfully executed.", 
-                    cmdInfo.Module.Name, cmdInfo.MethodName);
+                //logger.LogTrace("Interaction {ModuleName}.{MethodName} successfully executed.", 
+                //    cmdInfo.Module.Name, cmdInfo.MethodName);
             }
             else
             {
                 if (res is Discord.Interactions.ExecuteResult executeResult)
                 {
-                    logger.LogError(executeResult.Exception, "Interaction {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}.",
-                        cmdInfo?.Module?.Name, cmdInfo?.MethodName, executeResult.Error, executeResult.ErrorReason);
+                    //logger.LogError(executeResult.Exception, "Interaction {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}.",
+                    //    cmdInfo?.Module?.Name, cmdInfo?.MethodName, executeResult.Error, executeResult.ErrorReason);
                 }
                 else
                 {
-                    logger.LogError("Interaction {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}.",
-                        cmdInfo?.Module?.Name, cmdInfo?.MethodName, res.Error, res.ErrorReason);
+                    //logger.LogError("Interaction {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}.",
+                    //    cmdInfo?.Module?.Name, cmdInfo?.MethodName, res.Error, res.ErrorReason);
                 }
 
                 var messageBody = $"{res.Error}, {res.ErrorReason}";

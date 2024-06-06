@@ -5,7 +5,10 @@ using Asahi.Modules.BirthdayRoles;
 using Asahi.Modules.Highlights;
 using Asahi.Modules.ModSpoilers;
 using Asahi.Modules.Seigen;
+using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
+using Fergun.Interactive;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -59,6 +62,10 @@ public class BotService(
         client.ReactionAdded += Client_ReactionAdded;
         client.ReactionRemoved += Client_ReactionRemoved;
         client.MessageReceived += Client_MessageReceived;
+
+        services.GetRequiredService<InteractionService>().Log += Client_Log;
+        services.GetRequiredService<CommandService>().Log += Client_Log;
+        services.GetRequiredService<InteractiveService>().Log += Client_Log;
 
         await client.LoginAsync(TokenType.Bot, config.BotToken);
         await client.StartAsync();

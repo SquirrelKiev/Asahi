@@ -115,7 +115,7 @@ public class UserFacingBirthdayConfigModule(
         }, ephemeral: true);
     }
 
-    [SlashCommand("list-birthdays", "Lists all the users with a birthday set.")]
+    [SlashCommand("birthday-list", "Lists all the users with a birthday set.")]
     public async Task GetBirthdaysSlash(
     [Summary(description: "How to sort the list.")] SortingOptions sortingOption = SortingOptions.AscendingUpcoming,
     [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
@@ -166,10 +166,17 @@ public class UserFacingBirthdayConfigModule(
                 .WithDescription(string.Join('\n', x)));
 
         var paginator = new StaticPaginatorBuilder()
-            .WithDefaultEmotes()
+            .WithOptions(
+                [
+                    new PaginatorButton("<", PaginatorAction.Backward, ButtonStyle.Secondary),
+                    new PaginatorButton("Jump", PaginatorAction.Jump, ButtonStyle.Secondary),
+                    new PaginatorButton(">", PaginatorAction.Forward, ButtonStyle.Secondary),
+                    new PaginatorButton("X", PaginatorAction.Exit, ButtonStyle.Danger),
+                ])
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
-        .WithUsers(Context.User)
-        .WithPages(pages);
+            .WithActionOnTimeout(ActionOnStop.DisableInput)
+            .WithUsers(Context.User)
+            .WithPages(pages);
 
         await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(1), InteractionResponseType.DeferredChannelMessageWithSource);
     }
