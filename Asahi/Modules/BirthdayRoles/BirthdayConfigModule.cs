@@ -1,6 +1,7 @@
 ﻿using Asahi.Database;
 using Asahi.Database.Models;
 using Asahi.Modules.Highlights;
+using BotBase.Modules;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Fergun.Interactive;
@@ -57,7 +58,7 @@ public class UserFacingBirthdayConfigModule(
             var user = await Context.Guild.GetUserAsync(Context.User.Id);
 
             if (user.RoleIds.Any(y => x.Config.DeniedRoles.Contains(y)) ||
-                (x.Config.AllowedRoles.Any() && !user.RoleIds.Any(y => x.Config.AllowedRoles.Contains(y))))
+                (x.Config.AllowedRoles.Count != 0 && !user.RoleIds.Any(y => x.Config.AllowedRoles.Contains(y))))
             {
                 return new ConfigChangeResult(false,
                     x.Config.DeniedForReasonPermissionsText.Replace(BirthdayConfig.UsernamePlaceholder,
@@ -171,7 +172,7 @@ public class UserFacingBirthdayConfigModule(
                     new PaginatorButton("<", PaginatorAction.Backward, ButtonStyle.Secondary),
                     new PaginatorButton("Jump", PaginatorAction.Jump, ButtonStyle.Secondary),
                     new PaginatorButton(">", PaginatorAction.Forward, ButtonStyle.Secondary),
-                    new PaginatorButton("X", PaginatorAction.Exit, ButtonStyle.Danger),
+                    new PaginatorButton(BaseModulePrefixes.RED_BUTTON, null, "X", ButtonStyle.Danger),
                 ])
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
@@ -433,19 +434,12 @@ public class BirthdayConfigModule(
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, x =>
         {
-            List<ulong> roles;
-
-            switch (list)
+            List<ulong> roles = list switch
             {
-                case AllowBlockList.BlockList:
-                    roles = x.Config.DeniedRoles;
-                    break;
-                case AllowBlockList.AllowList:
-                    roles = x.Config.AllowedRoles;
-                    break;
-                default:
-                    throw new NotSupportedException();
-            }
+                AllowBlockList.BlockList => x.Config.DeniedRoles,
+                AllowBlockList.AllowList => x.Config.AllowedRoles,
+                _ => throw new NotSupportedException()
+            };
 
             if (roles.Contains(role.Id))
                 return Task.FromResult(new ConfigChangeResult(false, $"Role already in {list.Humanize()}."));
@@ -463,19 +457,12 @@ public class BirthdayConfigModule(
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, x =>
         {
-            List<ulong> roles;
-
-            switch (list)
+            List<ulong> roles = list switch
             {
-                case AllowBlockList.BlockList:
-                    roles = x.Config.DeniedRoles;
-                    break;
-                case AllowBlockList.AllowList:
-                    roles = x.Config.AllowedRoles;
-                    break;
-                default:
-                    throw new NotSupportedException();
-            }
+                AllowBlockList.BlockList => x.Config.DeniedRoles,
+                AllowBlockList.AllowList => x.Config.AllowedRoles,
+                _ => throw new NotSupportedException()
+            };
 
             if (!roles.Contains(role.Id))
                 return Task.FromResult(new ConfigChangeResult(false, $"Role not found in {list.Humanize()}."));
