@@ -10,7 +10,9 @@ public class CustomCommandModule(CustomCommandService commandService, Interactiv
 {
     [InteractionsModCommand]
     [SlashCommand("add", "Adds a custom command.")]
-    public async Task AddCommand(string name, string contents)
+    public async Task AddCommand(
+        [Summary(description: "The name of the command.")] string name,
+        [Summary(description: "The message the bot should say when ran.")] string contents)
     {
         await DeferAsync();
 
@@ -27,7 +29,7 @@ public class CustomCommandModule(CustomCommandService commandService, Interactiv
 
     [InteractionsModCommand]
     [SlashCommand("remove", "Removes a custom command (if you own it).")]
-    public async Task RemoveCommand(string name)
+    public async Task RemoveCommand([Summary(description: "The name of the command.")] string name)
     {
         await DeferAsync();
 

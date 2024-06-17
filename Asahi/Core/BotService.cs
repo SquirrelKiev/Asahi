@@ -1,9 +1,11 @@
 ﻿using System.Reflection;
 using Asahi.Database;
+using Asahi.Database.Models.Rss;
 using Asahi.Modules.CustomizeStatus;
 using Asahi.Modules.BirthdayRoles;
 using Asahi.Modules.Highlights;
 using Asahi.Modules.ModSpoilers;
+using Asahi.Modules.RssAtomFeed;
 using Asahi.Modules.Seigen;
 using Discord.Commands;
 using Discord.Interactions;
@@ -191,13 +193,17 @@ public class BotService(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to set custom status in ready!");
+            logger.LogError(ex, "Failed to set custom status in ready.");
         }
 
+        // TODO: Merge all these timer tasks into one big thing to avoid potential rate-limits?
         hts.StartBackgroundTask(cts.Token);
 
         var birthdayTimer = services.GetRequiredService<BirthdayTimerService>();
         birthdayTimer.StartBackgroundTask(cts.Token);
+
+        var rssTimerService = services.GetRequiredService<RssTimerService>();
+        rssTimerService.StartBackgroundTask(cts.Token);
 
         // see comment in ExecuteAsync
         var roleManagement = services.GetRequiredService<RoleManagementService>();

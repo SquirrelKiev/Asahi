@@ -367,6 +367,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
         IGuildChannel spoilerTaggedChannel,
         [MaxLength(SpoilerChannel.MaxContextLength)]
+        [Summary(description: "Why the message is spoiler tagged. e.g. \"spoilers for the manga.\"")]
         string spoilerContext
         )
     {
@@ -591,6 +592,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [Summary(description: "The channel to filter.")]
         IGuildChannel channel)
         {
             return CommonBoardConfig(name, options =>
@@ -615,6 +617,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
             [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread)]
+            [Summary(description: "The channel to unfilter.")]
             IGuildChannel channel)
         {
             return CommonBoardConfig(name, options =>
@@ -638,6 +641,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
+            [Summary(description: "The IDs of the channels to add. Comma separated.")]
             string channels)
         {
             return CommonBoardConfig(name, async options =>
@@ -719,6 +723,7 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
+            [Summary(description: "The IDs of the channels to remove. Comma separated.")]
             string channels)
         {
             return CommonBoardConfig(name, async options =>
@@ -1268,7 +1273,8 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         string name,
         [Summary(description: "The channel to check the threshold of.")]
         [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
-        IGuildChannel channel, bool stopLogging = false)
+        IGuildChannel channel, [Summary(description: "Whether to continue logging to the console or not.")]
+        bool stopLogging = false)
     {
         loggingShouldStop = stopLogging;
 

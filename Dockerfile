@@ -5,6 +5,7 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 as build-env
 WORKDIR /source
 
 COPY Asahi/*.csproj Asahi/
+COPY Asahi.Analyzers/*.csproj Asahi.Analyzers/
 
 ARG TARGETARCH
 

@@ -38,8 +38,7 @@ public enum Months
 public class UserFacingBirthdayConfigModule(
     DbService dbService,
     IClock clock,
-    InteractiveService interactive,
-    ILogger<BirthdayConfigModule> logger) : BotModule
+    InteractiveService interactive) : BotModule
 {
     // User facing birthday-setting command
     [SlashCommand("birthday", "Sets your birthday.", true)]
@@ -179,7 +178,7 @@ public class UserFacingBirthdayConfigModule(
             .WithUsers(Context.User)
             .WithPages(pages);
 
-        await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(1), InteractionResponseType.DeferredChannelMessageWithSource);
+        await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(2), InteractionResponseType.DeferredChannelMessageWithSource);
     }
 
     private int GetDaysUntilBirthday(AnnualDate birthday, LocalDate today)
@@ -251,8 +250,7 @@ public class UserFacingBirthdayConfigModule(
 public class BirthdayConfigModule(
         DbService dbService,
         BirthdayTimerService bts,
-        IClock clock,
-        ILogger<BirthdayConfigModule> logger) : BotModule
+        IClock clock) : BotModule
 {
     public const string NameDescription = "The name/ID of the config.";
 
@@ -578,7 +576,9 @@ public class BirthdayConfigModule(
 
 #if DEBUG
     [SlashCommand("debug-test-date", "[DEBUG] Runs a birthday check for the specified date (DD/MM/YYYY) at the specified time (UTC).")]
-    public async Task DebugRunForDateSlash(string date, string time)
+    public async Task DebugRunForDateSlash(
+        [Summary(description: "The date to run the check for (DD/MM/YYYY)")] string date, 
+        [Summary(description: "The time to run the check for (HH:MM:ss)")]string time)
     {
         await DeferAsync();
 
@@ -671,5 +671,4 @@ public class BirthdayConfigModule(
     }
 
     // a little dumb
-    public class ConfigException(string message) : Exception(message);
 }

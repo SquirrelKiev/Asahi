@@ -10,7 +10,8 @@ namespace Asahi.Modules.LazyConfig;
 public class LazyConfigModule(DbService dbService) : BotModule
 {
     [SlashCommand("prefix", "Gets/sets the bot prefix.")]
-    public async Task SetPrefix([MinLength(1), MaxLength(GuildConfig.MaxPrefixLength)] string prefix = "")
+    public async Task SetPrefix(
+        [MinLength(1)] [MaxLength(GuildConfig.MaxPrefixLength)] [Summary(description: "The new prefix.")] string prefix = "")
     {
         await DeferAsync();
 

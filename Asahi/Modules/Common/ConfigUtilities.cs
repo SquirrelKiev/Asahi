@@ -60,3 +60,5 @@ public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraE
     {
     }
 }
+
+public class ConfigException(string message) : Exception(message);

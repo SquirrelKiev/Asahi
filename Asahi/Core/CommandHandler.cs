@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Asahi.Database.Models;
 using Asahi.Modules;
+using BotBase.Modules;
 using BotBase.Modules.RedButton;
 using Discord.Commands;
 using Discord.Interactions;
@@ -156,44 +157,26 @@ namespace Asahi
 
         #region Interaction Handling
 
-        protected Task InteractionExecuted(ICommandInfo cmdInfo, IInteractionContext ctx, Discord.Interactions.IResult res)
+        protected async Task InteractionExecuted(ICommandInfo cmdInfo, IInteractionContext ctx, Discord.Interactions.IResult res)
         {
             if (res.IsSuccess)
+                return;
+
+            var messageBody = $"{res.Error}, {res.ErrorReason}";
+
+            if (res is Discord.Interactions.PreconditionResult precondResult)
             {
-                //logger.LogTrace("Interaction {ModuleName}.{MethodName} successfully executed.", 
-                //    cmdInfo.Module.Name, cmdInfo.MethodName);
+                messageBody = $"Condition to use this command not met. {precondResult.ErrorReason}";
+            }
+
+            if (ctx.Interaction.HasResponded)
+            {
+                await ctx.Interaction.ModifyOriginalResponseAsync(new MessageContents(messageBody, embed: null, null));
             }
             else
             {
-                if (res is Discord.Interactions.ExecuteResult executeResult)
-                {
-                    //logger.LogError(executeResult.Exception, "Interaction {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}.",
-                    //    cmdInfo?.Module?.Name, cmdInfo?.MethodName, executeResult.Error, executeResult.ErrorReason);
-                }
-                else
-                {
-                    //logger.LogError("Interaction {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}.",
-                    //    cmdInfo?.Module?.Name, cmdInfo?.MethodName, res.Error, res.ErrorReason);
-                }
-
-                var messageBody = $"{res.Error}, {res.ErrorReason}";
-
-                if (res is Discord.Interactions.PreconditionResult precondResult)
-                {
-                    messageBody = $"Condition to use this command not met. {precondResult.ErrorReason}";
-                }
-
-                if (ctx.Interaction.HasResponded)
-                {
-                    ctx.Interaction.ModifyOriginalResponseAsync(new MessageContents(messageBody, embed: null, null));
-                }
-                else
-                {
-                    ctx.Interaction.RespondAsync(messageBody, ephemeral: true);
-                }
+                await ctx.Interaction.RespondAsync(messageBody, ephemeral: true);
             }
-
-            return Task.CompletedTask;
         }
 
 
@@ -203,7 +186,7 @@ namespace Asahi
 
             if (ctx.Interaction is SocketMessageComponent componentInteraction)
             {
-                if (interactiveService.Callbacks.ContainsKey(componentInteraction.Message.Id))
+                if (componentInteraction.Data.CustomId != BaseModulePrefixes.RED_BUTTON && interactiveService.Callbacks.ContainsKey(componentInteraction.Message.Id))
                     return;
 
                 var ogRes = componentInteraction.Message;

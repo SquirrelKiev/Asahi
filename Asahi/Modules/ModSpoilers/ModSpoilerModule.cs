@@ -42,7 +42,7 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
     }
 
     [SlashCommand("spoiler-emote", "Sets the reaction emote that mods use to mark a message as spoiler.")]
-    public async Task SetSpoilerEmoteSlash(IEmote emote)
+    public async Task SetSpoilerEmoteSlash([Summary(description: "The emote mods will react with.")] IEmote emote)
     {
         await DeferAsync();
 
@@ -58,7 +58,7 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
     }
 
     [SlashCommand("delete-og", "Whether the bot should delete the message being tagged or not.")]
-    public async Task SetDeleteOgSlash(bool delete)
+    public async Task SetDeleteOgSlash([Summary(description: "Whether the bot should delete the message being tagged or not.")] bool delete)
     {
         await DeferAsync();
 
@@ -74,7 +74,7 @@ public class ModSpoilerModule(ModSpoilerService mss, DbService dbService) : BotM
     }
 
     [SlashCommand("delete-context", "Whether the bot should delete the messages for setting context or not. (Reaction only)")]
-    public async Task SetDeleteContextSlash(bool delete)
+    public async Task SetDeleteContextSlash([Summary(description: "Whether the bot should delete the message being tagged or not.")] bool delete)
     {
         await DeferAsync();
 

@@ -19,7 +19,8 @@ public class WolframModule(BotConfig botConfig, HttpClient httpClient) : BotModu
 
     [SlashCommand("wolfram", "Lookup something using Wolfram Alpha.")]
     public async Task WolframSlash([Summary(description: "What do you want to ask Wolfram Alpha?")] string query,
-        [Summary(description: "Specifies how to display the query.")] DisplayType displayType = DisplayType.Summary, bool ephemeral = true)
+        [Summary(description: "Specifies how to display the query.")] DisplayType displayType = DisplayType.Summary, 
+        [Summary(description: "Whether to show the message to only you or not. True by default.")] bool ephemeral = true)
     {
         if (string.IsNullOrWhiteSpace(botConfig.WolframAppId))
         {

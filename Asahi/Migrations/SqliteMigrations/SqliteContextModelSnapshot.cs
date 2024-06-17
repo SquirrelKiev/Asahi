@@ -396,6 +396,28 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.ToTable("LoggingChannelOverride");
                 });
 
+            modelBuilder.Entity("Asahi.Database.Models.Rss.RssFeedListener", b =>
+                {
+                    b.Property<uint>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<ulong>("ChannelId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FeedUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<ulong>("GuildId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RssFeedListeners");
+                });
+
             modelBuilder.Entity("Asahi.Database.Models.SpoilerChannel", b =>
                 {
                     b.Property<ulong>("ChannelId")

@@ -1,4 +1,5 @@
 ﻿using Asahi.Database.Models;
+using Asahi.Database.Models.Rss;
 using BotBase.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -20,10 +21,13 @@ public abstract class BotDbContext(string connectionString, ILoggerFactory? logg
     public DbSet<EmoteAlias> EmoteAliases { get; set; }
 
     public DbSet<BotWideConfig> BotWideConfig { get; set; }
+    // This property is unused but kept around so the name is kept.
     public DbSet<TrustedId> TrustedIds { get; set; }
 
     public DbSet<BirthdayConfig> BirthdayConfigs { get; set; }
     public DbSet<BirthdayEntry> Birthdays { get; set; }
+
+    public DbSet<RssFeedListener> RssFeedListeners { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

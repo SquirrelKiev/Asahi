@@ -15,7 +15,7 @@ namespace Asahi.Modules.ModSpoilers;
 [Inject(ServiceLifetime.Singleton)]
 public class ModSpoilerService(
     DiscordSocketClient client,
-    HttpClient httpClient,
+    IHttpClientFactory clientFactory,
     DbService dbService,
     InteractiveService interactive,
     BotConfig botConfig,
@@ -74,9 +74,10 @@ public class ModSpoilerService(
 
             List<FileAttachment> attachmentStreams = [];
             List<IDisposable> disposables = [];
+            using var http = clientFactory.CreateClient();
             foreach (var attachment in message.Attachments)
             {
-                var req = await httpClient.GetAsync(attachment.Url);
+                var req = await http.GetAsync(attachment.Url);
                 attachmentStreams.Add(new FileAttachment(await req.Content.ReadAsStreamAsync(), attachment.Filename, attachment.Description, true));
                 disposables.Add(req);
             }

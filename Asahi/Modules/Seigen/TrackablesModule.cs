@@ -14,16 +14,25 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";
     public const string ASSIGNABLE_GUILD_PARAM_NAME = "assignable-guild";
     public const string ID_PARAM_NAME = "id";
+    public const string ID_PARAM_DESCRIPTION = "The ID of the trackable.";
 
 
     [SlashCommand("add", "Add a trackable.")]
     public async Task AddTrackable(
-        [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(MONITORED_GUILD_PARAM_NAME)] string monitoredGuild,
-        [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))] string monitoredRole,
-        [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(ASSIGNABLE_GUILD_PARAM_NAME)] string assignableGuild,
-        [Autocomplete(typeof(AssignableRoleAutocompleteHandler))] string assignableRole,
+        [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(MONITORED_GUILD_PARAM_NAME, "The Guild to monitor the roles of.")]
+        string monitoredGuild,
+        [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))]
+        [Summary(description: "The specific role to monitor.")]
+        string monitoredRole,
+        [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(ASSIGNABLE_GUILD_PARAM_NAME, description: "The Guild to assign the role in.")]
+        string assignableGuild,
+        [Autocomplete(typeof(AssignableRoleAutocompleteHandler)), Summary(description: "The role to assign if the user has the monitored role.")]
+        string assignableRole,
+        [Summary(description: "The channel to log changes to.")]
         ITextChannel? logsChannel = null,
+        [Summary(description: "The maximum amount of users to allow to have the role.")]
         uint limit = 0,
+        [Summary(description: "Whether members already in the role should count toward the limit or not.")]
         bool includeExistingMembers = true)
     {
         await DeferAsync();
@@ -126,12 +135,24 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
     [SlashCommand("modify", "Modify/edit an existing trackable.")]
     public async Task ModifyTrackable(
-        [Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr,
-        [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(MONITORED_GUILD_PARAM_NAME)] string monitoredGuild = "0",
-        [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))] string monitoredRole = "0",
-        [Autocomplete(typeof(GuildAutocompleteHandler)), Summary(ASSIGNABLE_GUILD_PARAM_NAME)] string assignableGuild = "0",
-        [Autocomplete(typeof(AssignableRoleAutocompleteHandler))] string assignableRole = "0",
+        [Autocomplete(typeof(TrackableAutocompleteHandler))]
+        [Summary(ID_PARAM_NAME, description: ID_PARAM_DESCRIPTION)]
+        string idStr,
+        [Autocomplete(typeof(GuildAutocompleteHandler))]
+        [Summary(MONITORED_GUILD_PARAM_NAME, "The Guild to monitor the roles of.")]
+        string monitoredGuild = "0",
+        [Autocomplete(typeof(MonitoredRoleAutocompleteHandler))]
+        [Summary(description: "The specific role to monitor.")]
+        string monitoredRole = "0",
+        [Autocomplete(typeof(GuildAutocompleteHandler))]
+        [Summary(ASSIGNABLE_GUILD_PARAM_NAME, "The Guild to assign the role in.")]
+        string assignableGuild = "0",
+        [Autocomplete(typeof(AssignableRoleAutocompleteHandler))]
+        [Summary(description: "The role to assign if the user has the monitored role.")]
+        string assignableRole = "0",
+        [Summary(description: "The channel to log changes to.")]
         ITextChannel? logsChannel = null,
+        [Summary(description: "The maximum amount of users to allow to have the role.")]
         int limit = -1)
     {
         await DeferAsync();
@@ -191,7 +212,9 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
 
     [SlashCommand("remove", "Remove an existing trackable.")]
     public async Task RemoveTrackable(
-        [Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr)
+        [Autocomplete(typeof(TrackableAutocompleteHandler))]
+        [Summary(ID_PARAM_NAME, description: ID_PARAM_DESCRIPTION)]
+        string idStr)
     {
         await DeferAsync();
 
@@ -260,7 +283,12 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
     }
 
     [SlashCommand("track-user", "Force adds a user to the specified trackable.")]
-    public async Task TrackUser([Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr, IUser user)
+    public async Task TrackUser(
+        [Autocomplete(typeof(TrackableAutocompleteHandler))]
+        [Summary(ID_PARAM_NAME, ID_PARAM_DESCRIPTION)]
+        string idStr,
+        [Summary(description: "The user to forcefully add/track.")]
+        IUser user)
     {
         await DeferAsync();
 
@@ -313,7 +341,12 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
     }
 
     [SlashCommand("untrack-user", "Force adds a user to the specified trackable.")]
-    public async Task UntrackUser([Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr, IUser user)
+    public async Task UntrackUser(
+        [Autocomplete(typeof(TrackableAutocompleteHandler))]
+        [Summary(ID_PARAM_NAME)]
+        string idStr, 
+        [Summary(description: "The user to forcefully untrack.")]
+        IUser user)
     {
         await DeferAsync();
 

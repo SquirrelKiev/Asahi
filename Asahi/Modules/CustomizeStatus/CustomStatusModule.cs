@@ -10,7 +10,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css) : 
 {
     [TrustedMember(TrustedId.TrustedUserPerms.StatusPerms)]
     [SlashCommand("toggle-activity", "Toggles the bot activity.")]
-    public async Task ToggleBotActivitySlash(bool isActive)
+    public async Task ToggleBotActivitySlash([Summary(description: "Whether the bot should have a status or not.")] bool isActive)
     {
         await DeferAsync();
 
@@ -78,8 +78,14 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css) : 
 
     [TrustedMember(TrustedId.TrustedUserPerms.TrustedUserEditPerms)]
     [SlashCommand("add-trusted-id", "Adds a user to the trusted user list. This is a dangerous permission to grant.")]
-    public async Task AddTrustedIdSlash(string idStr, [MaxLength(TrustedId.CommentMaxLength)] string comment, 
-        bool wolframPerms, bool trustedUserPerms, bool statusPerms)
+    public async Task AddTrustedIdSlash([Summary(description: "The user ID of the user.")] string idStr,
+        [MaxLength(TrustedId.CommentMaxLength), Summary(description: "A note to put beside the user.")] string comment, 
+        [Summary(description: "Should the user have permission to use Wolfram?")]
+        bool wolframPerms, 
+        [Summary(description: "Should the user have permission to add or remove other trusted users?")]
+        bool trustedUserPerms,
+        [Summary(description: "Should the user have permission to change the bot's status/profile?")]
+        bool statusPerms)
     {
         await DeferAsync();
 
@@ -124,7 +130,7 @@ public class CustomStatusModule(DbService dbService, CustomStatusService css) : 
 
     [TrustedMember(TrustedId.TrustedUserPerms.TrustedUserEditPerms)]
     [SlashCommand("rm-trusted-id", "Removes a user from the trusted user list.")]
-    public async Task RemoveTrustedIdSlash(string idStr)
+    public async Task RemoveTrustedIdSlash([Summary(description: "The user ID of the user.")] string idStr)
     {
         await DeferAsync();
 
