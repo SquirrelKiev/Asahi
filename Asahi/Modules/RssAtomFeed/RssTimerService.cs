@@ -169,7 +169,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         return feed.Type != FeedType.Unknown;
     }
 
-    private static Embed GenerateFeedItemEmbed(FeedItem genericItem, Feed genericFeed)
+    private Embed GenerateFeedItemEmbed(FeedItem genericItem, Feed genericFeed)
     {
         var eb = new EmbedBuilder();
 
@@ -202,15 +202,6 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         eb.WithUrl(item.Link);
                     }
 
-                    string? thumbnail =
-                        item.Element.Descendants().FirstOrDefault(x => x.Name.LocalName.Contains("thumbnail", StringComparison.InvariantCultureIgnoreCase))?
-                            .Attribute("url")?.Value;
-
-                    if (!string.IsNullOrWhiteSpace(thumbnail))
-                    {
-                        eb.WithImageUrl(thumbnail);
-                    }
-
                     if (item.PublishedDate != null)
                     {
                         eb.WithTimestamp(item.PublishedDate.Value);
@@ -226,6 +217,16 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         {
                             footer.IconUrl = "https://www.redditstatic.com/icon.png";
                         }
+                    }
+
+                    var content = item.Element.Descendants().FirstOrDefault(x =>
+                        x.Name.LocalName == "content" && x.Attribute("type")?.Value == "xhtml")?
+                        .Descendants().FirstOrDefault(x => x.Name.LocalName == "img")?
+                        .Attributes().FirstOrDefault(x => x.Name == "src")?.Value;
+
+                    if (content != null)
+                    {
+                        eb.WithImageUrl(content);
                     }
 
                     if (!string.IsNullOrWhiteSpace(feed.Title))
@@ -289,6 +290,15 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
             case FeedType.Unknown:
             default:
                 throw new ArgumentOutOfRangeException();
+        }
+
+        string? thumbnail =
+            genericItem.SpecificItem.Element.Descendants().FirstOrDefault(x => x.Name.LocalName.Contains("thumbnail", StringComparison.InvariantCultureIgnoreCase))?
+                .Attribute("url")?.Value;
+
+        if (!string.IsNullOrWhiteSpace(thumbnail))
+        {
+            eb.WithImageUrl(thumbnail);
         }
 
         return eb.Build();
