@@ -34,7 +34,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
             {
                 logger.LogError(ex, "Unhandled exception in TimerTask! {message}", ex.Message);
             }
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
                 try
