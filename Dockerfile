@@ -14,7 +14,7 @@ RUN dotnet restore Asahi/ -a $TARGETARCH
 COPY . .
 
 RUN set -xe; \
-dotnet publish -c Release -a $TARGETARCH -o /app; \
+dotnet publish Asahi/ -c Release -a $TARGETARCH -o /app; \
 chmod +x /app/Asahi
 
 FROM mcr.microsoft.com/dotnet/runtime:8.0 as runtime
