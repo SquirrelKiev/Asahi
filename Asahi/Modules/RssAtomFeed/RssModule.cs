@@ -18,9 +18,10 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         [Summary(description: "The RSS/Atom url.")]
         string url, 
         [Summary(description: "The channel to send updates to.")]
-        IMessageChannel channel)
+        IMessageChannel channel,
+        [Summary(description: "The ID of the feed to edit.")]
+        uint? id = null)
     {
-        // TODO: Validate the URL
         await CommonConfig(async (context, builder) =>
         {
             if (await context.RssFeedListeners.AnyAsync(
@@ -31,13 +32,14 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
                 return new ConfigChangeResult(false, "You already have this feed added for this channel!");
             }
 
+            Feed? feed;
             try
             {
                 http.MaxResponseContentBufferSize = 8000000;
                 using var req = await http.GetAsync(url);
                 var xml = await req.Content.ReadAsStringAsync();
 
-                var feed = FeedReader.ReadFromString(xml);
+                feed = FeedReader.ReadFromString(xml);
 
                 if (!RssTimerService.ValidateFeed(feed))
                 {
@@ -49,14 +51,44 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
                 return new ConfigChangeResult(false, $"Failed to get feed. `{ex.GetType()}`: `{ex.Message}`");
             }
 
-            context.Add(new RssFeedListener()
+            if (id == null)
             {
-                GuildId = Context.Guild.Id,
-                ChannelId = channel.Id,
-                FeedUrl = url
-            });
+                context.Add(new RssFeedListener()
+                {
+                    GuildId = Context.Guild.Id,
+                    ChannelId = channel.Id,
+                    FeedUrl = url
+                });
+            }
+            else
+            {
+                var existing = await context.GetFeed(id.Value, Context.Guild.Id);
+                if (existing == null)
+                    return new ConfigChangeResult(false, "Could not find feed with that ID.");
 
-            return new ConfigChangeResult(true, "Added feed.");
+                existing.ChannelId = channel.Id;
+                existing.FeedUrl = url;
+            }
+
+            var eb = new EmbedBuilder();
+            if (!string.IsNullOrWhiteSpace(feed.ImageUrl))
+                eb.WithThumbnailUrl(feed.ImageUrl);
+
+            eb.WithUrl(url);
+
+            if (!string.IsNullOrWhiteSpace(feed.Title))
+                eb.WithTitle(feed.Title);
+
+            var us = await Context.Guild.GetCurrentUserAsync();
+            var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(us, Color.Green);
+            eb.WithColor(roleColor);
+
+            if (!string.IsNullOrWhiteSpace(feed.Description))
+                eb.WithFields(new EmbedFieldBuilder().WithName("Description").WithValue(feed.Description));
+
+            eb.WithDescription("Added feed.");
+
+            return new ConfigChangeResult(true, "Added feed.", [eb.Build()], true);
         });
     }
 
@@ -65,11 +97,9 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         [Summary(description: "The ID of the feed to remove.")]
         uint id)
     {
-        // TODO: Validate the URL
-        // TODO: Validate that the feed hasn't been added to this channel already
         await CommonConfig(async (context, builder) =>
         {
-            var feed = await context.RssFeedListeners.FirstOrDefaultAsync(x => x.Id == id && x.GuildId == Context.Guild.Id);
+            var feed = await context.GetFeed(id, Context.Guild.Id);
 
             if (feed == null)
                 return new ConfigChangeResult(false, "No feed found with that ID.");
@@ -89,9 +119,20 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
 
         var feeds = await context.RssFeedListeners.Where(x => x.GuildId == Context.Guild.Id).ToArrayAsync();
 
+        var us = await Context.Guild.GetCurrentUserAsync();
+        if (feeds.Length == 0)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(us,
+                new EmbedBuilder(), new ConfigChangeResult(true, "No feeds.")));
+
+            return;
+        }
+
+        var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(us, Color.Green);
+
         var pages = feeds
             .Select(x => $"* ({x.Id}) <#{x.ChannelId}> - {x.FeedUrl}")
-            .Chunk(10).Select(x => new PageBuilder().WithColor(Color.Green)
+            .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor)
                 .WithDescription(string.Join('\n', x)));
 
         var paginator = new StaticPaginatorBuilder()

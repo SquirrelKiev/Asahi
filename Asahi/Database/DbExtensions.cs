@@ -1,4 +1,5 @@
 ﻿using Asahi.Database.Models;
+using Asahi.Database.Models.Rss;
 using Microsoft.EntityFrameworkCore;
 using NodaTime;
 
@@ -80,5 +81,10 @@ public static class DbExtensions
         }
 
         return birthday;
+    }
+
+    public static Task<RssFeedListener?> GetFeed(this BotDbContext context, uint id, ulong guildId)
+    {
+        return context.RssFeedListeners.FirstOrDefaultAsync(x => x.Id == id && x.GuildId == guildId);
     }
 }

@@ -82,7 +82,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 {
                     //logger.LogTrace("never seen the url {url} before", url);
                     unseenUrl = true;
-                    seenArticles = new HashSet<int>();
+                    seenArticles = [];
                     hashedSeenArticles.Add(urlHash, seenArticles);
                 }
 
@@ -164,9 +164,9 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         }
     }
 
-    public static bool ValidateFeed(Feed feed)
+    public static bool ValidateFeed(Feed? feed)
     {
-        return feed.Type != FeedType.Unknown;
+        return feed?.Type != FeedType.Unknown;
     }
 
     private Embed GenerateFeedItemEmbed(FeedItem genericItem, Feed genericFeed)
@@ -206,6 +206,10 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                     {
                         eb.WithTimestamp(item.PublishedDate.Value);
                     }
+                    else if (item.UpdatedDate != null)
+                    {
+                        eb.WithTimestamp(item.UpdatedDate.Value);
+                    }
 
                     // general feed stuff
                     if (!string.IsNullOrWhiteSpace(feed.Icon))
@@ -231,7 +235,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                     if (!string.IsNullOrWhiteSpace(feed.Title))
                     {
-                        footer.Text = $"{feed.Title} | {item.Id}";
+                        footer.Text = $"{feed.Title} • {item.Id}";
                     }
 
                     eb.WithFooter(footer);
@@ -280,7 +284,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                     if (!string.IsNullOrWhiteSpace(genericFeed.Title))
                     {
-                        footer.Text = $"{genericFeed.Title} | {genericItem.Id}";
+                        footer.Text = $"{genericFeed.Title} • {genericItem.Id}";
                     }
 
                     eb.WithFooter(footer);
