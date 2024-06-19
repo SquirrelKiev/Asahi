@@ -8,13 +8,10 @@ using Fergun.Interactive;
 using Fergun.Interactive.Pagination;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using NodaTime;
 using NodaTime.Text;
 using NodaTime.TimeZones;
-using static Asahi.Modules.BirthdayRoles.BirthdayConfigModule;
 
 namespace Asahi.Modules.BirthdayRoles;
 
@@ -35,13 +32,14 @@ public enum Months
 }
 
 // dumb I have to do this
+[Group("birthday", "User facing birthday commands")]
 public class UserFacingBirthdayConfigModule(
     DbService dbService,
     IClock clock,
     InteractiveService interactive) : BotModule
 {
     // User facing birthday-setting command
-    [SlashCommand("birthday", "Sets your birthday.", true)]
+    [SlashCommand("set", "Sets your birthday.")]
     public async Task UserFacingSetBirthdaySlash(
         [Summary(description: "The day of the month your birthday is on.")] int day,
         [Summary(description: "The month your birthday is in.")]
@@ -115,9 +113,9 @@ public class UserFacingBirthdayConfigModule(
         }, ephemeral: true);
     }
 
-    [SlashCommand("birthday-list", "Lists all the users with a birthday set.")]
+    [SlashCommand("list", "Lists all the users with a birthday set.")]
     public async Task GetBirthdaysSlash(
-    [Summary(description: "How to sort the list.")] SortingOptions sortingOption = SortingOptions.AscendingUpcoming,
+    [Summary(description: "How to sort the list.")] BirthdayConfigModule.SortingOptions sortingOption = BirthdayConfigModule.SortingOptions.AscendingUpcoming,
     [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
     string? name = null)
     {
@@ -130,7 +128,7 @@ public class UserFacingBirthdayConfigModule(
         BirthdayConfig bday;
         try
         {
-            bday = await ResolveConfig(context, name, Context.Guild.Id);
+            bday = await BirthdayConfigModule.ResolveConfig(context, name, Context.Guild.Id);
         }
         catch (ConfigException ex)
         {
@@ -154,9 +152,9 @@ public class UserFacingBirthdayConfigModule(
 
         IEnumerable<BirthdayEntry> sortedBdays = sortingOption switch
         {
-            SortingOptions.DateAdded => bdays.OrderBy(x => x.TimeCreatedUtc),
-            SortingOptions.Ascending => bdays.OrderBy(x => x.BirthDayDate),
-            SortingOptions.AscendingUpcoming => bdays.OrderBy(x => GetDaysUntilBirthday(x.BirthDayDate, now)),
+            BirthdayConfigModule.SortingOptions.DateAdded => bdays.OrderBy(x => x.TimeCreatedUtc),
+            BirthdayConfigModule.SortingOptions.Ascending => bdays.OrderBy(x => x.BirthDayDate),
+            BirthdayConfigModule.SortingOptions.AscendingUpcoming => bdays.OrderBy(x => GetDaysUntilBirthday(x.BirthDayDate, now)),
             _ => bdays
         };
 
@@ -179,6 +177,32 @@ public class UserFacingBirthdayConfigModule(
             .WithPages(pages);
 
         await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(2), InteractionResponseType.DeferredChannelMessageWithSource);
+    }
+
+    [SlashCommand("view", "Gets someone else's birthday.")]
+    public async Task GetBirthdaySlash(
+        [Summary(description: "The user to get the birthday of.")] IGuildUser user,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
+    {
+        await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
+        {
+            var birthday = await x.Context.GetBirthday(x.Config, user.Id);
+
+            if (birthday == null)
+                return new ConfigChangeResult(false, $"{user.Mention} has not set a birthday.");
+
+            var eb = new EmbedBuilder()
+                .WithTitle(user.DisplayName)
+                .WithOptionalColor(await QuotingHelpers.GetQuoteEmbedColor(x.Config.EmbedColorSource,
+                    new Color(x.Config.FallbackEmbedColor), user,
+                    (DiscordSocketClient)Context.Client))
+                .WithThumbnailUrl(user.GetDisplayAvatarUrl())
+                .AddField(x.Config.Name.Titleize(), birthday.BirthDayDate.ToStringOrdinalized());
+
+            return new ConfigChangeResult(true, "Got birthday.", [eb.Build()], true, false);
+        });
     }
 
     private int GetDaysUntilBirthday(AnnualDate birthday, LocalDate today)
