@@ -415,6 +415,10 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.Property<decimal>("ChannelId")
                         .HasColumnType("numeric(20,0)");
 
+                    b.Property<string>("FeedTitle")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("FeedUrl")
                         .IsRequired()
                         .HasMaxLength(512)

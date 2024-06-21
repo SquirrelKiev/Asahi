@@ -335,21 +335,21 @@ public static class QuotingHelpers
             case EmbedColorSource.BotsRoleColor:
                 if (embedAuthor != null)
                 {
-                    user = await embedAuthor.Guild.GetUserAsync(client.CurrentUser.Id);
+                    user = await embedAuthor.Guild.GetCurrentUserAsync();
                     goto case EmbedColorSource.UsersRoleColor;
                 }
                 break;
             case EmbedColorSource.BotsBannerColor:
                 if (embedAuthor != null)
                 {
-                    user = await embedAuthor.Guild.GetUserAsync(client.CurrentUser.Id);
+                    user = await embedAuthor.Guild.GetCurrentUserAsync();
                     goto case EmbedColorSource.UsersBannerColor;
                 }
                 break;
             case EmbedColorSource.BotsAccentColor:
                 if (embedAuthor != null)
                 {
-                    user = await embedAuthor.Guild.GetUserAsync(client.CurrentUser.Id);
+                    user = await embedAuthor.Guild.GetCurrentUserAsync();
                     goto case EmbedColorSource.UsersAccentColor;
                 }
                 break;

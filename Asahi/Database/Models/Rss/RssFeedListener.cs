@@ -8,6 +8,9 @@ public class RssFeedListener : DbModel
     [MaxLength(512)]
     public required string FeedUrl { get; set; }
 
+    [MaxLength(64)]
+    public string? FeedTitle { get; set; }
+
     public required ulong GuildId { get; set; }
 
     public required ulong ChannelId { get; set; }

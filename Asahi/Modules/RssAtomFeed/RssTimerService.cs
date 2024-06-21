@@ -2,6 +2,7 @@
 using Asahi.Database.Models.Rss;
 using CodeHollow.FeedReader;
 using CodeHollow.FeedReader.Feeds;
+using Discord;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -94,8 +95,6 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 if (!ValidateFeed(feed))
                     continue;
 
-                var embeds = new List<Embed>();
-
                 var processedArticles = new HashSet<int>();
 
                 //logger.LogTrace("seen articles is {seen}", string.Join(',',seenArticles.Select(x => x.ToString())));
@@ -105,24 +104,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 {
                     feedsEnumerable = feedsEnumerable.OrderByDescending(x => x.PublishingDate);
                 }
-
-                foreach (var feedItem in feedsEnumerable)
-                {
-                    if (!unseenUrl && embeds.Count < 10 &&
-                        !seenArticles.Contains(feedItem.Id.GetHashCode(StringComparison.Ordinal)))
-                        embeds.Add(GenerateFeedItemEmbed(feedItem, feed));
-
-                    processedArticles.Add(feedItem.Id.GetHashCode(StringComparison.Ordinal));
-                }
-
-                seenArticles.Clear();
-                foreach (var article in processedArticles)
-                {
-                    seenArticles.Add(article);
-                }
-
-                //logger.LogTrace("seen articles is now {seen}",
-                //    string.Join(',', seenArticles.Select(x => x.ToString())));
+                var feedsArray = feedsEnumerable.ToArray();
 
                 foreach (var feedListener in feedGroup)
                 {
@@ -136,6 +118,14 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             continue;
                         }
 
+                        var embeds = new List<Embed>();
+                        foreach (var feedItem in feedsArray)
+                        {
+                            if (!unseenUrl && embeds.Count < 10 &&
+                                !seenArticles.Contains(feedItem.Id.GetHashCode(StringComparison.Ordinal)))
+                                embeds.Add(GenerateFeedItemEmbed(feedItem, feed, feedListener, QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default)));
+                        }
+
                         if (embeds.Count != 0)
                             await channel.SendMessageAsync(embeds: embeds.Take(10).ToArray());
                     }
@@ -144,6 +134,20 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         logger.LogWarning(ex, "Failed to send feed {url} to guild {guildId}, channel {channelId}", 
                             feedGroup.Key, feedListener.GuildId, feedListener.ChannelId);
                     }
+                }
+
+                foreach (var feedItem in feedsArray)
+                {
+                    processedArticles.Add(feedItem.Id.GetHashCode(StringComparison.Ordinal));
+                }
+
+                //logger.LogTrace("seen articles is now {seen}",
+                //    string.Join(',', seenArticles.Select(x => x.ToString())));
+
+                seenArticles.Clear();
+                foreach (var article in processedArticles)
+                {
+                    seenArticles.Add(article);
                 }
             }
             catch (Exception ex)
@@ -169,7 +173,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         return feed?.Type != FeedType.Unknown;
     }
 
-    private Embed GenerateFeedItemEmbed(FeedItem genericItem, Feed genericFeed)
+    private Embed GenerateFeedItemEmbed(FeedItem genericItem, Feed genericFeed, RssFeedListener feedListener, Color embedColor)
     {
         var eb = new EmbedBuilder();
 
@@ -233,7 +237,11 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         eb.WithImageUrl(content);
                     }
 
-                    if (!string.IsNullOrWhiteSpace(feed.Title))
+                    if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
+                    {
+                        footer.Text = $"{feedListener.FeedTitle} • {item.Id}";
+                    }
+                    else if (!string.IsNullOrWhiteSpace(feed.Title))
                     {
                         footer.Text = $"{feed.Title} • {item.Id}";
                     }
@@ -282,7 +290,11 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         eb.WithThumbnailUrl(genericFeed.ImageUrl);
                     }
 
-                    if (!string.IsNullOrWhiteSpace(genericFeed.Title))
+                    if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
+                    {
+                        footer.Text = $"{feedListener.FeedTitle} • {genericItem.Id}";
+                    }
+                    else if (!string.IsNullOrWhiteSpace(genericFeed.Title))
                     {
                         footer.Text = $"{genericFeed.Title} • {genericItem.Id}";
                     }
@@ -304,6 +316,8 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         {
             eb.WithImageUrl(thumbnail);
         }
+
+        eb.WithColor(embedColor);
 
         return eb.Build();
     }
