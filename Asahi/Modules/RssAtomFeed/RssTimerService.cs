@@ -91,8 +91,8 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 //logger.LogTrace("processing {url}", url);
                 if (!hashedSeenArticles.TryGetValue(urlHash, out var seenArticles))
                 {
-                    //logger.LogTrace("never seen the url {url} before", url);
-                    unseenUrl = false;
+                    logger.LogTrace("never seen the url {url} before", url);
+                    unseenUrl = true;
                     seenArticles = [];
                     hashedSeenArticles.Add(urlHash, seenArticles);
                 }
@@ -145,7 +145,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                     continue;
                 }
 
-                //logger.LogTrace("seen articles is {seen}", string.Join(',',seenArticles.Select(x => x.ToString())));
+                //logger.LogTrace("seen articles is {seen}", string.Join(',', seenArticles.Select(x => x.ToString())));
 
                 foreach (var feedListener in feedGroup)
                 {
@@ -160,7 +160,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         }
 
                         var embeds = embedGenerator.GenerateFeedItemEmbeds(feedListener, seenArticles, processedArticles,
-                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), unseenUrl).Take(10).ToArray();
+                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), !unseenUrl).Take(10).ToArray();
 
                         if (embeds.Length != 0)
                             await channel.SendMessageAsync(embeds: embeds);
@@ -180,14 +180,14 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                     }
                 }
 
-                //logger.LogTrace("seen articles is now {seen}",
-                //    string.Join(',', seenArticles.Select(x => x.ToString())));
-
                 seenArticles.Clear();
                 foreach (var article in processedArticles)
                 {
                     seenArticles.Add(article);
                 }
+
+                //logger.LogTrace("seen articles is now {seen}",
+                //    string.Join(',', seenArticles.Select(x => x.ToString())));
             }
             catch (Exception ex)
             {
