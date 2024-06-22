@@ -91,7 +91,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 //logger.LogTrace("processing {url}", url);
                 if (!hashedSeenArticles.TryGetValue(urlHash, out var seenArticles))
                 {
-                    logger.LogTrace("never seen the url {url} before", url);
+                    //logger.LogTrace("never seen the url {url} before", url);
                     unseenUrl = true;
                     seenArticles = [];
                     hashedSeenArticles.Add(urlHash, seenArticles);
