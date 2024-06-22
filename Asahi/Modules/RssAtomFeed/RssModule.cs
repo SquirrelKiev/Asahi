@@ -1,4 +1,5 @@
-﻿using Asahi.Database;
+﻿using System.Web;
+using Asahi.Database;
 using Asahi.Database.Models.Rss;
 using BotBase.Modules;
 using CodeHollow.FeedReader;
@@ -30,63 +31,89 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
                 return new ConfigChangeResult(false, "You already have this feed added for this channel!");
             }
 
-            var (feed, configChangeResult) = await ValidateFeedUrl(url);
+            var configChangeResult = await ValidateFeedUrl(url, eb);
 
             if (configChangeResult != null)
                 return configChangeResult.Value;
 
-            if (feed == null)
-                throw new NullReferenceException("Feed should not be null if we have not returned a config.");
-
-            context.Add(new RssFeedListener()
+            context.Add(new FeedListener()
             {
                 GuildId = Context.Guild.Id,
                 ChannelId = channel.Id,
                 FeedUrl = url,
-                FeedTitle = feed.Title.Truncate(64)
+                FeedTitle = eb.Title?.Truncate(64)
             });
-
-            if (!string.IsNullOrWhiteSpace(feed.ImageUrl))
-                eb.WithThumbnailUrl(feed.ImageUrl);
-
-            eb.WithUrl(url);
-
-            if (!string.IsNullOrWhiteSpace(feed.Title))
-                eb.WithTitle(feed.Title);
-
-            if (!string.IsNullOrWhiteSpace(feed.Description))
-                eb.WithFields(new EmbedFieldBuilder().WithName("Description").WithValue(feed.Description));
 
             return new ConfigChangeResult(true, "Added feed.");
         });
     }
 
-    private async Task<(Feed? feed, ConfigChangeResult? configChangeResult)> ValidateFeedUrl(string url)
+    private async Task<ConfigChangeResult?> ValidateFeedUrl(string url, EmbedBuilder eb)
     {
-        Feed? feed = null;
         try
         {
             http.MaxResponseContentBufferSize = 8000000;
             using var req = await http.GetAsync(url);
             var xml = await req.Content.ReadAsStringAsync();
 
-            feed = FeedReader.ReadFromString(xml);
-
-            if (!RssTimerService.ValidateFeed(feed))
+            var feedHandler = RssTimerService.FeedHandlerForUrl(url);
+            switch (feedHandler)
             {
+                case RssTimerService.FeedHandler.RssAtom:
+                    {
+                        var feed = FeedReader.ReadFromString(xml);
+
+                        if (!RssTimerService.ValidateFeed(feed))
+                        {
+                            return new ConfigChangeResult(false, "Feed isn't valid!");
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(feed.ImageUrl))
+                            eb.WithThumbnailUrl(feed.ImageUrl);
+
+                        eb.WithUrl(url);
+
+                        if (!string.IsNullOrWhiteSpace(feed.Title))
+                            eb.WithTitle(feed.Title);
+
+                        if (!string.IsNullOrWhiteSpace(feed.Description))
+                            eb.WithFields(new EmbedFieldBuilder().WithName("Description").WithValue(feed.Description));
+                        break;
+                    }
+                case RssTimerService.FeedHandler.Danbooru:
                 {
-                    return (feed, new ConfigChangeResult(false, "Feed isn't valid!"));
-                }
+                        var uri = new Uri(url);
+
+                        var query = HttpUtility.ParseQueryString(uri.Query);
+
+                        var tags = query["tags"];
+                        string? title;
+                        if (tags != null)
+                        {
+                            title = $"Danbooru: {tags}";
+                        }
+                        else
+                        {
+                            title = "Danbooru";
+                        }
+
+                        eb.WithTitle(title);
+                        eb.WithUrl(url);
+
+                        break;
+                    }
+                default:
+                    throw new NotSupportedException();
             }
         }
         catch (Exception ex)
         {
             {
-                return (feed, new ConfigChangeResult(false, $"Failed to get feed. `{ex.GetType()}`: `{ex.Message}`"));
+                return new ConfigChangeResult(false, $"Failed to get feed. `{ex.GetType()}`: `{ex.Message}`");
             }
         }
 
-        return (feed, null);
+        return null;
     }
 
     [SlashCommand("rm-feed", "Removes a feed.")]
@@ -109,13 +136,10 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
     {
         await CommonFeedConfig(id, async options =>
         {
-            var (feed, configChangeResult) = await ValidateFeedUrl(url);
+            var configChangeResult = await ValidateFeedUrl(url, options.embedBuilder);
 
             if (configChangeResult != null)
                 return configChangeResult.Value;
-
-            if (feed == null)
-                throw new NullReferenceException("Feed should not be null if we have not returned a config.");
 
             options.feedListener.FeedUrl = url;
 
@@ -194,11 +218,11 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
     }
 #endif
 
-    public struct ConfigChangeOptions(BotDbContext context, RssFeedListener feedListener, EmbedBuilder embedBuilder)
+    public struct ConfigChangeOptions(BotDbContext context, FeedListener feedListener, EmbedBuilder embedBuilder)
     {
         public BotDbContext context = context;
         public EmbedBuilder embedBuilder = embedBuilder;
-        public RssFeedListener feedListener = feedListener;
+        public FeedListener feedListener = feedListener;
     }
 
     private Task<bool> CommonFeedConfig(uint id, Func<ConfigChangeOptions, Task<ConfigChangeResult>> updateAction)

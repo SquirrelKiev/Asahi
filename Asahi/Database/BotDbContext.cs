@@ -27,7 +27,7 @@ public abstract class BotDbContext(string connectionString, ILoggerFactory? logg
     public DbSet<BirthdayConfig> BirthdayConfigs { get; set; }
     public DbSet<BirthdayEntry> Birthdays { get; set; }
 
-    public DbSet<RssFeedListener> RssFeedListeners { get; set; }
+    public DbSet<FeedListener> RssFeedListeners { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

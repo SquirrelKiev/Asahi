@@ -3,7 +3,7 @@ using BotBase.Database;
 
 namespace Asahi.Database.Models.Rss;
 
-public class RssFeedListener : DbModel
+public class FeedListener : DbModel
 {
     [MaxLength(512)]
     public required string FeedUrl { get; set; }

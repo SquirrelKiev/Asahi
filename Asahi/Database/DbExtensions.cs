@@ -83,7 +83,7 @@ public static class DbExtensions
         return birthday;
     }
 
-    public static Task<RssFeedListener?> GetFeed(this BotDbContext context, uint id, ulong guildId)
+    public static Task<FeedListener?> GetFeed(this BotDbContext context, uint id, ulong guildId)
     {
         return context.RssFeedListeners.FirstOrDefaultAsync(x => x.Id == id && x.GuildId == guildId);
     }

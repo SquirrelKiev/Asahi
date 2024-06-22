@@ -1,17 +1,26 @@
 ﻿using Asahi.Database;
 using Asahi.Database.Models.Rss;
+using Asahi.Modules.RssAtomFeed.Models;
 using CodeHollow.FeedReader;
 using CodeHollow.FeedReader.Feeds;
-using Discord;
 using Discord.WebSocket;
+using Humanizer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using StringExtensions = BotBase.StringExtensions;
 
 namespace Asahi.Modules.RssAtomFeed;
 
 [Inject(ServiceLifetime.Singleton)]
 public class RssTimerService(IHttpClientFactory clientFactory, DbService dbService, DiscordSocketClient client, ILogger<RssTimerService> logger)
 {
+    public enum FeedHandler
+    {
+        RssAtom,
+        Danbooru
+    }
+
     public Task? timerTask;
 
     private readonly Dictionary<int, HashSet<int>> hashedSeenArticles = [];
@@ -56,7 +65,6 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         }
     }
 
-    // TODO: Error handling
     public async Task PollFeeds()
     {
         await using var context = dbService.GetDbContext();
@@ -77,34 +85,67 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 // doing hashes for memory reasons
                 var urlHash = url.GetHashCode(StringComparison.OrdinalIgnoreCase);
 
+                var feedHandler = FeedHandlerForUrl(url);
+
                 var unseenUrl = false;
                 //logger.LogTrace("processing {url}", url);
                 if (!hashedSeenArticles.TryGetValue(urlHash, out var seenArticles))
                 {
                     //logger.LogTrace("never seen the url {url} before", url);
-                    unseenUrl = true;
+                    unseenUrl = false;
                     seenArticles = [];
                     hashedSeenArticles.Add(urlHash, seenArticles);
                 }
 
                 using var req = await http.GetAsync(url);
-                var xml = await req.Content.ReadAsStringAsync();
-
-                var feed = FeedReader.ReadFromString(xml);
-
-                if (!ValidateFeed(feed))
-                    continue;
+                var reqContent = await req.Content.ReadAsStringAsync();
 
                 var processedArticles = new HashSet<int>();
 
-                //logger.LogTrace("seen articles is {seen}", string.Join(',',seenArticles.Select(x => x.ToString())));
-
-                IEnumerable<FeedItem> feedsEnumerable = feed.Items;
-                if (feed.Items.All(x => x.PublishingDate.HasValue))
+                IEmbedGenerator embedGenerator;
+                try
                 {
-                    feedsEnumerable = feedsEnumerable.OrderByDescending(x => x.PublishingDate);
+                    switch (feedHandler)
+                    {
+                        case FeedHandler.RssAtom:
+                            {
+                                var feed = FeedReader.ReadFromString(reqContent);
+
+                                if (!ValidateFeed(feed))
+                                    continue;
+
+                                IEnumerable<FeedItem> feedsEnumerable = feed.Items;
+                                if (feed.Items.All(x => x.PublishingDate.HasValue))
+                                {
+                                    feedsEnumerable = feedsEnumerable.OrderByDescending(x => x.PublishingDate);
+                                }
+
+                                var feedsArray = feedsEnumerable.ToArray();
+
+                                embedGenerator = new RssFeedEmbedGenerator(feed, feedsArray);
+                                break;
+                            }
+                        case FeedHandler.Danbooru:
+                            {
+                                var posts = JsonConvert.DeserializeObject<DanbooruPost[]>(reqContent);
+
+                                if (posts == null)
+                                    continue;
+
+                                embedGenerator = new DanbooruEmbedGenerator(posts);
+                                break;
+                            }
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
-                var feedsArray = feedsEnumerable.ToArray();
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to process feed {feedUrl}.", url);
+                    continue;
+                }
+
+                //logger.LogTrace("seen articles is {seen}", string.Join(',',seenArticles.Select(x => x.ToString())));
 
                 foreach (var feedListener in feedGroup)
                 {
@@ -118,27 +159,25 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             continue;
                         }
 
-                        var embeds = new List<Embed>();
-                        foreach (var feedItem in feedsArray)
-                        {
-                            if (!unseenUrl && embeds.Count < 10 &&
-                                !seenArticles.Contains(feedItem.Id.GetHashCode(StringComparison.Ordinal)))
-                                embeds.Add(GenerateFeedItemEmbed(feedItem, feed, feedListener, QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default)));
-                        }
+                        var embeds = embedGenerator.GenerateFeedItemEmbeds(feedListener, seenArticles, processedArticles,
+                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), unseenUrl).Take(10).ToArray();
 
-                        if (embeds.Count != 0)
-                            await channel.SendMessageAsync(embeds: embeds.Take(10).ToArray());
+                        if (embeds.Length != 0)
+                            await channel.SendMessageAsync(embeds: embeds);
+
+                        //foreach (var feedItem in feedsArray)
+                        //{
+                        //    if (unseenUrl || embeds.Count >= 10 ||
+                        //        seenArticles.Contains(feedItem.Id.GetHashCode(StringComparison.Ordinal))) continue;
+
+                        //    embeds.Add(GenerateFeedItemEmbed(feedItem, feed, feedListener, QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default)));
+                        //}
                     }
                     catch (Exception ex)
                     {
-                        logger.LogWarning(ex, "Failed to send feed {url} to guild {guildId}, channel {channelId}", 
+                        logger.LogWarning(ex, "Failed to send feed {url} to guild {guildId}, channel {channelId}",
                             feedGroup.Key, feedListener.GuildId, feedListener.ChannelId);
                     }
-                }
-
-                foreach (var feedItem in feedsArray)
-                {
-                    processedArticles.Add(feedItem.Id.GetHashCode(StringComparison.Ordinal));
                 }
 
                 //logger.LogTrace("seen articles is now {seen}",
@@ -158,7 +197,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
         if (channelsToPurgeFeedsOf.Count != 0)
         {
-            IQueryable<RssFeedListener> query = context.RssFeedListeners;
+            IQueryable<FeedListener> query = context.RssFeedListeners;
             foreach (var channelId in channelsToPurgeFeedsOf)
             {
                 query = query.Where(x => x.ChannelId == channelId);
@@ -168,12 +207,103 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         }
     }
 
+    public static FeedHandler FeedHandlerForUrl(string url)
+    {
+        return url.StartsWith("https://danbooru.donmai.us/posts.json") ? FeedHandler.Danbooru : FeedHandler.RssAtom;
+    }
+
     public static bool ValidateFeed(Feed? feed)
     {
         return feed?.Type != FeedType.Unknown;
     }
+}
 
-    private Embed GenerateFeedItemEmbed(FeedItem genericItem, Feed genericFeed, RssFeedListener feedListener, Color embedColor)
+public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
+{
+    private static readonly HashSet<string> KnownImageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
+
+    public IEnumerable<Embed> GenerateFeedItemEmbeds(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles,
+        Color embedColor, bool shouldCreateEmbeds)
+    {
+        foreach (var post in posts)
+        {
+            processedArticles.Add(post.Id);
+
+            if (seenArticles.Contains(post.Id)) continue;
+            if (!shouldCreateEmbeds) continue;
+
+            yield return GenerateFeedItemEmbed(feedListener, post, embedColor);
+        }
+    }
+
+    private Embed GenerateFeedItemEmbed(FeedListener feedListener, DanbooruPost post, Color embedColor)
+    {
+        var eb = new EmbedBuilder();
+
+        eb.WithColor(embedColor);
+        if (!string.IsNullOrWhiteSpace(post.TagStringArtist))
+        {
+            eb.WithAuthor(post.TagStringArtist.Split(' ').Humanize());
+        }
+        if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
+        {
+            eb.WithFooter(feedListener.FeedTitle, "https://danbooru.donmai.us/packs/static/danbooru-logo-128x128-ea111b6658173e847734.png");
+        }
+        eb.WithTimestamp(post.CreatedAt);
+
+        if (!string.IsNullOrWhiteSpace(post.TagStringCharacter))
+        {
+            eb.WithTitle(post.TagStringCharacter.Split(' ').Select(x => x.Titleize()).Humanize());
+        }
+
+        eb.WithUrl($"https://danbooru.donmai.us/posts/{post.Id}/");
+
+        var bestVariant = GetBestVariant(post.MediaAsset.Variants);
+        if (bestVariant != null)
+        {
+            eb.WithImageUrl(bestVariant.Url);
+        }
+
+        eb.WithDescription($"{post.MediaAsset.FileExtension.ToUpperInvariant()} file | " +
+                           $"embed is {bestVariant?.Type} quality{(bestVariant?.Type != "original" ? $" ({bestVariant?.FileExt.ToUpperInvariant()} file)" : "")}");
+
+        return eb.Build();
+    }
+
+    private DanbooruVariant? GetBestVariant(DanbooruVariant[] variants)
+    {
+        // we only want embeddable variants
+        var validVariants = variants.Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower())).ToList();
+
+        //// sample is usually best compromise
+        //var sampleVariant = validVariants.FirstOrDefault(v => v.Type == "sample");
+
+        //if (sampleVariant != null)
+        //{
+        //    return sampleVariant;
+        //}
+
+        // sample doesn't exist oh god lets just hope the rest of the options are ok
+        return validVariants.MaxBy(v => v.Width * v.Height);
+    }
+}
+
+public class RssFeedEmbedGenerator(Feed genericFeed, FeedItem[] feedItems) : IEmbedGenerator
+{
+    public IEnumerable<Embed> GenerateFeedItemEmbeds(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles, Color embedColor, bool shouldCreateEmbeds)
+    {
+        foreach (var feedItem in feedItems)
+        {
+            processedArticles.Add(feedItem.Id.GetHashCode(StringComparison.Ordinal));
+
+            if (seenArticles.Contains(feedItem.Id.GetHashCode(StringComparison.Ordinal))) continue;
+            if (!shouldCreateEmbeds) continue;
+
+            yield return GenerateFeedItemEmbed(feedListener, feedItem, embedColor);
+        }
+    }
+
+    public Embed GenerateFeedItemEmbed(FeedListener feedListener, FeedItem genericItem, Color embedColor)
     {
         var eb = new EmbedBuilder();
 
@@ -225,16 +355,6 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         {
                             footer.IconUrl = "https://www.redditstatic.com/icon.png";
                         }
-                    }
-
-                    var content = item.Element.Descendants().FirstOrDefault(x =>
-                        x.Name.LocalName == "content" && x.Attribute("type")?.Value == "xhtml")?
-                        .Descendants().FirstOrDefault(x => x.Name.LocalName == "img")?
-                        .Attributes().FirstOrDefault(x => x.Name == "src")?.Value;
-
-                    if (content != null)
-                    {
-                        eb.WithImageUrl(content);
                     }
 
                     if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
@@ -305,20 +425,54 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 }
             case FeedType.Unknown:
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new NotSupportedException();
         }
 
-        string? thumbnail =
+        var thumbnail = genericItem.SpecificItem.Element.Descendants().FirstOrDefault(x =>
+                x.Name.LocalName == "content" && x.Attribute("type")?.Value == "xhtml")?
+            .Descendants().FirstOrDefault(x => x.Name.LocalName == "img")?
+            .Attributes().FirstOrDefault(x => x.Name == "src")?.Value;
+
+        thumbnail ??=
             genericItem.SpecificItem.Element.Descendants().FirstOrDefault(x => x.Name.LocalName.Contains("thumbnail", StringComparison.InvariantCultureIgnoreCase))?
                 .Attribute("url")?.Value;
 
         if (!string.IsNullOrWhiteSpace(thumbnail))
         {
+            //const string garbageQualityUrl = "https://cdn.donmai.us/360x360/";
+            //const string goodQualityUrl = "https://cdn.donmai.us/original/";
+
+            //if (thumbnail.StartsWith(garbageQualityUrl))
+            //{
+            //    logger.LogTrace(thumbnail);
+            //    // CA said it was better to do this? guess spans are better for this stuff?
+            //    thumbnail = string.Concat(goodQualityUrl, thumbnail.AsSpan(garbageQualityUrl.Length));
+            //}
+
             eb.WithImageUrl(thumbnail);
         }
 
         eb.WithColor(embedColor);
 
+        if (!string.IsNullOrWhiteSpace(eb.Title))
+            eb.Title = StringExtensions.Truncate(eb.Title, 200);
+
+        if (!string.IsNullOrWhiteSpace(eb.Description))
+            eb.Description = StringExtensions.Truncate(eb.Description, 400);
+
         return eb.Build();
     }
+}
+
+public interface IEmbedGenerator
+{
+    /// <summary>
+    /// Returns an IEnumerable of all the embeds for that feed's items.
+    /// </summary>
+    /// <param name="feedListener">The listener.</param>
+    /// <param name="seenArticles">The previously seen articles from the last run. Will not be edited.</param>
+    /// <param name="processedArticles">The current work in progress articles that have been processed. Will be edited.</param>
+    /// <param name="embedColor">The color to use for the embed.</param>
+    /// <returns></returns>
+    public IEnumerable<Embed> GenerateFeedItemEmbeds(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles, Color embedColor, bool shouldCreateEmbeds);
 }
