@@ -160,13 +160,19 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
     }
 
     [SlashCommand("list-feeds", "Lists the feeds within the server.")]
-    public async Task ListFeedsSlash()
+    public async Task ListFeedsSlash([Summary(description: "Filters the list to only show feeds for the specified channel.")] IMessageChannel? channel = null)
     {
         await DeferAsync();
-
+        
         await using var context = dbService.GetDbContext();
 
-        var feeds = await context.RssFeedListeners.Where(x => x.GuildId == Context.Guild.Id).ToArrayAsync();
+        var feedsQuery = context.RssFeedListeners.Where(x => x.GuildId == Context.Guild.Id);
+
+        if (channel != null)
+        {
+            feedsQuery = feedsQuery.Where(x => x.ChannelId == channel.Id);
+        }
+        var feeds = await feedsQuery.OrderBy(x => x.Id).ToArrayAsync();
 
         var us = await Context.Guild.GetCurrentUserAsync();
         if (feeds.Length == 0)
