@@ -160,7 +160,10 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
     }
 
     [SlashCommand("list-feeds", "Lists the feeds within the server.")]
-    public async Task ListFeedsSlash([Summary(description: "Filters the list to only show feeds for the specified channel.")] IMessageChannel? channel = null)
+    public async Task ListFeedsSlash(
+        [Summary(description: "Filters the list to only show feeds for the specified channel.")]
+        IMessageChannel? channel = null
+        )
     {
         await DeferAsync();
         
@@ -193,7 +196,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
 
                 return $"* ({x.Id}) <#{x.ChannelId}> - [{x.FeedTitle}]({x.FeedUrl})";
             })
-            .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor)
+            .Chunk(20).Select(x => new PageBuilder().WithColor(roleColor)
                 .WithDescription(string.Join('\n', x)));
 
         var paginator = new StaticPaginatorBuilder()
