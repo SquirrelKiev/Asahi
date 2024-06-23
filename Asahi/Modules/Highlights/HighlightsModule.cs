@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
@@ -15,7 +17,7 @@ namespace Asahi.Modules.Highlights;
 [CommandContextType(InteractionContextType.Guild)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [Group("highlights", "Commands relating to the highlights system.")]
-public class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger, InteractiveService interactive) : HighlightsSubmodule(dbService)
+public partial class HighlightsModule(DbService dbService, HighlightsTrackingService hts, ILogger<HighlightsModule> logger, InteractiveService interactive) : HighlightsSubmodule(dbService)
 {
     public const string NameDescription = "The name of the board.";
 
@@ -1170,24 +1172,66 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         string name,
         [Summary(description: "The channel to check the threshold of.")]
         [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
-        IGuildChannel channel)
+        IGuildChannel channel,
+        [Summary(description: "The date to check (dd/MM/yyyy). can also be a message ID or a link to a message.")]
+        string? date = null
+        )
     {
-        return CommonBoardConfig(name, options =>
+        return CommonBoardConfig(name, async options =>
         {
             var threshold = options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
             if (channel is SocketThreadChannel threadChannel)
                 threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == threadChannel.ParentChannel.Id);
-            if (channel is ITextChannel textChannel)
-                threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == textChannel.CategoryId);
+
+            var textChannel = (ITextChannel)channel;
+
+            threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == textChannel.CategoryId);
             threshold ??= options.board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
 
             if (threshold == null)
-                return Task.FromResult(new ConfigChangeResult(false, "Couldn't find a threshold for that channel! " +
-                                                                     "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev."));
+                return new ConfigChangeResult(false, "Couldn't find a threshold for that channel! " +
+                                                                     "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev.");
 
-            HighlightsTrackingService.CalculateThreshold(threshold, hts.GetCachedMessages(channel.Id), DateTimeOffset.UtcNow, out var message);
+            var lookupDate = DateTimeOffset.UtcNow;
+            if (date != null)
+            {
+                ulong messageId;
 
-            return Task.FromResult(new ConfigChangeResult(true, $"Threshold info for <#{channel.Id}>\n\n{message}"));
+                var messageLinkRegex = MessageLinkMessageIdRegex();
+
+                var messageLinkMatch = messageLinkRegex.Match(date);
+                if (messageLinkMatch.Success)
+                {
+                    var idStr = messageLinkMatch.Groups[1].Value;
+                    messageId = ulong.Parse(idStr);
+                }
+                else if (!ulong.TryParse(date, out messageId))
+                {
+                    messageId = 0;
+                }
+
+                if (messageId != 0)
+                {
+                    var message = await textChannel.GetMessageAsync(messageId);
+
+                    if (message == null)
+                        return new ConfigChangeResult(false, $"Could not find message with ID `{messageId}`.");
+
+                    lookupDate = message.Timestamp;
+                }
+                else
+                {
+                    // 0x0809 is en-GB, so we get the nice lovely format of dd/MM/yyyy
+                    if (!DateTimeOffset.TryParse(date, CultureInfo.GetCultureInfo(0x0809), DateTimeStyles.AssumeUniversal, out lookupDate))
+                    {
+                        return new ConfigChangeResult(false, "Failed to parse date.");
+                    }
+                }
+            }
+
+            HighlightsTrackingService.CalculateThreshold(threshold, hts.GetCachedMessages(channel.Id), lookupDate, out var thresholdInfo);
+
+            return new ConfigChangeResult(true, $"Threshold info for <#{channel.Id}>\n\n{thresholdInfo}");
         }, boards => boards.Include(x => x.Thresholds));
     }
 
@@ -1315,6 +1359,9 @@ public class HighlightsModule(DbService dbService, HighlightsTrackingService hts
         await FollowupAsync("done'd");
     }
 
+    [GeneratedRegex(@"https:\/\/(?:canary)?.discord.com\/channels\/[0-9]*\/[0-9]*\/([0-9]*)")]
+    private static partial Regex MessageLinkMessageIdRegex();
+
 #endif
 
     #endregion
@@ -1414,7 +1461,7 @@ public class HighlightsSubmodule(DbService dbService) : BotModule
     {
         return HighlightsModuleUtility.CommonConfig(Context, dbService, name, updateAction);
     }
-    
+
     protected Task<bool> CommonBoardConfig(string userSetName,
         Func<ConfigChangeOptions, Task<ConfigChangeResult>> updateAction,
         Func<IQueryable<HighlightBoard>, IQueryable<HighlightBoard>>? highlightBoardModifier = null)
