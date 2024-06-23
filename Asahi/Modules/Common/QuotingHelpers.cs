@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics.Contracts;
 using System.Text;
 using Asahi.Database.Models;
-using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 

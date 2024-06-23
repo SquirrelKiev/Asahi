@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Asahi.Database;
-using Asahi.Database.Models.Rss;
 using Asahi.Modules.CustomizeStatus;
 using Asahi.Modules.BirthdayRoles;
 using Asahi.Modules.Highlights;

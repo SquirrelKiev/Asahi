@@ -1,6 +1,4 @@
-﻿using BotBase.Database;
-
-namespace Asahi.Database.Models;
+﻿namespace Asahi.Database.Models;
 
 public class CustomCommand : DbModel
 {

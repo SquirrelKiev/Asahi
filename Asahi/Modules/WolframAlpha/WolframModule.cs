@@ -1,5 +1,4 @@
-﻿using System.Net;
-using Asahi.Database.Models;
+﻿using Asahi.Database.Models;
 using Discord.Interactions;
 
 namespace Asahi.Modules.WolframAlpha;

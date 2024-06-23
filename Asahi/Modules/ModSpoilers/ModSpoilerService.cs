@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Asahi.Database;
-using Asahi.Database.Models;
 using Asahi.Modules.Highlights;
 using Discord.Webhook;
 using Discord.WebSocket;

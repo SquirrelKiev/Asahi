@@ -1,7 +1,6 @@
 ﻿using System.Web;
 using Asahi.Database;
 using Asahi.Database.Models.Rss;
-using BotBase.Modules;
 using CodeHollow.FeedReader;
 using Discord.Interactions;
 using Fergun.Interactive;
@@ -206,7 +205,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
                 new PaginatorButton("<", PaginatorAction.Backward, ButtonStyle.Secondary),
                 new PaginatorButton("Jump", PaginatorAction.Jump, ButtonStyle.Secondary),
                 new PaginatorButton(">", PaginatorAction.Forward, ButtonStyle.Secondary),
-                new PaginatorButton(BaseModulePrefixes.RED_BUTTON, null, "X", ButtonStyle.Danger),
+                new PaginatorButton(ModulePrefixes.RED_BUTTON, null, "X", ButtonStyle.Danger),
             ])
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)

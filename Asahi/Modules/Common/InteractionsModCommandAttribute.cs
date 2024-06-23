@@ -12,17 +12,17 @@ public class InteractionsModCommandAttribute : PreconditionAttribute
 
         await using var dbContext = dbService.GetDbContext();
 
-        var config = services.GetRequiredService<BotConfigBase>();
+        var config = services.GetRequiredService<BotConfig>();
         var overrideService = services.GetRequiredService<OverrideTrackerService>();
 
-        if (config.ManagerUserIds.Contains(context.User.Id) && await overrideService.HasOverride(context.User.Id))
+        if (config.ManagerUserIds.Contains(context.User.Id) && overrideService.HasOverride(context.User.Id))
         {
             return PreconditionResult.FromSuccess();
         }
 
         if (context.User is SocketGuildUser user)
         {
-            var guildConfig = await dbContext.GetGuildConfig(user.Guild.Id);
+            //var guildConfig = await dbContext.GetGuildConfig(user.Guild.Id);
 
             if (user.GuildPermissions.ManageGuild 
                 //|| user.Roles.Any(x => x.Id == guildConfig.ModRole)

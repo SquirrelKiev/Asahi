@@ -1,5 +1,4 @@
-﻿using BotBase.Modules;
-using Discord.Interactions;
+﻿using Discord.Interactions;
 using Fergun.Interactive;
 using Humanizer;
 using Microsoft.Extensions.Logging;
@@ -178,7 +177,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
 
         var selectInteraction = await interactive.NextMessageComponentAsync(
             x => msg.Id == x.Message.Id &&
-                 x.Data.CustomId is BACK_BUTTON or BaseModulePrefixes.RED_BUTTON,
+                 x.Data.CustomId is BACK_BUTTON or ModulePrefixes.RED_BUTTON,
             timeout: ThemeSlashExpiryTime);
 
         if (!selectInteraction.IsSuccess)
@@ -188,7 +187,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             return;
         }
 
-        if (selectInteraction.Value.Data.CustomId != BaseModulePrefixes.RED_BUTTON)
+        if (selectInteraction.Value.Data.CustomId != ModulePrefixes.RED_BUTTON)
             await selectInteraction.Value.DeferAsync();
 
         if (selectInteraction.Value.Data.Type == ComponentType.Button)
@@ -197,7 +196,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             {
                 goto anime_selection;
             }
-            if (selectInteraction.Value.Data.CustomId == BaseModulePrefixes.RED_BUTTON)
+            if (selectInteraction.Value.Data.CustomId == ModulePrefixes.RED_BUTTON)
             { }
         }
 
@@ -275,7 +274,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             x => msg.Id == x.Message.Id && x.User.Id == Context.User.Id &&
                  (x.Data.CustomId == prefix ||
                   x.Data.CustomId is BACK_BUTTON 
-                      or BaseModulePrefixes.RED_BUTTON 
+                      or ModulePrefixes.RED_BUTTON 
                       or PREVIOUS_PAGE_BUTTON 
                       or NEXT_PAGE_BUTTON),
             timeout: ThemeSlashExpiryTime);
@@ -288,7 +287,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
             }
 
 
-            if (selectInteraction.Value.Data.CustomId != BaseModulePrefixes.RED_BUTTON)
+            if (selectInteraction.Value.Data.CustomId != ModulePrefixes.RED_BUTTON)
                 await selectInteraction.Value.DeferAsync();
 
             if (selectInteraction.Value.Data.Type == ComponentType.Button)
@@ -297,7 +296,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
                 {
                     case BACK_BUTTON:
                         return (default, ResultType.Back);
-                    case BaseModulePrefixes.RED_BUTTON:
+                    case ModulePrefixes.RED_BUTTON:
                         return (default, ResultType.HandledAlreadyDontWorryAboutIt);
                     case PREVIOUS_PAGE_BUTTON:
                         pageIndex--;

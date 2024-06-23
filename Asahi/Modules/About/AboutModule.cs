@@ -1,15 +1,34 @@
-﻿using BotBase.Modules.About;
-using Discord.Interactions;
+﻿using Discord.Interactions;
 
 namespace Asahi.Modules.About;
 
-public class AboutModule(AboutService aboutService, OverrideTrackerService overrideTrackerService)
-    : AboutModuleImpl(aboutService, overrideTrackerService)
+public class AboutModule(AboutService aboutService, OverrideTrackerService overrideTrackerService) : BotModule
 {
     [SlashCommand("about", "Info about the bot.")]
-    [HelpPageDescription("Pulls up info about the bot.")]
-    public override Task AboutSlash()
+    [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm)]
+    public async Task AboutSlash()
     {
-        return base.AboutSlash();
+        await DeferAsync();
+
+        var contents = aboutService.GetMessageContents(await AboutService.GetPlaceholders(Context.Client), Context.User.Id);
+
+        await FollowupAsync(contents);
+    }
+
+    [ComponentInteraction(ModulePrefixes.ABOUT_OVERRIDE_TOGGLE)]
+    public async Task OverrideToggleButton()
+    {
+        await DeferAsync();
+
+        if (overrideTrackerService.TryToggleOverride(Context.User.Id))
+        {
+            var contents = aboutService.GetMessageContents(await AboutService.GetPlaceholders(Context.Client), Context.User.Id);
+
+            await ModifyOriginalResponseAsync(contents);
+        }
+        else
+        {
+            await RespondAsync(new MessageContents("No permission."), true);
+        }
     }
 }

@@ -1,12 +1,11 @@
 ﻿using Asahi.Database.Models;
 using Asahi.Database.Models.Rss;
-using BotBase.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Asahi.Database;
 
-public abstract class BotDbContext(string connectionString, ILoggerFactory? loggerFactory) : BotDbContextBase(connectionString)
+public abstract class BotDbContext(ILoggerFactory? loggerFactory) : DbContext
 {
     public DbSet<GuildConfig> GuildConfigs { get; set; }
 

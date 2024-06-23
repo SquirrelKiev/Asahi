@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using BotBase.Database;
 
 namespace Asahi.Database.Models.Rss;
 

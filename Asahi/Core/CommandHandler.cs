@@ -2,8 +2,6 @@
 using Asahi.Database;
 using Asahi.Database.Models;
 using Asahi.Modules;
-using BotBase.Modules;
-using BotBase.Modules.RedButton;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
@@ -18,7 +16,7 @@ namespace Asahi
         InteractionService interactionService,
         CommandService commandService,
         DiscordSocketClient client,
-        BotConfigBase botConfig,
+        BotConfig botConfig,
         IServiceProvider services,
         DbService dbService,
         InteractiveService interactiveService,
@@ -186,7 +184,7 @@ namespace Asahi
 
             if (ctx.Interaction is SocketMessageComponent componentInteraction)
             {
-                if (componentInteraction.Data.CustomId != BaseModulePrefixes.RED_BUTTON && interactiveService.Callbacks.ContainsKey(componentInteraction.Message.Id))
+                if (componentInteraction.Data.CustomId != ModulePrefixes.RED_BUTTON && interactiveService.Callbacks.ContainsKey(componentInteraction.Message.Id))
                     return;
 
                 var ogRes = componentInteraction.Message;
@@ -219,7 +217,7 @@ namespace Asahi
             interactionService.AddTypeConverter<Color>(new ColorTypeConverter());
             interactionService.AddTypeConverter<IEmote>(new EmoteTypeConverter());
 
-            foreach (var assembly in assemblies.Append(typeof(RedButtonModule).Assembly))
+            foreach (var assembly in assemblies)
             {
                 var modules = await interactionService.AddModulesAsync(assembly, services);
 

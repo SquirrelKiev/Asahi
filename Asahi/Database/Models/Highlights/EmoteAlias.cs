@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 
 namespace Asahi.Database.Models;
 

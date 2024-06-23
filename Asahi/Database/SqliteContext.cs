@@ -4,12 +4,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Asahi.Database;
 
-public class SqliteContext : BotDbContext
+public class SqliteContext(string connectionString = "Data Source=data/botDb.db", ILoggerFactory? loggerFactory = null) : BotDbContext(loggerFactory)
 {
-    public SqliteContext(string connStr = "Data Source=data/botDb.db", ILoggerFactory? loggerFactory = null) : base(connStr, loggerFactory)
-    {
-    }
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         base.OnConfiguring(optionsBuilder);

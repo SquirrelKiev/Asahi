@@ -1,9 +1,8 @@
 ﻿using System.Text;
 using Asahi.Database;
+using Asahi.Modules.About;
 using Asahi.Modules.AnimeThemes;
 using Asahi.Modules.Tatsu;
-using BotBase.Database;
-using BotBase.Modules.About;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
@@ -26,7 +25,7 @@ public static class Startup
         Console.OutputEncoding = Encoding.UTF8;
         Log.Logger = new LoggerConfiguration().WriteTo.Console(outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}").CreateLogger();
 
-        if (!new BotConfigFactory<BotConfig>().GetConfig(out var botConfig))
+        if (!BotConfigFactory.GetConfig(out var botConfig))
         {
             Environment.Exit(1);
         }
@@ -69,8 +68,6 @@ public static class Startup
     private static IServiceCollection AddBotServices(this IServiceCollection serviceCollection, BotConfig config)
     {
         serviceCollection
-            .AddSingleton<BotConfigBase>(config)
-            .AddCache(config)
             .AddSingleton(config)
             .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
             {
@@ -96,7 +93,6 @@ public static class Startup
             }))
             .AddSingleton<CommandHandler>()
             .AddSingleton<DbService>()
-            .AddSingleton(x => (DbServiceBase<BotDbContext>)x.GetService<DbService>()!)
             .AddSingleton(new InteractiveConfig(){ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true})
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()

@@ -1,5 +1,4 @@
 ﻿using Asahi.Database;
-using Serilog.Context;
 using System.Text.RegularExpressions;
 
 namespace Asahi.Modules;

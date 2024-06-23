@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 
 namespace Asahi.Modules.Seigen;
@@ -45,7 +46,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
             return;
         }
 
-        var isValid = await GetIsValid(trackable.MonitoredGuild, trackable.MonitoredRole, trackable.AssignableGuild, trackable.AssignableRole);
+        var isValid = GetIsValid(trackable.MonitoredGuild, trackable.MonitoredRole, trackable.AssignableGuild, trackable.AssignableRole);
         if (isValid != null)
         {
             await FollowupAsync(isValid.Value);
@@ -95,13 +96,15 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         return trackable;
     }
 
-    private async Task<MessageContents?> GetIsValid(ulong monitoredGuild, ulong monitoredRole, ulong assignableGuild, ulong assignableRole)
+    private MessageContents? GetIsValid(ulong monitoredGuild, ulong monitoredRole, ulong assignableGuild, ulong assignableRole)
     {
-        var monitoredGuildInstance = await Context.Client.GetGuildAsync(monitoredGuild);
-        var assignedGuildInstance = await Context.Client.GetGuildAsync(assignableGuild);
+        var client = ((DiscordSocketClient)Context.Client);
 
-        if (!await trackablesUtility.IsGuildValid(monitoredGuildInstance, Context.User.Id) ||
-            !await trackablesUtility.IsGuildValid(assignedGuildInstance, Context.User.Id))
+        var monitoredGuildInstance = client.GetGuild(monitoredGuild);
+        var assignedGuildInstance = client.GetGuild(assignableGuild);
+
+        if (!trackablesUtility.IsGuildValid(monitoredGuildInstance, Context.User.Id) ||
+            !trackablesUtility.IsGuildValid(assignedGuildInstance, Context.User.Id))
         {
             return new MessageContents(new EmbedBuilder().WithDescription("One of the specified guilds could not be found or is not allowed."));
         }
@@ -118,13 +121,15 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         return null;
     }
 
-    private async Task<MessageContents?> GetIsValidPermissionCheckOnly(ulong monitoredGuild, ulong assignableGuild)
+    private MessageContents? GetIsValidPermissionCheckOnly(ulong monitoredGuild, ulong assignableGuild)
     {
-        var monitoredGuildInstance = await Context.Client.GetGuildAsync(monitoredGuild);
-        var assignedGuildInstance = await Context.Client.GetGuildAsync(assignableGuild);
+        var client = ((DiscordSocketClient)Context.Client);
 
-        if ((!await trackablesUtility.IsGuildValidIgnoreNull(monitoredGuildInstance, Context.User.Id) ||
-             !await trackablesUtility.IsGuildValidIgnoreNull(assignedGuildInstance, Context.User.Id))
+        var monitoredGuildInstance = client.GetGuild(monitoredGuild);
+        var assignedGuildInstance = client.GetGuild(assignableGuild);
+
+        if ((!trackablesUtility.IsGuildValidIgnoreNull(monitoredGuildInstance, Context.User.Id) ||
+             !trackablesUtility.IsGuildValidIgnoreNull(assignedGuildInstance, Context.User.Id))
             && monitoredGuildInstance != null && assignedGuildInstance != null)
         {
             return new MessageContents(new EmbedBuilder().WithDescription("One of the specified guilds is not allowed."));
@@ -180,7 +185,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
         // do we have permission from both guilds to edit this trackable?
         // (checking only permissions in case one of the guilds/roles no longer exists to the bot, which might be the case if the
         //  bot was kicked or the guild/role was deleted.)
-        var isValid = await GetIsValidPermissionCheckOnly(entry.MonitoredGuild, entry.AssignableGuild);
+        var isValid = GetIsValidPermissionCheckOnly(entry.MonitoredGuild, entry.AssignableGuild);
         if (isValid != null)
         {
             await FollowupAsync(isValid.Value);
@@ -197,7 +202,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
             return;
         }
 
-        isValid = await GetIsValid(trackable.MonitoredGuild, trackable.MonitoredRole, trackable.AssignableGuild, trackable.AssignableRole);
+        isValid = GetIsValid(trackable.MonitoredGuild, trackable.MonitoredRole, trackable.AssignableGuild, trackable.AssignableRole);
         if (isValid != null)
         {
             await FollowupAsync(isValid.Value);
@@ -235,7 +240,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
             return;
         }
 
-        var isValid = await GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
+        var isValid = GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
         if (isValid != null)
         {
             await FollowupAsync(isValid.Value);
@@ -309,7 +314,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
             return;
         }
 
-        var isValid = await GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
+        var isValid = GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
         if (isValid != null)
         {
             await FollowupAsync(isValid.Value);
@@ -367,7 +372,7 @@ public class TrackablesModule(DbService dbService, RoleManagementService roleMan
             return;
         }
 
-        var isValid = await GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
+        var isValid = GetIsValidPermissionCheckOnly(trackable.MonitoredGuild, trackable.AssignableGuild);
         if (isValid != null)
         {
             await FollowupAsync(isValid.Value);
