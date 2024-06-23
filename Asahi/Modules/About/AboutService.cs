@@ -10,7 +10,7 @@ public class AboutService(BotConfig botConfig, OverrideTrackerService overrideSe
     /// 
     /// <param name="userId">The caller's User ID.
     /// The user ID is used to determine if they should see the manager controls.</param>
-    public MessageContents GetMessageContents(KeyValuePair<string, string>[] placeholders, ulong userId)
+    public MessageContents GetMessageContents(KeyValuePair<string, string>[] placeholders, ulong userId, IGuildUser? us)
     {
         var fields = new EmbedFieldBuilder[botConfig.AboutPageFields.Length];
         for (int i = 0; i < fields.Length; i++)
@@ -38,8 +38,7 @@ public class AboutService(BotConfig botConfig, OverrideTrackerService overrideSe
         var embed = new EmbedBuilder()
             .WithAuthor(ReplacePlaceholders(botConfig.AboutPageTitle, placeholders))
             .WithDescription(ReplacePlaceholders(botConfig.AboutPageDescription, placeholders))
-            // TODO: this should use the QuotingHelpers role color stuff
-            .WithColor(Color.Purple)
+            .WithColor(QuotingHelpers.GetUserRoleColorWithFallback(us, Color.Green))
             .WithFields(fields);
 
         return new MessageContents(string.Empty, embed.Build(), components);

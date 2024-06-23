@@ -10,7 +10,13 @@ public class AboutModule(AboutService aboutService, OverrideTrackerService overr
     {
         await DeferAsync();
 
-        var contents = aboutService.GetMessageContents(await AboutService.GetPlaceholders(Context.Client), Context.User.Id);
+        IGuildUser? us = null;
+        if (Context.Guild != null)
+        {
+            us = await Context.Guild.GetCurrentUserAsync();
+        }
+
+        var contents = aboutService.GetMessageContents(await AboutService.GetPlaceholders(Context.Client), Context.User.Id, us);
 
         await FollowupAsync(contents);
     }
@@ -22,7 +28,13 @@ public class AboutModule(AboutService aboutService, OverrideTrackerService overr
 
         if (overrideTrackerService.TryToggleOverride(Context.User.Id))
         {
-            var contents = aboutService.GetMessageContents(await AboutService.GetPlaceholders(Context.Client), Context.User.Id);
+            IGuildUser? us = null;
+            if (Context.Guild != null)
+            {
+                us = await Context.Guild.GetCurrentUserAsync();
+            }
+
+            var contents = aboutService.GetMessageContents(await AboutService.GetPlaceholders(Context.Client), Context.User.Id, us);
 
             await ModifyOriginalResponseAsync(contents);
         }
