@@ -129,7 +129,7 @@ public class ModSpoilerService(
 
             var firstMessageObj = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
             var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
-                await hts.GetReactions([ogMessage, firstMessageObj], [ogMessage]);
+                await hts.GetReactions([ogMessage, firstMessageObj], [ogMessage], []);
 
             var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, false, true, context, 
                 replyMessage, eb =>
