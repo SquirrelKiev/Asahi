@@ -1197,7 +1197,9 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
             {
                 ulong messageId;
 
-                var messageLinkRegex = MessageLinkMessageIdRegex();
+                // fails to compile if I make this source gen? but only here?? and only on ARM builds??? why????
+                var messageLinkRegex = new Regex(
+                    @"https:\/\/(?:canary)?.discord.com\/channels\/[0-9]*\/[0-9]*\/([0-9]*)");
 
                 var messageLinkMatch = messageLinkRegex.Match(date);
                 if (messageLinkMatch.Success)
@@ -1359,9 +1361,6 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         await FollowupAsync("done'd");
     }
 
-    [GeneratedRegex(@"https:\/\/(?:canary)?.discord.com\/channels\/[0-9]*\/[0-9]*\/([0-9]*)")]
-    private static partial Regex MessageLinkMessageIdRegex();
-
 #endif
 
     #endregion
@@ -1381,7 +1380,7 @@ public struct ConfigChangeOptions(BotDbContext context, HighlightBoard board, st
     public EmbedBuilder embedBuilder = embedBuilder;
 }
 
-public static partial class HighlightsModuleUtility
+public static class HighlightsModuleUtility
 {
     public static async Task<bool> CommonConfig(IInteractionContext botContext, DbService dbService,
         string name,
