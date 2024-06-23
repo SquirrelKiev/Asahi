@@ -194,15 +194,10 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
             }
         }
 
-        if (channelsToPurgeFeedsOf.Count != 0)
-        {
-            IQueryable<FeedListener> query = context.RssFeedListeners;
-            foreach (var channelId in channelsToPurgeFeedsOf)
-            {
-                query = query.Where(x => x.ChannelId == channelId);
-            }
 
-            await query.ExecuteDeleteAsync();
+        foreach (var channelId in channelsToPurgeFeedsOf)
+        {
+            await context.RssFeedListeners.Where(x => x.ChannelId == channelId).ExecuteDeleteAsync();
         }
     }
 
