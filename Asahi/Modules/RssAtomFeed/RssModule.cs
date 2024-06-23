@@ -128,7 +128,21 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         });
     }
 
-    [SlashCommand("set-url", "Sets the feed's url to something different.")]
+    [SlashCommand("set-channel", "Sets the feed's channel to something different.")]
+    public async Task SetFeedUrlSlash([Summary(description: "The ID of the feed to edit.")] uint id,
+        [Summary(description: "The channel to send updates to.")]
+        IMessageChannel channel)
+    {
+        await CommonFeedConfig(id, options =>
+        {
+            options.feedListener.ChannelId = channel.Id;
+
+            return Task.FromResult(new ConfigChangeResult(true, $"Successfully set channel to <#{channel.Id}>. " +
+                                                                $"(Make sure the bot has permission to speak there)"));
+        });
+    }
+
+    [SlashCommand("set-url", "Sets the feed's URL to something different.")]
     public async Task SetFeedUrlSlash([Summary(description: "The ID of the feed to edit.")] uint id,
         [Summary(description: "The RSS/Atom url."), MaxLength(512)]
         string url)
