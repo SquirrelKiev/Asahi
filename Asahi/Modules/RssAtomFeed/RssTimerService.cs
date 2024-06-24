@@ -87,10 +87,10 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 var feedHandler = FeedHandlerForUrl(url);
 
                 var unseenUrl = false;
-                //logger.LogTrace("processing {url}", url);
+                logger.LogTrace("processing {url}", url);
                 if (!hashedSeenArticles.TryGetValue(urlHash, out var seenArticles))
                 {
-                    //logger.LogTrace("never seen the url {url} before", url);
+                    logger.LogTrace("never seen the url {url} before", url);
                     unseenUrl = true;
                     seenArticles = [];
                     hashedSeenArticles.Add(urlHash, seenArticles);
@@ -152,8 +152,9 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                     {
                         var guild = client.GetGuild(feedListener.GuildId);
 
-                        if (guild.GetChannel(feedListener.ChannelId) is not ISocketMessageChannel channel)
+                        if (guild.GetChannel(feedListener.ChannelId) is not ITextChannel channel)
                         {
+                            logger.LogTrace("unknown channel {channel}, added to purge queue", feedListener.ChannelId);
                             channelsToPurgeFeedsOf.Add(feedListener.ChannelId);
                             continue;
                         }
@@ -239,16 +240,18 @@ public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
         {
             eb.WithAuthor(post.TagStringArtist.Split(' ').Humanize());
         }
+
+        var footer = new EmbedFooterBuilder();
+        footer.WithIconUrl("https://danbooru.donmai.us/packs/static/danbooru-logo-128x128-ea111b6658173e847734.png");
         if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
         {
-            eb.WithFooter(feedListener.FeedTitle, "https://danbooru.donmai.us/packs/static/danbooru-logo-128x128-ea111b6658173e847734.png");
+            footer.WithText($"{feedListener.FeedTitle} • {post.Rating}");
         }
         eb.WithTimestamp(post.CreatedAt);
 
-        if (!string.IsNullOrWhiteSpace(post.TagStringCharacter))
-        {
-            eb.WithTitle(post.TagStringCharacter.Split(' ').Select(x => x.Titleize()).Humanize());
-        }
+        eb.WithTitle(!string.IsNullOrWhiteSpace(post.TagStringCharacter)
+            ? post.TagStringCharacter.Split(' ').Select(x => x.Titleize()).Humanize()
+            : "Danbooru");
 
         eb.WithUrl($"https://danbooru.donmai.us/posts/{post.Id}/");
 
