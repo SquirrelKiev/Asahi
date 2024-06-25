@@ -247,6 +247,8 @@ public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
         {
             footer.WithText($"{feedListener.FeedTitle} • {post.Rating}");
         }
+
+        eb.WithFooter(footer);
         eb.WithTimestamp(post.CreatedAt);
 
         eb.WithTitle(!string.IsNullOrWhiteSpace(post.TagStringCharacter)
