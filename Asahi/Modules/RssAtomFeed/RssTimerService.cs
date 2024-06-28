@@ -154,7 +154,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                         if (guild.GetChannel(feedListener.ChannelId) is not ITextChannel channel)
                         {
-                            logger.LogTrace("unknown channel {channel}, added to purge queue", feedListener.ChannelId);
+                            logger.LogDebug("unknown channel {channel}, added to purge queue", feedListener.ChannelId);
                             channelsToPurgeFeedsOf.Add(feedListener.ChannelId);
                             continue;
                         }
@@ -472,10 +472,10 @@ public class RssFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : I
         eb.WithColor(embedColor);
 
         if (!string.IsNullOrWhiteSpace(eb.Title))
-            eb.Title = StringExtensions.Truncate(eb.Title, 200);
+            eb.Title = eb.Title.Truncate(200);
 
         if (!string.IsNullOrWhiteSpace(eb.Description))
-            eb.Description = StringExtensions.Truncate(eb.Description, 400);
+            eb.Description = eb.Description.Truncate(400);
 
         return new MessageContents(eb);
     }

@@ -125,7 +125,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
             guildTasks.Add(Task.Run(async () =>
             {
-                logger.LogTrace("Checking for Guild {guildId} has begun.", groupedMessages.Key);
+                logger.LogDebug("Checking for Guild {guildId} has begun.", groupedMessages.Key);
 
                 foreach (var queuedMessage in groupedMessages)
                 {
@@ -146,7 +146,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                     }
                 }
 
-                logger.LogTrace("Finished processing messages for Guild {guildId}.", groupedMessages.Key);
+                logger.LogDebug("Finished processing messages for Guild {guildId}.", groupedMessages.Key);
             }, cancellationToken));
         }
 
@@ -325,7 +325,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         if (!hasPerms && forcedBoards.Length == 0)
         {
-            logger.LogTrace("Channel locked, skipping!");
+            logger.LogDebug("Channel locked, skipping!");
             return;
         }
 
@@ -364,7 +364,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                                         msg.Author is SocketGuildUser guildUser && guildUser.Roles.All(y => y.Id != x.HighlightsMuteRole))
             .ToArray();
 
-        logger.LogTrace("Total non unique reactions is {nur}, found {bl} boards", nonUniqueReactions, boards.Length);
+        logger.LogDebug("Total non unique reactions is {nur}, found {bl} boards", nonUniqueReactions, boards.Length);
 
         if (boards.Length == 0)
             return;
@@ -402,7 +402,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
                          var requiredReactions = CalculateThreshold(threshold, messages, msg.CreatedAt, out _);
 
-                         logger.LogTrace("threshold is {threshold}", requiredReactions);
+                         logger.LogDebug("threshold is {threshold}", requiredReactions);
 
                          return requiredReactions;
                      });
@@ -515,7 +515,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             loggingChannelId = loggingChannelOverride.LoggingChannelId;
         }
 
-        logger.LogTrace("Sending highlight message to {channel}", loggingChannelId);
+        logger.LogDebug("Sending highlight message to {channel}", loggingChannelId);
 
         var loggingChannel = client.GetGuild(board.GuildId).GetTextChannel(loggingChannelId);
         var embedAuthor = (IGuildUser)message.Author;
@@ -578,7 +578,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
             OriginalMessageId = message.Id
         });
 
-        logger.LogTrace("Sent and tracked highlight {messageCount} messages", highlightMessages.Count);
+        logger.LogDebug("Sent and tracked highlight {messageCount} messages", highlightMessages.Count);
     }
 
     public async Task AutoReact(HighlightBoard board, EmoteAlias[] aliases, IReadOnlyDictionary<IEmote, ReactionMetadata> reactions, IMessage lastMessage)

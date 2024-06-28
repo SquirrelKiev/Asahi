@@ -1345,7 +1345,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
                 return;
 
             HighlightsTrackingService.CalculateThreshold(board.Thresholds.First(), hts.GetCachedMessages(Context.Channel.Id), DateTimeOffset.UtcNow, out var threshDebugInfo);
-            logger.LogTrace("info is {info}", threshDebugInfo);
+            logger.LogDebug("info is {info}", threshDebugInfo);
         }
     }
 
