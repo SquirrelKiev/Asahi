@@ -160,7 +160,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                         }
 
                         var messages = embedGenerator.GenerateFeedItemMessages(feedListener, seenArticles, processedArticles,
-                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), true).ToArray();
+                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), !unseenUrl).ToArray();
 
                         // this may look wasteful (only taking the top 10) but im trying to avoid some feed with like 100 new contents ruining the rate limits
                         // Also doing this after the ToArray so that the reads are marked correctly
