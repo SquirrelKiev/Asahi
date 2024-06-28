@@ -23,6 +23,8 @@ public class BotConfig
 
     public string LoadingEmote { get; set; } = "\ud83e\udd14"; // 🤔
 
+    public string PixivEmote { get; set; } = "<:pixivicon:1255352423028097134>";
+
     [YamlMember(Description = "A set of UserIDs. Users in this set will be granted permission to use commands to manage the instance itself.\n" +
                               "This is a dangerous permission to grant.")]
     public HashSet<ulong> ManagerUserIds { get; set; } = [0ul];
@@ -39,7 +41,7 @@ public class BotConfig
     public string DefaultPrefix { get; set; } = "]";
 
     [YamlMember(Description = "The default UserAgent to use when making web requests.")]
-    public string UserAgent { get; set; } = "Asahi/NoSetVersion (https://github.com/SquirrelKiev/Asahi)";
+    public string UserAgent { get; set; } = "AsahiBot/NoSetVersion (https://github.com/SquirrelKiev/Asahi)";
     [YamlMember(Description = "The App ID to use for the Wolfram command. Can get one from https://developer.wolframalpha.com/.")]
     public string WolframAppId { get; set; } = "";
 

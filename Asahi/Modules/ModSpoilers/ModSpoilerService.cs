@@ -200,7 +200,7 @@ public class ModSpoilerService(
 
             var guildConfig = await context.GetGuildConfig(channel.GuildId);
 
-            if (!TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote))
+            if (!QuotingHelpers.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote))
                 return;
 
             if (!reaction.Emote.Equals(spoilerEmote))
@@ -261,7 +261,7 @@ public class ModSpoilerService(
 
             var spoilerContext = contextMsg.Value.Content == "0" ? "" : contextMsg.Value.Content;
 
-            if (TryParseEmote(botConfig.LoadingEmote, out var waitEmote))
+            if (QuotingHelpers.TryParseEmote(botConfig.LoadingEmote, out var waitEmote))
             {
                 await contextMsg.Value.AddReactionAsync(waitEmote);
             }
@@ -301,23 +301,5 @@ public class ModSpoilerService(
         {
             logger.LogError(e, "Failed to do spoiler reaction.");
         }
-    }
-
-    public static bool TryParseEmote(string text, [NotNullWhen(true)] out IEmote? emote)
-    {
-        if (Emote.TryParse(text, out var result))
-        {
-            emote = result;
-            return true;
-        }
-
-        if (Emoji.TryParse(text, out var result2))
-        {
-            emote = result2;
-            return true;
-        }
-
-        emote = null;
-        return false;
     }
 }

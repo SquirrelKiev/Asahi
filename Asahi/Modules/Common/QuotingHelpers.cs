@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.Contracts;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 using System.Text;
 using Asahi.Database.Models;
 using Discord.WebSocket;
@@ -60,9 +61,7 @@ public static class QuotingHelpers
 
         if (showAuthor)
         {
-            var user = message.Author as IGuildUser;
-
-            if (user == null)
+            if (message.Author is not IGuildUser user)
             {
                 firstEmbed.WithAuthor(message.Author);
             }
@@ -378,29 +377,49 @@ public static class QuotingHelpers
             thumbnailUrl = null;
         }
 
-        var builder = new EmbedBuilder();
-        builder.Author = new EmbedAuthorBuilder
+        var builder = new EmbedBuilder
         {
-            Name = embed.Author?.Name,
-            IconUrl = embed.Author?.IconUrl,
-            Url = embed.Author?.Url
+            Author = new EmbedAuthorBuilder
+            {
+                Name = embed.Author?.Name,
+                IconUrl = embed.Author?.IconUrl,
+                Url = embed.Author?.Url
+            },
+            Color = embed.Color,
+            Description = embed.Description,
+            Footer = new EmbedFooterBuilder
+            {
+                Text = embed.Footer?.Text,
+                IconUrl = embed.Footer?.IconUrl
+            },
+            ImageUrl = imageUrl,
+            ThumbnailUrl = thumbnailUrl,
+            Timestamp = embed.Timestamp,
+            Title = embed.Title,
+            Url = embed.Url
         };
-        builder.Color = embed.Color;
-        builder.Description = embed.Description;
-        builder.Footer = new EmbedFooterBuilder
-        {
-            Text = embed.Footer?.Text,
-            IconUrl = embed.Footer?.IconUrl
-        };
-        builder.ImageUrl = imageUrl;
-        builder.ThumbnailUrl = thumbnailUrl;
-        builder.Timestamp = embed.Timestamp;
-        builder.Title = embed.Title;
-        builder.Url = embed.Url;
 
         foreach (var field in embed.Fields)
             builder.AddField(field.Name, field.Value, field.Inline);
 
         return builder;
+    }
+
+    public static bool TryParseEmote(string text, [NotNullWhen(true)] out IEmote? emote)
+    {
+        if (Emote.TryParse(text, out var result))
+        {
+            emote = result;
+            return true;
+        }
+
+        if (Emoji.TryParse(text, out var result2))
+        {
+            emote = result2;
+            return true;
+        }
+
+        emote = null;
+        return false;
     }
 }

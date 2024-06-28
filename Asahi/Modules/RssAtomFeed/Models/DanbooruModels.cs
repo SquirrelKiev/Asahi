@@ -88,6 +88,9 @@ public class DanbooruPost
     [JsonProperty("media_asset")]
     public DanbooruMediaAsset MediaAsset { get; set; } = null!;
 
+    [JsonProperty("pixiv_id")]
+    public int? PixivId { get; set; }
+
     [JsonProperty("last_comment_bumped_at")]
     public DateTimeOffset? LastCommentBumpedAt { get; set; }
 

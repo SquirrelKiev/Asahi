@@ -12,7 +12,7 @@ using Newtonsoft.Json;
 namespace Asahi.Modules.RssAtomFeed;
 
 [Inject(ServiceLifetime.Singleton)]
-public class RssTimerService(IHttpClientFactory clientFactory, DbService dbService, DiscordSocketClient client, ILogger<RssTimerService> logger)
+public class RssTimerService(IHttpClientFactory clientFactory, DbService dbService, DiscordSocketClient client, ILogger<RssTimerService> logger, BotConfig config)
 {
     public enum FeedHandler
     {
@@ -121,7 +121,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                                 var feedsArray = feedsEnumerable.ToArray();
 
-                                embedGenerator = new RssFeedEmbedGenerator(feed, feedsArray);
+                                embedGenerator = new RssFeedMessageGenerator(feed, feedsArray);
                                 break;
                             }
                         case FeedHandler.Danbooru:
@@ -131,7 +131,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                                 if (posts == null)
                                     continue;
 
-                                embedGenerator = new DanbooruEmbedGenerator(posts);
+                                embedGenerator = new DanbooruMessageGenerator(posts, config);
                                 break;
                             }
                         default:
@@ -159,11 +159,15 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             continue;
                         }
 
-                        var embeds = embedGenerator.GenerateFeedItemEmbeds(feedListener, seenArticles, processedArticles,
-                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), !unseenUrl).Take(10).ToArray();
+                        var messages = embedGenerator.GenerateFeedItemMessages(feedListener, seenArticles, processedArticles,
+                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), true).ToArray();
 
-                        if (embeds.Length != 0)
-                            await channel.SendMessageAsync(embeds: embeds);
+                        // this may look wasteful (only taking the top 10) but im trying to avoid some feed with like 100 new contents ruining the rate limits
+                        // Also doing this after the ToArray so that the reads are marked correctly
+                        foreach (var message in messages.Take(10))
+                        {
+                            await channel.SendMessageAsync(message.body, embeds: message.embeds, components: message.components);
+                        }
 
                         //foreach (var feedItem in feedsArray)
                         //{
@@ -213,11 +217,11 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
     }
 }
 
-public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
+public class DanbooruMessageGenerator(DanbooruPost[] posts, BotConfig config) : IEmbedGenerator
 {
     private static readonly HashSet<string> KnownImageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "webp"];
 
-    public IEnumerable<Embed> GenerateFeedItemEmbeds(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles,
+    public IEnumerable<MessageContents> GenerateFeedItemMessages(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles,
         Color embedColor, bool shouldCreateEmbeds)
     {
         foreach (var post in posts)
@@ -227,11 +231,11 @@ public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
             if (seenArticles.Contains(post.Id)) continue;
             if (!shouldCreateEmbeds) continue;
 
-            yield return GenerateFeedItemEmbed(feedListener, post, embedColor);
+            yield return GenerateFeedItemMessage(feedListener, post, embedColor);
         }
     }
 
-    private Embed GenerateFeedItemEmbed(FeedListener feedListener, DanbooruPost post, Color embedColor)
+    private MessageContents GenerateFeedItemMessage(FeedListener feedListener, DanbooruPost post, Color embedColor)
     {
         var eb = new EmbedBuilder();
 
@@ -245,7 +249,7 @@ public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
         footer.WithIconUrl("https://danbooru.donmai.us/packs/static/danbooru-logo-128x128-ea111b6658173e847734.png");
         if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
         {
-            footer.WithText($"{feedListener.FeedTitle} • {post.Rating}");
+            footer.WithText($"{feedListener.FeedTitle} • Rating: {post.Rating}");
         }
 
         eb.WithFooter(footer);
@@ -266,10 +270,24 @@ public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
         eb.WithDescription($"{post.MediaAsset.FileExtension.ToUpperInvariant()} file | " +
                            $"embed is {bestVariant?.Type} quality{(bestVariant?.Type != "original" ? $" ({bestVariant?.FileExt.ToUpperInvariant()} file)" : "")}");
 
-        return eb.Build();
+        var components = new ComponentBuilder();
+
+        if (post.PixivId != null)
+        {
+            QuotingHelpers.TryParseEmote(config.PixivEmote, out var pixivEmote);
+
+            var pixivUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
+            components.WithButton("Pixiv", emote: pixivEmote, url: pixivUrl, style: ButtonStyle.Link);
+        }
+        else if (!string.IsNullOrWhiteSpace(post.Source))
+        {
+            components.WithButton("Source", url: post.Source, style: ButtonStyle.Link);
+        }
+
+        return new MessageContents(eb, components);
     }
 
-    private DanbooruVariant? GetBestVariant(DanbooruVariant[] variants)
+    private static DanbooruVariant? GetBestVariant(DanbooruVariant[] variants)
     {
         // we only want embeddable variants
         var validVariants = variants.Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower())).ToList();
@@ -287,9 +305,9 @@ public class DanbooruEmbedGenerator(DanbooruPost[] posts) : IEmbedGenerator
     }
 }
 
-public class RssFeedEmbedGenerator(Feed genericFeed, FeedItem[] feedItems) : IEmbedGenerator
+public class RssFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : IEmbedGenerator
 {
-    public IEnumerable<Embed> GenerateFeedItemEmbeds(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles, Color embedColor, bool shouldCreateEmbeds)
+    public IEnumerable<MessageContents> GenerateFeedItemMessages(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles, Color embedColor, bool shouldCreateEmbeds)
     {
         foreach (var feedItem in feedItems)
         {
@@ -302,7 +320,7 @@ public class RssFeedEmbedGenerator(Feed genericFeed, FeedItem[] feedItems) : IEm
         }
     }
 
-    public Embed GenerateFeedItemEmbed(FeedListener feedListener, FeedItem genericItem, Color embedColor)
+    public MessageContents GenerateFeedItemEmbed(FeedListener feedListener, FeedItem genericItem, Color embedColor)
     {
         var eb = new EmbedBuilder();
 
@@ -459,7 +477,7 @@ public class RssFeedEmbedGenerator(Feed genericFeed, FeedItem[] feedItems) : IEm
         if (!string.IsNullOrWhiteSpace(eb.Description))
             eb.Description = StringExtensions.Truncate(eb.Description, 400);
 
-        return eb.Build();
+        return new MessageContents(eb);
     }
 }
 
@@ -473,5 +491,5 @@ public interface IEmbedGenerator
     /// <param name="processedArticles">The current work in progress articles that have been processed. Will be edited.</param>
     /// <param name="embedColor">The color to use for the embed.</param>
     /// <returns></returns>
-    public IEnumerable<Embed> GenerateFeedItemEmbeds(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles, Color embedColor, bool shouldCreateEmbeds);
+    public IEnumerable<MessageContents> GenerateFeedItemMessages(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles, Color embedColor, bool shouldCreateEmbeds);
 }
