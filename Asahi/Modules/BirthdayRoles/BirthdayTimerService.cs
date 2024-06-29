@@ -81,6 +81,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
             var birthdayConfig = group.Key;
 
             var guild = client.GetGuild(birthdayConfig.GuildId);
+            await guild.DownloadUsersAsync();
             var role = guild.GetRole(birthdayConfig.BirthdayRole);
 
             foreach (var entry in group)
@@ -89,6 +90,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
             }
         }
 
+        
         var birthdaysInGuild = birthdayAndys
             .GroupBy(x => x.User.Guild).ToDictionary(x => x.Key, x => x.ToArray());
 
