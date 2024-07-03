@@ -366,7 +366,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "Any highlights originating from this channel are spoiler-tagged.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
         IGuildChannel spoilerTaggedChannel,
         [MaxLength(SpoilerChannel.MaxContextLength)]
         [Summary(description: "Why the message is spoiler tagged. e.g. \"spoilers for the manga.\"")]
@@ -402,7 +402,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The channel to remove.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
         IGuildChannel spoilerTaggedChannel
     )
     {
@@ -428,7 +428,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The channel to override the logging channel for.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
         IGuildChannel overriddenChannel,
         [Summary(description: "The logging channel to use instead.")]
         ITextChannel logChannel
@@ -464,7 +464,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The overridden channel to reset to default.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
         IGuildChannel overriddenChannel
     )
     {
@@ -593,7 +593,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
-        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
         [Summary(description: "The channel to filter.")]
         IGuildChannel channel)
         {
@@ -618,7 +618,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
             string name,
-            [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread)]
+            [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
             [Summary(description: "The channel to unfilter.")]
             IGuildChannel channel)
         {
@@ -1171,7 +1171,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The channel to check the threshold of.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
         IGuildChannel channel,
         [Summary(description: "The date to check (dd/MM/yyyy). can also be a message ID or a link to a message.")]
         string? date = null
@@ -1318,7 +1318,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
         [Summary(description: "The channel to check the threshold of.")]
-        [ChannelTypes(ChannelType.Text, ChannelType.PrivateThread, ChannelType.PublicThread)]
+        [ChannelTypes(ChannelType.Text, ChannelType.Forum, ChannelType.PrivateThread, ChannelType.PublicThread, ChannelType.Voice, ChannelType.Stage)]
         IGuildChannel channel, [Summary(description: "Whether to continue logging to the console or not.")]
         bool stopLogging = false)
     {
