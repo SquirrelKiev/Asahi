@@ -1193,6 +1193,8 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
                                                                      "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev.");
 
             var lookupDate = DateTimeOffset.UtcNow;
+            int cachedThreshold = -1;
+            IMessage? message = null;
             if (date != null)
             {
                 ulong messageId;
@@ -1214,11 +1216,12 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
 
                 if (messageId != 0)
                 {
-                    var message = await textChannel.GetMessageAsync(messageId);
+                    message = await textChannel.GetMessageAsync(messageId);
 
                     if (message == null)
                         return new ConfigChangeResult(false, $"Could not find message with ID `{messageId}`.");
 
+                    cachedThreshold = hts.GetCachedThreshold(options.board, messageId);
                     lookupDate = message.Timestamp;
                 }
                 else
@@ -1233,7 +1236,16 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
 
             HighlightsTrackingService.CalculateThreshold(threshold, hts.GetCachedMessages(channel.Id), lookupDate, out var thresholdInfo);
 
-            return new ConfigChangeResult(true, $"Threshold info for <#{channel.Id}>\n\n{thresholdInfo}");
+            var messageContents = $"Threshold info for <#{channel.Id}>\n\n";
+
+            if (cachedThreshold != -1 && message != null)
+            {
+                messageContents += $"**Cached Threshold for {message.GetJumpUrl()}**: {cachedThreshold}\n\n";
+            }
+
+            messageContents += thresholdInfo;
+
+            return new ConfigChangeResult(true, messageContents);
         }, boards => boards.Include(x => x.Thresholds));
     }
 

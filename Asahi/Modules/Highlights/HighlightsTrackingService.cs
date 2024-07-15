@@ -382,9 +382,11 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                      if (!hasPerms)
                          return false;
 
-                     var threshold = messageThresholds.GetOrCreate($"{board.GuildId}-{board.Name}-{msg.Id}", entry =>
+                     var threshold = messageThresholds.GetOrCreate(GetThresholdKey(board, msg.Id), entry =>
                      {
-                         entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(3);
+                         var timespan = TimeSpan.FromSeconds(Math.Min(board.MaxMessageAgeSeconds, 43200)); // 43200 seconds = 12 hours
+
+                         entry.AbsoluteExpirationRelativeToNow = timespan;
 
                          var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
                          threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == parentChannel.Id);
@@ -427,6 +429,19 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
 
         await context.SaveChangesAsync();
+    }
+
+    public int GetCachedThreshold(HighlightBoard board, ulong msgId)
+    {
+        if (messageThresholds.TryGetValue(GetThresholdKey(board, msgId), out int cachedThreshold))
+            return cachedThreshold;
+        else
+            return -1;
+    }
+
+    private static string GetThresholdKey(HighlightBoard board, ulong msgId)
+    {
+        return $"{board.GuildId}-{board.Name}-{msgId}";
     }
 
     public async Task<(HashSet<ulong> uniqueReactionUsersAutoReact, HashSet<IEmote> uniqueReactionEmotes)> GetReactions(
