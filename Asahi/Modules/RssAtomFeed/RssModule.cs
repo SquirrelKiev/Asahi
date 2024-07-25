@@ -6,12 +6,13 @@ using Discord.Interactions;
 using Fergun.Interactive;
 using Fergun.Interactive.Pagination;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.RssAtomFeed;
 
 [Group("rss", "Commands relating to RSS/Atom feeds.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
-public class RssModule(DbService dbService, RssTimerService rts, InteractiveService interactive, HttpClient http) : BotModule
+public class RssModule(DbService dbService, RssTimerService rts, InteractiveService interactive, HttpClient http, ILogger<RssModule> logger) : BotModule
 {
     [SlashCommand("add-feed", "Adds a feed.")]
     public async Task AddFeedSlash(
@@ -30,7 +31,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
                 return new ConfigChangeResult(false, "You already have this feed added for this channel!");
             }
 
-            var configChangeResult = await ValidateFeedUrl(url, eb);
+            var (configChangeResult, _) = await ValidateFeedUrl(url, eb);
 
             if (configChangeResult != null)
                 return configChangeResult.Value;
@@ -45,74 +46,6 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
 
             return new ConfigChangeResult(true, "Added feed.");
         });
-    }
-
-    private async Task<ConfigChangeResult?> ValidateFeedUrl(string url, EmbedBuilder eb)
-    {
-        try
-        {
-            http.MaxResponseContentBufferSize = 8000000;
-            using var req = await http.GetAsync(url);
-            var xml = await req.Content.ReadAsStringAsync();
-
-            var feedHandler = RssTimerService.FeedHandlerForUrl(url);
-            switch (feedHandler)
-            {
-                case RssTimerService.FeedHandler.RssAtom:
-                    {
-                        var feed = FeedReader.ReadFromString(xml);
-
-                        if (!RssTimerService.ValidateFeed(feed))
-                        {
-                            return new ConfigChangeResult(false, "Feed isn't valid!");
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(feed.ImageUrl))
-                            eb.WithThumbnailUrl(feed.ImageUrl);
-
-                        eb.WithUrl(url);
-
-                        if (!string.IsNullOrWhiteSpace(feed.Title))
-                            eb.WithTitle(feed.Title);
-
-                        if (!string.IsNullOrWhiteSpace(feed.Description))
-                            eb.WithFields(new EmbedFieldBuilder().WithName("Description").WithValue(feed.Description));
-                        break;
-                    }
-                case RssTimerService.FeedHandler.Danbooru:
-                {
-                        var uri = new Uri(url);
-
-                        var query = HttpUtility.ParseQueryString(uri.Query);
-
-                        var tags = query["tags"];
-                        string? title;
-                        if (tags != null)
-                        {
-                            title = $"Danbooru: {tags}";
-                        }
-                        else
-                        {
-                            title = "Danbooru";
-                        }
-
-                        eb.WithTitle(title);
-                        eb.WithUrl(url);
-
-                        break;
-                    }
-                default:
-                    throw new NotSupportedException();
-            }
-        }
-        catch (Exception ex)
-        {
-            {
-                return new ConfigChangeResult(false, $"Failed to get feed. `{ex.GetType()}`: `{ex.Message}`");
-            }
-        }
-
-        return null;
     }
 
     [SlashCommand("rm-feed", "Removes a feed.")]
@@ -149,7 +82,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
     {
         await CommonFeedConfig(id, async options =>
         {
-            var configChangeResult = await ValidateFeedUrl(url, options.embedBuilder);
+            var (configChangeResult, _) = await ValidateFeedUrl(url, options.embedBuilder);
 
             if (configChangeResult != null)
                 return configChangeResult.Value;
@@ -228,6 +161,60 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(2), InteractionResponseType.DeferredChannelMessageWithSource);
     }
 
+    [SlashCommand("test-feed", "Sends the newest post from a feed.")]
+    public async Task TestFeedSlash(string url, [MinValue(1), MaxValue(3)] int entriesToSend = 1)
+    {
+        await DeferAsync();
+
+        var eb = new EmbedBuilder();
+        var (configRes, feedRes) = await ValidateFeedUrl(url, eb);
+
+        var currentUser = await Context.Guild.GetCurrentUserAsync();
+        if (configRes != null)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(currentUser, eb,
+                configRes.Value));
+            return;
+        }
+
+        if (feedRes == null)
+        {
+            await FollowupAsync("Feed response is null? That's not right, ping kiev.");
+            return;
+        }
+
+        if (!rts.TryGetEmbedGeneratorForFeed(url, feedRes, out var embedGenerator))
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(currentUser, new EmbedBuilder(), new ConfigChangeResult(false, 
+                "Failed to generate embeds.")));
+            return;
+        }
+
+        var testFeedListener = new FeedListener()
+        {
+            GuildId = Context.Guild.Id,
+            ChannelId = Context.Channel.Id,
+            FeedTitle = eb.Title?.Truncate(64),
+            FeedUrl = url,
+            Id = 0
+        };
+
+        var messages = embedGenerator.GenerateFeedItemMessages(testFeedListener, new HashSet<int>(), new HashSet<int>(),
+            QuotingHelpers.GetUserRoleColorWithFallback(currentUser, Color.Default), true);
+
+        int i = 0;
+        foreach (var message in messages.Take(entriesToSend))
+        {
+            //logger.LogTrace($"message {i++}: {message.embeds?[0].Title} {message.embeds?[0].Timestamp}");
+            await Context.Channel.SendMessageAsync(message.body, embeds: message.embeds,
+                components: message.components);
+            i++;
+        }
+
+        await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(currentUser, eb, new ConfigChangeResult(true,
+            $"Sent {i} entries.")));
+    }
+
 #if DEBUG
     [SlashCommand("force-poll", "[DEBUG] Poll for feed updates.")]
     public async Task DebugSlash()
@@ -239,6 +226,76 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         await FollowupAsync("Polled. Check logs for more info.");
     }
 #endif
+
+    private async Task<(ConfigChangeResult? configRes, string? feedRes)> ValidateFeedUrl(string url, EmbedBuilder eb)
+    {
+
+        string? res;
+        try
+        {
+            http.MaxResponseContentBufferSize = 8000000;
+            using var req = await http.GetAsync(url);
+            res = await req.Content.ReadAsStringAsync();
+
+            var feedHandler = RssTimerService.FeedHandlerForUrl(url);
+            switch (feedHandler)
+            {
+                case RssTimerService.FeedHandler.RssAtom:
+                    {
+                        var feed = FeedReader.ReadFromString(res);
+
+                        if (!RssTimerService.ValidateFeed(feed))
+                        {
+                            return (new ConfigChangeResult(false, "Feed isn't valid!"), res);
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(feed.ImageUrl))
+                            eb.WithThumbnailUrl(feed.ImageUrl);
+
+                        eb.WithUrl(url);
+
+                        if (!string.IsNullOrWhiteSpace(feed.Title))
+                            eb.WithTitle(feed.Title);
+
+                        if (!string.IsNullOrWhiteSpace(feed.Description))
+                            eb.WithFields(new EmbedFieldBuilder().WithName("Description").WithValue(feed.Description));
+                        break;
+                    }
+                case RssTimerService.FeedHandler.Danbooru:
+                    {
+                        var uri = new Uri(url);
+
+                        var query = HttpUtility.ParseQueryString(uri.Query);
+
+                        var tags = query["tags"];
+                        string? title;
+                        if (tags != null)
+                        {
+                            title = $"Danbooru: {tags}";
+                        }
+                        else
+                        {
+                            title = "Danbooru";
+                        }
+
+                        eb.WithTitle(title);
+                        eb.WithUrl(url);
+
+                        break;
+                    }
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+        catch (Exception ex)
+        {
+            {
+                return (new ConfigChangeResult(false, $"Failed to get feed. `{ex.GetType()}`: `{ex.Message}`"), null);
+            }
+        }
+
+        return (null, res);
+    }
 
     public struct ConfigChangeOptions(BotDbContext context, FeedListener feedListener, EmbedBuilder embedBuilder)
     {

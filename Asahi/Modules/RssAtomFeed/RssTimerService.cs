@@ -1,4 +1,5 @@
-﻿using Asahi.Database;
+﻿using System.Diagnostics.CodeAnalysis;
+using Asahi.Database;
 using Asahi.Database.Models.Rss;
 using Asahi.Modules.RssAtomFeed.Models;
 using CodeHollow.FeedReader;
@@ -84,7 +85,6 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 // doing hashes for memory reasons
                 var urlHash = url.GetHashCode(StringComparison.OrdinalIgnoreCase);
 
-                var feedHandler = FeedHandlerForUrl(url);
 
                 var unseenUrl = false;
                 logger.LogTrace("processing {url}", url);
@@ -101,42 +101,11 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                 var processedArticles = new HashSet<int>();
 
-                IEmbedGenerator embedGenerator;
+                IEmbedGenerator? embedGenerator;
                 try
                 {
-                    switch (feedHandler)
-                    {
-                        case FeedHandler.RssAtom:
-                            {
-                                var feed = FeedReader.ReadFromString(reqContent);
-
-                                if (!ValidateFeed(feed))
-                                    continue;
-
-                                IEnumerable<FeedItem> feedsEnumerable = feed.Items;
-                                if (feed.Items.All(x => x.PublishingDate.HasValue))
-                                {
-                                    feedsEnumerable = feedsEnumerable.OrderByDescending(x => x.PublishingDate);
-                                }
-
-                                var feedsArray = feedsEnumerable.ToArray();
-
-                                embedGenerator = new RssFeedMessageGenerator(feed, feedsArray);
-                                break;
-                            }
-                        case FeedHandler.Danbooru:
-                            {
-                                var posts = JsonConvert.DeserializeObject<DanbooruPost[]>(reqContent);
-
-                                if (posts == null)
-                                    continue;
-
-                                embedGenerator = new DanbooruMessageGenerator(posts, config);
-                                break;
-                            }
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    if (!TryGetEmbedGeneratorForFeed(url, reqContent, out embedGenerator))
+                        continue;
                 }
                 catch (Exception ex)
                 {
@@ -161,6 +130,11 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                         var messages = embedGenerator.GenerateFeedItemMessages(feedListener, seenArticles, processedArticles,
                             QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), !unseenUrl).ToArray();
+
+                        if (messages.All(x => x.embeds is { Length: > 0 } && x.embeds[0].Timestamp.HasValue))
+                        {
+                            messages = messages.OrderByDescending(x => x.embeds![0].Timestamp.HasValue).ToArray();
+                        }
 
                         // this may look wasteful (only taking the top 10) but im trying to avoid some feed with like 100 new contents ruining the rate limits
                         // Also doing this after the ToArray so that the reads are marked correctly
@@ -206,6 +180,47 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         }
     }
 
+    public bool TryGetEmbedGeneratorForFeed(string url, string reqContent, [NotNullWhen(true)] out IEmbedGenerator? embedGenerator)
+    {
+        var feedHandler = FeedHandlerForUrl(url);
+        switch (feedHandler)
+        {
+            case FeedHandler.RssAtom:
+                {
+                    var feed = FeedReader.ReadFromString(reqContent);
+
+                    if (!ValidateFeed(feed))
+                    {
+                        embedGenerator = null;
+                        return false;
+                    }
+
+                    IEnumerable<FeedItem> feedsEnumerable = feed.Items;
+                    var feedsArray = feedsEnumerable.ToArray();
+
+                    embedGenerator = new RssFeedMessageGenerator(feed, feedsArray);
+                    break;
+                }
+            case FeedHandler.Danbooru:
+                {
+                    var posts = JsonConvert.DeserializeObject<DanbooruPost[]>(reqContent);
+
+                    if (posts == null)
+                    {
+                        embedGenerator = null;
+                        return false;
+                    }
+
+                    embedGenerator = new DanbooruMessageGenerator(posts, config);
+                    break;
+                }
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+
+        return true;
+    }
+
     public static FeedHandler FeedHandlerForUrl(string url)
     {
         return url.StartsWith("https://danbooru.donmai.us/posts.json") ? FeedHandler.Danbooru : FeedHandler.RssAtom;
@@ -235,7 +250,7 @@ public class DanbooruMessageGenerator(DanbooruPost[] posts, BotConfig config) : 
         }
     }
 
-    private MessageContents GenerateFeedItemMessage(FeedListener feedListener, DanbooruPost post, Color embedColor)
+    private MessageContents GenerateFeedItemMessage(FeedListener? feedListener, DanbooruPost post, Color embedColor)
     {
         var eb = new EmbedBuilder();
 
@@ -247,7 +262,7 @@ public class DanbooruMessageGenerator(DanbooruPost[] posts, BotConfig config) : 
 
         var footer = new EmbedFooterBuilder();
         footer.WithIconUrl("https://danbooru.donmai.us/packs/static/danbooru-logo-128x128-ea111b6658173e847734.png");
-        if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
+        if (!string.IsNullOrWhiteSpace(feedListener?.FeedTitle))
         {
             footer.WithText($"{feedListener.FeedTitle} • Rating: {post.Rating}");
         }
@@ -290,17 +305,17 @@ public class DanbooruMessageGenerator(DanbooruPost[] posts, BotConfig config) : 
     private static DanbooruVariant? GetBestVariant(DanbooruVariant[] variants)
     {
         // we only want embeddable variants
-        var validVariants = variants.Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower())).ToList();
+        var validVariants = variants.Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower())).ToArray();
 
-        //// sample is usually best compromise
-        //var sampleVariant = validVariants.FirstOrDefault(v => v.Type == "sample");
+        // original is the ideal pick here
+        var originalVariant = validVariants.FirstOrDefault(v => v.Type == "original");
 
-        //if (sampleVariant != null)
-        //{
-        //    return sampleVariant;
-        //}
+        if (originalVariant != null)
+        {
+            return originalVariant;
+        }
 
-        // sample doesn't exist oh god lets just hope the rest of the options are ok
+        // original doesn't exist/work oh god lets just hope the rest of the options are ok
         return validVariants.MaxBy(v => v.Width * v.Height);
     }
 }
@@ -456,16 +471,6 @@ public class RssFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : I
 
         if (!string.IsNullOrWhiteSpace(thumbnail))
         {
-            //const string garbageQualityUrl = "https://cdn.donmai.us/360x360/";
-            //const string goodQualityUrl = "https://cdn.donmai.us/original/";
-
-            //if (thumbnail.StartsWith(garbageQualityUrl))
-            //{
-            //    logger.LogTrace(thumbnail);
-            //    // CA said it was better to do this? guess spans are better for this stuff?
-            //    thumbnail = string.Concat(goodQualityUrl, thumbnail.AsSpan(garbageQualityUrl.Length));
-            //}
-
             eb.WithImageUrl(thumbnail);
         }
 
