@@ -1,5 +1,4 @@
-﻿using System.Net.Sockets;
-using Discord.WebSocket;
+﻿using Discord.WebSocket;
 
 namespace Asahi.Modules.Seigen;
 

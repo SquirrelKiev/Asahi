@@ -12,7 +12,9 @@ namespace Asahi.Modules.RssAtomFeed;
 
 [Group("rss", "Commands relating to RSS/Atom feeds.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
-public class RssModule(DbService dbService, RssTimerService rts, InteractiveService interactive, HttpClient http, ILogger<RssModule> logger) : BotModule
+public class RssModule(DbService dbService, RssTimerService rts, InteractiveService interactive, HttpClient http,
+    IRedditApi redditApi,
+    ILogger<RssModule> logger) : BotModule
 {
     [SlashCommand("add-feed", "Adds a feed.")]
     public async Task AddFeedSlash(
@@ -112,7 +114,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         )
     {
         await DeferAsync();
-        
+
         await using var context = dbService.GetDbContext();
 
         var feedsQuery = context.RssFeedListeners.Where(x => x.GuildId == Context.Guild.Id);
@@ -162,7 +164,8 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
     }
 
     [SlashCommand("test-feed", "Sends the newest post from a feed.")]
-    public async Task TestFeedSlash(string url, [MinValue(1), MaxValue(3)] int entriesToSend = 1)
+    public async Task TestFeedSlash([Summary(description: "The url to test.")] string url,
+        [MinValue(1), MaxValue(10), Summary(description: "How many entries to send.")] int entriesToSend = 1)
     {
         await DeferAsync();
 
@@ -177,15 +180,10 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
             return;
         }
 
-        if (feedRes == null)
+        var thing = await rts.TryGetEmbedGeneratorForFeed(url, feedRes);
+        if (!thing.isSuccess)
         {
-            await FollowupAsync("Feed response is null? That's not right, ping kiev.");
-            return;
-        }
-
-        if (!rts.TryGetEmbedGeneratorForFeed(url, feedRes, out var embedGenerator))
-        {
-            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(currentUser, new EmbedBuilder(), new ConfigChangeResult(false, 
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(currentUser, new EmbedBuilder(), new ConfigChangeResult(false,
                 "Failed to generate embeds.")));
             return;
         }
@@ -199,7 +197,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
             Id = 0
         };
 
-        var messages = embedGenerator.GenerateFeedItemMessages(testFeedListener, new HashSet<int>(), new HashSet<int>(),
+        var messages = thing.embedGenerator!.GenerateFeedItemMessages(testFeedListener, new HashSet<int>(), new HashSet<int>(),
             QuotingHelpers.GetUserRoleColorWithFallback(currentUser, Color.Default), true);
 
         int i = 0;
@@ -207,7 +205,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         {
             //logger.LogTrace($"message {i++}: {message.embeds?[0].Title} {message.embeds?[0].Timestamp}");
             await Context.Channel.SendMessageAsync(message.body, embeds: message.embeds,
-                components: message.components);
+                components: message.components, allowedMentions: new AllowedMentions(AllowedMentionTypes.Users));
             i++;
         }
 
@@ -229,19 +227,18 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
 
     private async Task<(ConfigChangeResult? configRes, string? feedRes)> ValidateFeedUrl(string url, EmbedBuilder eb)
     {
-
-        string? res;
+        string? res = null;
         try
         {
-            http.MaxResponseContentBufferSize = 8000000;
-            using var req = await http.GetAsync(url);
-            res = await req.Content.ReadAsStringAsync();
-
             var feedHandler = RssTimerService.FeedHandlerForUrl(url);
             switch (feedHandler)
             {
                 case RssTimerService.FeedHandler.RssAtom:
                     {
+                        http.MaxResponseContentBufferSize = 8000000;
+                        using var req = await http.GetAsync(url);
+                        res = await req.Content.ReadAsStringAsync();
+
                         var feed = FeedReader.ReadFromString(res);
 
                         if (!RssTimerService.ValidateFeed(feed))
@@ -263,6 +260,10 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
                     }
                 case RssTimerService.FeedHandler.Danbooru:
                     {
+                        http.MaxResponseContentBufferSize = 8000000;
+                        using var req = await http.GetAsync(url);
+                        res = await req.Content.ReadAsStringAsync();
+
                         var uri = new Uri(url);
 
                         var query = HttpUtility.ParseQueryString(uri.Query);
@@ -283,15 +284,37 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
 
                         break;
                     }
+                case RssTimerService.FeedHandler.Reddit:
+                    {
+                        var regex = CompiledRegex.RedditFeedRegex().Match(url);
+
+                        var feedType = regex.Groups["type"].Value;
+
+                        if (feedType != "r")
+                        {
+                            return (new ConfigChangeResult(false, "Not a supported reddit feed type. (Currently only subreddits)"), res);
+                        }
+
+                        var subreddit = regex.Groups["subreddit"].Value;
+
+                        // TODO: test non existent subreddits
+
+                        var sr = await redditApi.GetSubredditInfo(subreddit);
+
+                        eb.WithTitle(sr.Data.DisplayNamePrefixed);
+                        eb.WithUrl($"https://reddit.com/{feedType}/{subreddit}/new");
+
+                        break;
+                    }
                 default:
                     throw new NotSupportedException();
             }
         }
         catch (Exception ex)
         {
-            {
-                return (new ConfigChangeResult(false, $"Failed to get feed. `{ex.GetType()}`: `{ex.Message}`"), null);
-            }
+            logger.LogError(ex, "Failed to get feed: {url}. Exception: {ex}", url, ex.Message);
+
+            return (new ConfigChangeResult(false, $"Failed to get feed. `{ex.GetType()}`: `{ex.Message}`"), null);
         }
 
         return (null, res);

@@ -2,6 +2,7 @@
 using Asahi.Database;
 using Asahi.Modules.About;
 using Asahi.Modules.AnimeThemes;
+using Asahi.Modules.RssAtomFeed;
 using Asahi.Modules.Tatsu;
 using Discord.Commands;
 using Discord.Interactions;
@@ -93,14 +94,15 @@ public static class Startup
             }))
             .AddSingleton<CommandHandler>()
             .AddSingleton<DbService>()
-            .AddSingleton(new InteractiveConfig(){ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true})
+            .AddSingleton(new InteractiveConfig()
+            { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true })
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()
             .AddSingleton<IClock>(SystemClock.Instance)
             // about command
             .AddSingleton<AboutService>()
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
-                .ConfigureHttpClient(x => AddDefaultProperties(x));
+            .ConfigureHttpClient(x => AddDefaultProperties(x));
 
         serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
 
@@ -114,13 +116,20 @@ public static class Startup
         serviceCollection.AddRefitClient<ITatsuClient>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.tatsu.gg/v1"));
 
-        serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
-            .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
-                x.ServiceLifetime == ServiceLifetime.Singleton)
-            )
-            .AsSelf()
-            .WithSingletonLifetime()
+        serviceCollection.AddRefitClient<IRedditApi>(settings)
+            .ConfigureHttpClient(x =>
+            {
+                AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com");
+            }
         );
+
+        serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
+                .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
+                    x.ServiceLifetime == ServiceLifetime.Singleton)
+                )
+                .AsSelf()
+                .WithSingletonLifetime()
+            );
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Asahi.Database;
+﻿using Asahi.Database;
 using Asahi.Database.Models.Rss;
 using Asahi.Modules.RssAtomFeed.Models;
 using CodeHollow.FeedReader;
@@ -13,12 +12,14 @@ using Newtonsoft.Json;
 namespace Asahi.Modules.RssAtomFeed;
 
 [Inject(ServiceLifetime.Singleton)]
-public class RssTimerService(IHttpClientFactory clientFactory, DbService dbService, DiscordSocketClient client, ILogger<RssTimerService> logger, BotConfig config)
+public class RssTimerService(IHttpClientFactory clientFactory, DbService dbService, DiscordSocketClient client, ILogger<RssTimerService> logger,
+    BotConfig config, IRedditApi redditApi)
 {
     public enum FeedHandler
     {
         RssAtom,
-        Danbooru
+        Danbooru,
+        Reddit
     }
 
     public Task? timerTask;
@@ -96,16 +97,23 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                     hashedSeenArticles.Add(urlHash, seenArticles);
                 }
 
-                using var req = await http.GetAsync(url);
-                var reqContent = await req.Content.ReadAsStringAsync();
+                string? reqContent = null;
+                if (url.StartsWith("https://"))
+                {
+                    using HttpResponseMessage req = await http.GetAsync(url);
+                    reqContent = await req.Content.ReadAsStringAsync();
+                }
 
                 var processedArticles = new HashSet<int>();
 
                 IEmbedGenerator? embedGenerator;
                 try
                 {
-                    if (!TryGetEmbedGeneratorForFeed(url, reqContent, out embedGenerator))
+                    var thing = await TryGetEmbedGeneratorForFeed(url, reqContent);
+                    if (!thing.isSuccess)
                         continue;
+
+                    embedGenerator = thing.embedGenerator;
                 }
                 catch (Exception ex)
                 {
@@ -128,7 +136,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             continue;
                         }
 
-                        var messages = embedGenerator.GenerateFeedItemMessages(feedListener, seenArticles, processedArticles,
+                        var messages = embedGenerator!.GenerateFeedItemMessages(feedListener, seenArticles, processedArticles,
                             QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), !unseenUrl).ToArray();
 
                         if (messages.All(x => x.embeds is { Length: > 0 } && x.embeds[0].Timestamp.HasValue))
@@ -180,9 +188,10 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
         }
     }
 
-    public bool TryGetEmbedGeneratorForFeed(string url, string reqContent, [NotNullWhen(true)] out IEmbedGenerator? embedGenerator)
+    public async Task<(bool isSuccess, IEmbedGenerator? embedGenerator)> TryGetEmbedGeneratorForFeed(string url, string? reqContent)
     {
         var feedHandler = FeedHandlerForUrl(url);
+        IEmbedGenerator? embedGenerator;
         switch (feedHandler)
         {
             case FeedHandler.RssAtom:
@@ -192,7 +201,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                     if (!ValidateFeed(feed))
                     {
                         embedGenerator = null;
-                        return false;
+                        return (false, embedGenerator);
                     }
 
                     IEnumerable<FeedItem> feedsEnumerable = feed.Items;
@@ -203,32 +212,96 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 }
             case FeedHandler.Danbooru:
                 {
-                    var posts = JsonConvert.DeserializeObject<DanbooruPost[]>(reqContent);
+                    var posts = JsonConvert.DeserializeObject<DanbooruPost[]>(reqContent!);
 
                     if (posts == null)
                     {
                         embedGenerator = null;
-                        return false;
+                        return (false, embedGenerator);
                     }
 
                     embedGenerator = new DanbooruMessageGenerator(posts, config);
+                    break;
+                }
+            case FeedHandler.Reddit:
+                {
+                    var regex = CompiledRegex.RedditFeedRegex().Match(url);
+
+                    var feedType = regex.Groups["type"].Value;
+
+                    if (feedType != "r")
+                    {
+                        embedGenerator = null;
+                        return (false, embedGenerator);
+                    }
+
+                    var subreddit = regex.Groups["subreddit"].Value;
+
+                    var posts = await redditApi.GetSubredditPosts(subreddit);
+
+                    embedGenerator = new RedditMessageGenerator(posts.Data.Children);
                     break;
                 }
             default:
                 throw new ArgumentOutOfRangeException();
         }
 
-        return true;
+        return (true, embedGenerator);
     }
 
     public static FeedHandler FeedHandlerForUrl(string url)
     {
-        return url.StartsWith("https://danbooru.donmai.us/posts.json") ? FeedHandler.Danbooru : FeedHandler.RssAtom;
+        if (url.StartsWith("https://danbooru.donmai.us/posts.json"))
+            return FeedHandler.Danbooru;
+        if (CompiledRegex.RedditFeedRegex().IsMatch(url))
+            return FeedHandler.Reddit;
+
+        return FeedHandler.RssAtom;
     }
 
     public static bool ValidateFeed(Feed? feed)
     {
         return feed?.Type != FeedType.Unknown;
+    }
+}
+
+public class RedditMessageGenerator(List<PostChild> posts) : IEmbedGenerator
+{
+    public IEnumerable<MessageContents> GenerateFeedItemMessages(FeedListener feedListener, HashSet<int> seenArticles, HashSet<int> processedArticles,
+        Color embedColor, bool shouldCreateEmbeds)
+    {
+        foreach (var post in posts.Select(x => x.Data))
+        {
+            processedArticles.Add(post.Id.GetHashCode());
+
+            if (seenArticles.Contains(post.Id.GetHashCode())) continue;
+            if(!shouldCreateEmbeds) continue;
+
+            yield return GenerateFeedItemMessage(feedListener, post, embedColor);
+        }
+    }
+
+    private MessageContents GenerateFeedItemMessage(FeedListener feedListener, Post post, Color embedColor)
+    {
+        // TODO: this is uber lazy, don't do this
+        return new MessageContents("https://www.rxddit.com" + post.Permalink);
+
+        //var eb = new EmbedBuilder();
+
+        //eb.WithColor(embedColor);
+
+        //var footer = new EmbedFooterBuilder();
+        //// TODO: Customisable per feed :chatting:
+        //footer.WithIconUrl("https://www.redditstatic.com/icon.png");
+        //if (!string.IsNullOrWhiteSpace(feedListener?.FeedTitle))
+        //{
+        //    footer.WithText($"{feedListener.FeedTitle}");
+        //}
+
+        //eb.WithFooter(footer);
+        //eb.WithTimestamp(DateTimeOffset.FromUnixTimeSeconds(post.CreatedUtc));
+
+        //return new MessageContents();
     }
 }
 
@@ -302,7 +375,7 @@ public class DanbooruMessageGenerator(DanbooruPost[] posts, BotConfig config) : 
         return new MessageContents(eb, components);
     }
 
-    private static DanbooruVariant? GetBestVariant(DanbooruVariant[] variants)
+    public static DanbooruVariant? GetBestVariant(DanbooruVariant[] variants)
     {
         // we only want embeddable variants
         var validVariants = variants.Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower())).ToArray();
