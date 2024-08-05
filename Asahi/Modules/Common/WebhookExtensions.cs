@@ -2,12 +2,22 @@
 
 public static class WebhookExtensions
 {
-    public static async Task<IWebhook> GetOrCreateWebhookAsync(this IIntegrationChannel channel, string name)
+    // userFilter should be the bot user
+    public static async Task<IWebhook> GetOrCreateWebhookAsync(this IIntegrationChannel channel, string name, IUser? userFilter = null)
     {
         var webhooks = await channel.GetWebhooksAsync();
 
-        var webhook = webhooks.FirstOrDefault(x => 
-            x.Name == name);
+        IWebhook? webhook;
+        if (userFilter != null)
+        {
+            webhook = webhooks.FirstOrDefault(x =>
+                x.Name == name && x.Creator.Id == userFilter.Id);
+        }
+        else
+        {
+            webhook = webhooks.FirstOrDefault(x =>
+                x.Name == name);
+        }
 
         if (webhook != null)
             return webhook;

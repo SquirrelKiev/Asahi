@@ -396,7 +396,7 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.ToTable("LoggingChannelOverride");
                 });
 
-            modelBuilder.Entity("Asahi.Database.Models.Rss.RssFeedListener", b =>
+            modelBuilder.Entity("Asahi.Database.Models.Rss.FeedListener", b =>
                 {
                     b.Property<uint>("Id")
                         .ValueGeneratedOnAdd()
@@ -416,6 +416,10 @@ namespace Asahi.Migrations.SqliteMigrations
 
                     b.Property<ulong>("GuildId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("WebhookName")
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

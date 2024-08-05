@@ -158,7 +158,10 @@ public class UserFacingBirthdayConfigModule(
         };
 
         var pages = sortedBdays
-            .Select(x => $"* <@{x.UserId}> - {x.BirthDayDate.ToStringOrdinalized()}")
+            .Select(x =>
+            {
+                return $"* <@{x.UserId}> - {x.BirthDayDate.ToStringOrdinalized()}{(x.BirthDayDate.InYear(now.Year) == now ? " (🎂)" : "")}";
+            })
             .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor).WithTitle($"Sort: `{sortingOption.Humanize()}`")
                 .WithDescription(string.Join('\n', x)));
 
@@ -245,7 +248,7 @@ public class UserFacingBirthdayConfigModule(
 
             name = name.ToLowerInvariant();
 
-            if (!ConfigUtilities.IsValidId().IsMatch(name))
+            if (!CompiledRegex.IsValidId().IsMatch(name))
             {
                 return new ConfigChangeResult(false, $"`{name}` is not valid.");
             }
@@ -285,7 +288,7 @@ public class BirthdayConfigModule(
         {
             name = name.ToLowerInvariant();
 
-            if (!ConfigUtilities.IsValidId().IsMatch(name))
+            if (!CompiledRegex.IsValidId().IsMatch(name))
             {
                 return new ConfigChangeResult(false, $"`{name}` is not valid.");
             }
@@ -654,7 +657,7 @@ public class BirthdayConfigModule(
 
         name = name.ToLowerInvariant();
 
-        if (!ConfigUtilities.IsValidId().IsMatch(name))
+        if (!CompiledRegex.IsValidId().IsMatch(name))
         {
             throw new ConfigException($"`{name}` is not valid.");
         }

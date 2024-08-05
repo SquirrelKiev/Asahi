@@ -107,6 +107,23 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
         });
     }
 
+    [SlashCommand("set-webhook-name", "Sets or clears the name of the webhook to look for to send with.")]
+    public async Task SetFeedWebhookNameSlash([Summary(description: "The ID of the feed to edit.")] uint id,
+        [Summary(description: "The new webhook name for the feed."), MaxLength(64)] string? webhookName = null)
+    {
+        await CommonFeedConfig(id, options =>
+        {
+            options.feedListener.WebhookName = webhookName;
+
+            if (webhookName == null)
+            {
+                return Task.FromResult(new ConfigChangeResult(true, "Cleared the webhook name."));
+            }
+
+            return Task.FromResult(new ConfigChangeResult(true, $"Set feed webhook name to `{webhookName}`."));
+        });
+    }
+
     [SlashCommand("list-feeds", "Lists the feeds within the server.")]
     public async Task ListFeedsSlash(
         [Summary(description: "Filters the list to only show feeds for the specified channel.")]

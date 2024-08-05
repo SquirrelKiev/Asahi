@@ -42,9 +42,6 @@ public static partial class ConfigUtilities
 
         return embeds;
     }
-
-    [GeneratedRegex(@"^[\w-]+$")]
-    public static partial Regex IsValidId();
 }
 
 public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraEmbeds, bool onlyExtraEmbeds = false, bool shouldSave = true)

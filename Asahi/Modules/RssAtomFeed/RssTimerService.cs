@@ -3,6 +3,7 @@ using Asahi.Database.Models.Rss;
 using Asahi.Modules.RssAtomFeed.Models;
 using CodeHollow.FeedReader;
 using CodeHollow.FeedReader.Feeds;
+using Discord.Webhook;
 using Discord.WebSocket;
 using Humanizer;
 using Microsoft.EntityFrameworkCore;
@@ -88,7 +89,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
 
                 var unseenUrl = false;
-                logger.LogTrace("processing {url}", url);
+                //logger.LogTrace("processing {url}", url);
                 if (!hashedSeenArticles.TryGetValue(urlHash, out var seenArticles))
                 {
                     logger.LogTrace("never seen the url {url} before", url);
@@ -98,7 +99,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                 }
 
                 string? reqContent = null;
-                if (url.StartsWith("https://"))
+                if (url.StartsWith("http://") || url.StartsWith("https://"))
                 {
                     using HttpResponseMessage req = await http.GetAsync(url);
                     reqContent = await req.Content.ReadAsStringAsync();
@@ -144,11 +145,40 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             messages = messages.OrderByDescending(x => x.embeds![0].Timestamp.HasValue).ToArray();
                         }
 
+                        if (messages.Length == 0)
+                            continue;
+
                         // this may look wasteful (only taking the top 10) but im trying to avoid some feed with like 100 new contents ruining the rate limits
                         // Also doing this after the ToArray so that the reads are marked correctly
+                        DiscordWebhookClient? webhookClient = null;
+                        var threadChannel = channel as SocketThreadChannel;
+                        if (feedListener.WebhookName != null)
+                        {
+                            var webhookCh = threadChannel != null ? threadChannel.ParentChannel as IIntegrationChannel : channel;
+                            if (webhookCh != null)
+                            {
+                                var webhook = await webhookCh.GetOrCreateWebhookAsync(feedListener.WebhookName, client.CurrentUser);
+
+                                webhookClient = new DiscordWebhookClient(webhook);
+                            }
+                        }
+
                         foreach (var message in messages.Take(10))
                         {
-                            await channel.SendMessageAsync(message.body, embeds: message.embeds, components: message.components);
+                            if (webhookClient != null)
+                            {
+                                await webhookClient.SendMessageAsync(message.body, embeds: message.embeds,
+                                    components: message.components, threadId: threadChannel?.Id);
+                            }
+                            else
+                            {
+                                await channel.SendMessageAsync(message.body, embeds: message.embeds, components: message.components);
+                            }
+                        }
+
+                        if (webhookClient != null)
+                        {
+                            webhookClient.Dispose();
                         }
 
                         //foreach (var feedItem in feedsArray)
@@ -275,7 +305,7 @@ public class RedditMessageGenerator(List<PostChild> posts) : IEmbedGenerator
             processedArticles.Add(post.Id.GetHashCode());
 
             if (seenArticles.Contains(post.Id.GetHashCode())) continue;
-            if(!shouldCreateEmbeds) continue;
+            if (!shouldCreateEmbeds) continue;
 
             yield return GenerateFeedItemMessage(feedListener, post, embedColor);
         }

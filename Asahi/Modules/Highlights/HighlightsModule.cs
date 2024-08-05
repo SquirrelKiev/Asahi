@@ -1038,7 +1038,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
 
         name = name.ToLowerInvariant();
 
-        if (!ConfigUtilities.IsValidId().IsMatch(name))
+        if (!CompiledRegex.IsValidId().IsMatch(name))
         {
             await FollowupAsync(new MessageContents(new EmbedBuilder()
                 .WithColor(Color.Red)
@@ -1109,7 +1109,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
 
         name = name.ToLowerInvariant();
 
-        if (!ConfigUtilities.IsValidId().IsMatch(name))
+        if (!CompiledRegex.IsValidId().IsMatch(name))
         {
             await FollowupAsync(new MessageContents(new EmbedBuilder()
                 .WithColor(Color.Red)
@@ -1200,8 +1200,7 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
                 ulong messageId;
 
                 // fails to compile if I make this source gen? but only here?? and only on ARM builds??? why????
-                var messageLinkRegex = new Regex(
-                    @"https:\/\/(?:canary)?.discord.com\/channels\/[0-9]*\/[0-9]*\/([0-9]*)");
+                var messageLinkRegex = CompiledRegex.MessageLinkRegex();
 
                 var messageLinkMatch = messageLinkRegex.Match(date);
                 if (messageLinkMatch.Success)
@@ -1402,7 +1401,7 @@ public static class HighlightsModuleUtility
         {
             name = name.ToLowerInvariant();
 
-            if (!ConfigUtilities.IsValidId().IsMatch(name))
+            if (!CompiledRegex.IsValidId().IsMatch(name))
             {
                 return Task.FromResult(new ConfigChangeResult(false, $"`{name}` is not valid."));
             }
