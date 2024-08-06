@@ -199,7 +199,8 @@ public class BotManagementModule(DbService dbService, CustomStatusService css, B
         {
             await guild.DownloadUsersAsync();
 
-            var eb = new PageBuilder();
+            var eb = new PageBuilder()
+                .WithOptionalColor(QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default));
 
             var trustedIds = botWideConfig.TrustedIds.Select(x => x.Id);
             foreach (var managerUserId in config.ManagerUserIds)

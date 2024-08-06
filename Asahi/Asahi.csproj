@@ -40,4 +40,8 @@
     <ProjectReference Include="..\Asahi.Analyzers\Asahi.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Modules\Statistics\" />
+  </ItemGroup>
+
 </Project>
