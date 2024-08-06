@@ -314,7 +314,10 @@ public class RedditMessageGenerator(List<PostChild> posts) : IEmbedGenerator
     private MessageContents GenerateFeedItemMessage(FeedListener feedListener, Post post, Color embedColor)
     {
         // TODO: this is uber lazy, don't do this
-        return new MessageContents("https://www.rxddit.com" + post.Permalink);
+        if (post.Spoiler)
+            return new MessageContents($"|| https://www.rxddit.com{post.Permalink} ||");
+        else
+            return new MessageContents($"https://www.rxddit.com{post.Permalink}");
 
         //var eb = new EmbedBuilder();
 
