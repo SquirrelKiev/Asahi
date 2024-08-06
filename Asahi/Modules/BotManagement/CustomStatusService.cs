@@ -2,7 +2,7 @@
 using Discord.WebSocket;
 using Microsoft.Extensions.Logging;
 
-namespace Asahi.Modules.CustomizeStatus;
+namespace Asahi.Modules.BotManagement;
 
 [Inject(ServiceLifetime.Singleton)]
 public class CustomStatusService(ILogger<CustomStatusService> logger, DbService dbService, DiscordSocketClient client)

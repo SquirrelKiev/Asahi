@@ -39,6 +39,7 @@ public static class DbExtensions
 
     public static async Task<BotWideConfig> GetBotWideConfig(this BotDbContext context, ulong botId)
     {
+        // Why did I do it like this instead of just having it on its own? why does it need a bot ID?
         var cfg = await context.BotWideConfig.Include(x => x.TrustedIds).FirstOrDefaultAsync(x => x.BotId == botId);
         if (cfg != null) return cfg;
 

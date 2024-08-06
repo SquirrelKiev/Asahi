@@ -1,8 +1,8 @@
 ﻿using System.Reflection;
 using Asahi.Database;
 using Asahi.Modules;
-using Asahi.Modules.CustomizeStatus;
 using Asahi.Modules.BirthdayRoles;
+using Asahi.Modules.BotManagement;
 using Asahi.Modules.Highlights;
 using Asahi.Modules.ModSpoilers;
 using Asahi.Modules.RssAtomFeed;

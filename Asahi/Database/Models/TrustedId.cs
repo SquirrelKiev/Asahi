@@ -13,7 +13,8 @@ public class TrustedId
         None = 0,
         WolframPerms = 1,
         TrustedUserEditPerms = 2,
-        StatusPerms = 4
+        StatusPerms = 4,
+        BotGuildManagementPerms = 8,
     }
 
     public const int CommentMaxLength = 200;
