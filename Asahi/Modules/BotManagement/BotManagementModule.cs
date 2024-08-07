@@ -389,8 +389,6 @@ public class {className}(IInteractionContext context)
             return;
         }
 
-        await File.WriteAllTextAsync("C:/Users/SquirrelKiev/Desktop/test2.cs", csharpCode, Encoding.UTF8);
-
         await ModifyOriginalResponseAsync(new MessageContents($"{config.LoadingEmote} Compiling..."));
 
         logger.LogTrace("Parsing.");
