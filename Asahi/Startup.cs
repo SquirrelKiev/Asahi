@@ -21,7 +21,7 @@ namespace Asahi;
 
 public static class Startup
 {
-    public static async Task Main(string[] args)
+    public static async Task Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
         Log.Logger = new LoggerConfiguration().WriteTo.Console(outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}").CreateLogger();
