@@ -3,6 +3,7 @@ using Asahi.Database;
 using Asahi.Database.Models.Rss;
 using CodeHollow.FeedReader;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Fergun.Interactive;
 using Fergun.Interactive.Pagination;
 using Microsoft.EntityFrameworkCore;
@@ -111,16 +112,21 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
     public async Task SetFeedWebhookNameSlash([Summary(description: "The ID of the feed to edit.")] uint id,
         [Summary(description: "The new webhook name for the feed."), MaxLength(64)] string? webhookName = null)
     {
-        await CommonFeedConfig(id, options =>
+        await CommonFeedConfig(id, async options =>
         {
             options.feedListener.WebhookName = webhookName;
 
             if (webhookName == null)
             {
-                return Task.FromResult(new ConfigChangeResult(true, "Cleared the webhook name."));
+                return new ConfigChangeResult(true, "Cleared the webhook name.");
             }
 
-            return Task.FromResult(new ConfigChangeResult(true, $"Set feed webhook name to `{webhookName}`."));
+            if (((SocketGuild)Context.Guild).GetChannel(options.feedListener.ChannelId) is IIntegrationChannel channel)
+            {
+                await channel.GetOrCreateWebhookAsync(webhookName, Context.Client.CurrentUser);
+            }
+
+            return new ConfigChangeResult(true, $"Set feed webhook name to `{webhookName}`.");
         });
     }
 
