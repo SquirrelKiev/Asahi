@@ -389,6 +389,8 @@ public class {className}(IInteractionContext context)
             return;
         }
 
+        await File.WriteAllTextAsync("C:/Users/SquirrelKiev/Desktop/test2.cs", csharpCode, Encoding.UTF8);
+
         await ModifyOriginalResponseAsync(new MessageContents($"{config.LoadingEmote} Compiling..."));
 
         logger.LogTrace("Parsing.");
@@ -416,7 +418,7 @@ public class {className}(IInteractionContext context)
 
             foreach (var diagnostic in result.Diagnostics.OrderByDescending(x => x.Severity))
             {
-                sb.AppendLine($"`({diagnostic.Severity.Humanize()})` `{diagnostic.Id}`: \n```{diagnostic.GetMessage()}```");
+                sb.AppendLine($"`({diagnostic.Severity.Humanize()})` `{diagnostic.Id}` `{diagnostic.Location.GetLineSpan().ToString()}`: \n```{diagnostic.GetMessage()}```");
             }
 
             await ModifyOriginalResponseAsync(new MessageContents(sb.ToString()));
