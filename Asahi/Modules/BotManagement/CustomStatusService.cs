@@ -23,7 +23,7 @@ public class CustomStatusService(ILogger<CustomStatusService> logger, DbService 
     /// <remarks>Should only be one of these running!</remarks>
     private async Task TimerTask(CancellationToken cancellationToken)
     {
-        logger.LogTrace("Highlights timer task started");
+        logger.LogTrace("Custom status timer task started");
 
         try
         {
