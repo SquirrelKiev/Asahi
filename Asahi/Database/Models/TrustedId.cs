@@ -15,6 +15,7 @@ public class TrustedId
         TrustedUserEditPerms = 2,
         StatusPerms = 4,
         BotGuildManagementPerms = 8,
+        CodeExecutionPerms = 16,
     }
 
     public const int CommentMaxLength = 200;

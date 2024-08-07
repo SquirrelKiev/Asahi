@@ -13,4 +13,7 @@ public static partial class CompiledRegex
     
     [GeneratedRegex(@"https:\/\/(?:canary)?.discord.com\/channels\/[0-9]*\/[0-9]*\/([0-9]*)")]
     public static partial Regex MessageLinkRegex();
+    
+    [GeneratedRegex(@"```cs\n([\s\S]+?)\n```")]
+    public static partial Regex CsharpCodeBlock();
 }

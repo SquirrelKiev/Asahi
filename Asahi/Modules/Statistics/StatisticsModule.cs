@@ -51,7 +51,7 @@ public class StatisticsModule(DbService dbService) : BotModule
     }
 
     [SlashCommand("channel", "Bot-related statistics about the specified channel.")]
-    public async Task StatsSlash(IGuildChannel channel)
+    public async Task StatsSlash([Summary(description: "The channel to fetch the statistics of")] IGuildChannel channel)
     {
         await DeferAsync();
 
