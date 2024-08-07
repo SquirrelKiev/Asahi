@@ -478,7 +478,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         return (uniqueReactionUsersAutoReact, uniqueReactionEmotes);
 
-        int GetKey(IMessage message, IEmote reactionEmote)
+        static int GetKey(IMessage message, IEmote reactionEmote)
         {
             return $"{message.Id}{reactionEmote}".GetHashCode(StringComparison.Ordinal);
         }

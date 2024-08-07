@@ -176,10 +176,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             }
                         }
 
-                        if (webhookClient != null)
-                        {
-                            webhookClient.Dispose();
-                        }
+                        webhookClient?.Dispose();
 
                         //foreach (var feedItem in feedsArray)
                         //{

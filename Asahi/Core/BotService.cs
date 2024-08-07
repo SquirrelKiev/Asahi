@@ -187,17 +187,10 @@ public class BotService(
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
-        try
-        {
-            await css.UpdateStatus();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to set custom status in ready.");
-        }
-
         // TODO: Merge all these timer tasks into one big thing to avoid potential rate-limits?
         hts.StartBackgroundTask(cts.Token);
+
+        css.StartBackgroundTask(cts.Token);
 
         var birthdayTimer = services.GetRequiredService<BirthdayTimerService>();
         birthdayTimer.StartBackgroundTask(cts.Token);
@@ -205,7 +198,6 @@ public class BotService(
         var rssTimerService = services.GetRequiredService<RssTimerService>();
         rssTimerService.StartBackgroundTask(cts.Token);
 
-        // see comment in ExecuteAsync
         var roleManagement = services.GetRequiredService<RoleManagementService>();
         await roleManagement.CacheAndResolve();
     }

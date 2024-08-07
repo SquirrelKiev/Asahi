@@ -10,8 +10,9 @@ public class BotWideConfig
     public bool ShouldHaveActivity { get; set; } = false;
     public UserStatus UserStatus { get; set; } = UserStatus.Online;
     public ActivityType ActivityType { get; set; } = ActivityType.CustomStatus;
-    [MaxLength(128)]
-    public string BotActivity { get; set; } = "Doing nothing.";
+
+    //[MaxLength(128)]
+    public string[] BotActivities { get; set; } = ["Doing nothing."];
     [MaxLength(128)]
     public string ActivityStreamingUrl { get; set; } = "https://www.twitch.tv/jerma985";
 

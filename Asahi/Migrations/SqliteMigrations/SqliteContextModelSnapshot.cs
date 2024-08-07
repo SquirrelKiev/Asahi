@@ -15,7 +15,7 @@ namespace Asahi.Migrations.SqliteMigrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.6");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayConfig", b =>
                 {
@@ -128,9 +128,8 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.Property<int>("ActivityType")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("BotActivity")
+                    b.Property<string>("BotActivities")
                         .IsRequired()
-                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("ShouldHaveActivity")

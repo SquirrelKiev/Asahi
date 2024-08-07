@@ -59,7 +59,7 @@ public class BotManagementModule(DbService dbService, CustomStatusService css, B
 
         botWideConfig.ShouldHaveActivity = true;
         botWideConfig.ActivityType = activityType;
-        botWideConfig.BotActivity = activity;
+        botWideConfig.BotActivities = activity.Split('|');
         if (!string.IsNullOrWhiteSpace(streamingUrl))
             botWideConfig.ActivityStreamingUrl = streamingUrl;
 

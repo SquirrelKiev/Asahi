@@ -1014,11 +1014,6 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
 
     #region Utility Commands
 
-    private static string GetDisplayableBoardConfig(HighlightBoard board)
-    {
-        return $"```json\n{JsonConvert.SerializeObject(board, Formatting.Indented).Replace("```", @"\`\`\`")}\n```";
-    }
-
     [SlashCommand("get-board", "Retrieves a board config.")]
     public async Task GetBoardSlash(
         [Summary(description: NameDescription)]
