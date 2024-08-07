@@ -13,7 +13,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 
 namespace Asahi.Modules.BotManagement;
@@ -304,7 +303,7 @@ public class BotManagementModule(DbService dbService, CustomStatusService css, B
     [TrustedMember(TrustedId.TrustedUserPerms.CodeExecutionPerms)]
     public async Task EvalSlash()
     {
-        logger.LogInformation($"{Context.User} has started an eval!");
+        logger.LogInformation("{user} has started an eval!", Context.User);
 
         await DeferAsync();
 
