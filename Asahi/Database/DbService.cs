@@ -1,14 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Core;
 
 namespace Asahi.Database;
 
-public class DbService(BotConfig botConfig, ILoggerFactory loggerFactory)
+public class DbService(BotConfig botConfig, ILoggerFactory loggerFactory, ILogger<DbService> logger)
 {
     public async Task Initialize(bool migrationEnabled)
     {
-        Log.Debug("Database migration: {migrationStatus}", migrationEnabled);
+        logger.LogDebug("Database migration: {migrationStatus}", migrationEnabled);
 
         var context = GetDbContext();
 

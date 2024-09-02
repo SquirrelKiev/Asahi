@@ -3,7 +3,7 @@ using Discord.WebSocket;
 
 namespace Asahi.Modules;
 
-public abstract class BotModule : InteractionModuleBase
+public abstract class BotModule : InteractionModuleBase<IInteractionContext>
 {
     protected virtual Task<IUserMessage> FollowupAsync(MessageContents contents, bool ephemeral = false)
     {
