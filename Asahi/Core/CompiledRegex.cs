@@ -16,4 +16,8 @@ public static partial class CompiledRegex
     
     [GeneratedRegex(@"```cs\n([\s\S]+?)\n```")]
     public static partial Regex CsharpCodeBlock();
+
+    // https://regexr.com/3dqa0
+    [GeneratedRegex(@"^(?:https?:\/\/)?(?:[\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+)(?:[\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?$", RegexOptions.IgnoreCase)]
+    public static partial Regex GenericLinkRegex();
 }

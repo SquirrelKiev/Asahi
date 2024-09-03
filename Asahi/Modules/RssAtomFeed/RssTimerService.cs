@@ -397,7 +397,7 @@ public class DanbooruMessageGenerator(DanbooruPost[] posts, BotConfig config) : 
             var pixivUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
             components.WithButton("Pixiv", emote: pixivEmote, url: pixivUrl, style: ButtonStyle.Link);
         }
-        else if (!string.IsNullOrWhiteSpace(post.Source))
+        else if (!string.IsNullOrWhiteSpace(post.Source) && CompiledRegex.GenericLinkRegex().IsMatch(post.Source))
         {
             components.WithButton("Source", url: post.Source, style: ButtonStyle.Link);
         }
