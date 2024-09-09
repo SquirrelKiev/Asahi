@@ -1194,13 +1194,12 @@ public partial class HighlightsModule(DbService dbService, HighlightsTrackingSer
             {
                 ulong messageId;
 
-                // fails to compile if I make this source gen? but only here?? and only on ARM builds??? why????
                 var messageLinkRegex = CompiledRegex.MessageLinkRegex();
 
                 var messageLinkMatch = messageLinkRegex.Match(date);
                 if (messageLinkMatch.Success)
                 {
-                    var idStr = messageLinkMatch.Groups[1].Value;
+                    var idStr = messageLinkMatch.Groups["message"].Value;
                     messageId = ulong.Parse(idStr);
                 }
                 else if (!ulong.TryParse(date, out messageId))

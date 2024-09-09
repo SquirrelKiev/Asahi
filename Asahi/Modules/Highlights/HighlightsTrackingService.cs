@@ -286,7 +286,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                         return;
 
                     var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
-                    var webhookClient = new DiscordWebhookClient(webhook);
+
+                    using var webhookClient = new DiscordWebhookClient(webhook, BotService.WebhookRestConfig);
+                    webhookClient.Log += msg => BotService.Client_Log(logger, msg);
 
                     await webhookClient.ModifyMessageAsync(reactorsMessage.Id, messageProperties =>
                     {
@@ -560,7 +562,8 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 });
 
         var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
-        var webhookClient = new DiscordWebhookClient(webhook);
+        using var webhookClient = new DiscordWebhookClient(webhook, BotService.WebhookRestConfig);
+        webhookClient.Log += msg => BotService.Client_Log(logger, msg);
         List<ulong> highlightMessages = [];
 
         var username = embedAuthor is IWebhookUser webhookUser ? webhookUser.Username : embedAuthor.DisplayName;

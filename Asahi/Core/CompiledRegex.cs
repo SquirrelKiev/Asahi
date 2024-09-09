@@ -11,7 +11,7 @@ public static partial class CompiledRegex
     [GeneratedRegex(@"^[\w-]+$")]
     public static partial Regex IsValidId();
     
-    [GeneratedRegex(@"^https:\/\/(?:canary)?.discord.com\/channels\/[0-9]*\/[0-9]*\/([0-9]*)$")]
+    [GeneratedRegex(@"^https:\/\/(?:\w*.)?discord.com\/channels\/(?<guild>\d*)\/(?<channel>\d*)\/(?<message>\d*)$")]
     public static partial Regex MessageLinkRegex();
     
     [GeneratedRegex(@"```cs\n([\s\S]+?)\n```")]

@@ -61,7 +61,8 @@ public class ModSpoilerService(
         }
 
         var webhook = await channel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
-        var webhookClient = new DiscordWebhookClient(webhook);
+        using var webhookClient = new DiscordWebhookClient(webhook, BotService.WebhookRestConfig);
+        webhookClient.Log += msg => BotService.Client_Log(logger, msg);
 
         var cachedHighlightedMessage = await
             dbContext.CachedHighlightedMessages

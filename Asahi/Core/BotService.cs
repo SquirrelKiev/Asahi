@@ -9,6 +9,7 @@ using Asahi.Modules.RssAtomFeed;
 using Asahi.Modules.Seigen;
 using Discord.Commands;
 using Discord.Interactions;
+using Discord.Rest;
 using Discord.WebSocket;
 using Fergun.Interactive;
 using Microsoft.Extensions.Hosting;
@@ -22,10 +23,12 @@ public class BotService(
     DbService dbService,
     ILogger<BotService> logger,
     CommandHandler commandHandler,
+    // TODO: Remove the request for services and just inject manually
     IServiceProvider services,
     HighlightsTrackingService hts,
     CustomStatusService css,
-    ModSpoilerService mss) : BackgroundService
+    ModSpoilerService mss
+) : BackgroundService
 {
     public const string WebhookDefaultName =
 #if DEBUG
@@ -33,6 +36,11 @@ public class BotService(
 #endif
         "Asahi Webhook";
     public CancellationTokenSource cts = new();
+
+    public static readonly DiscordRestConfig WebhookRestConfig = new()
+    {
+        LogLevel = LogSeverity.Verbose
+    };
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -86,25 +94,33 @@ public class BotService(
         await base.StopAsync(cancellationToken);
     }
 
-    private Task Client_UserLeft(SocketGuild guild, SocketUser user) => services.GetRequiredService<RoleManagementService>().OnUserLeft(guild, user);
+    private Task Client_UserLeft(SocketGuild guild, SocketUser user) =>
+        services.GetRequiredService<RoleManagementService>().OnUserLeft(guild, user);
 
-    private Task Client_UserJoined(SocketGuildUser user) => services.GetRequiredService<RoleManagementService>().OnUserJoined(user);
+    private Task Client_UserJoined(SocketGuildUser user) =>
+        services.GetRequiredService<RoleManagementService>().OnUserJoined(user);
 
-    private async Task Client_GuildMemberUpdated(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser user)
+    private async Task Client_GuildMemberUpdated(
+        Cacheable<SocketGuildUser, ulong> cacheable,
+        SocketGuildUser user
+    )
     {
         if (!cacheable.HasValue)
             return;
 
         if (!user.Roles.SequenceEqual(cacheable.Value.Roles))
         {
-            await services.GetRequiredService<RoleManagementService>().OnUserRolesUpdated(cacheable, user);
+            await services
+                .GetRequiredService<RoleManagementService>()
+                .OnUserRolesUpdated(cacheable, user);
         }
     }
 
     private async Task Client_ReactionAdded(
         Cacheable<IUserMessage, ulong> cachedMessage,
         Cacheable<IMessageChannel, ulong> originChannel,
-        SocketReaction reaction)
+        SocketReaction reaction
+    )
     {
         logger.LogTrace("Reaction added");
 
@@ -117,16 +133,29 @@ public class BotService(
         await using var context = dbService.GetDbContext();
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
-        if (!QuotingHelpers.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote) || !spoilerEmote.Equals(reaction.Emote))
+        if (
+            !QuotingHelpers.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote)
+            || !spoilerEmote.Equals(reaction.Emote)
+        )
         {
-                hts.QueueMessage(
-                    new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), true);
+            hts.QueueMessage(
+                new HighlightsTrackingService.QueuedMessage(
+                    channel.Guild.Id,
+                    channel.Id,
+                    cachedMessage.Id
+                ),
+                true
+            );
         }
 
         _ = Task.Run(() => mss.ReactionCheck(reaction));
     }
 
-    private async Task Client_ReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
+    private async Task Client_ReactionRemoved(
+        Cacheable<IUserMessage, ulong> cachedMessage,
+        Cacheable<IMessageChannel, ulong> originChannel,
+        SocketReaction reaction
+    )
     {
         logger.LogTrace("Reaction removed");
 
@@ -139,10 +168,19 @@ public class BotService(
         await using var context = dbService.GetDbContext();
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
-        if (!QuotingHelpers.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote) || !spoilerEmote.Equals(reaction.Emote))
+        if (
+            !QuotingHelpers.TryParseEmote(guildConfig.SpoilerReactionEmote, out var spoilerEmote)
+            || !spoilerEmote.Equals(reaction.Emote)
+        )
         {
             hts.QueueMessage(
-                new HighlightsTrackingService.QueuedMessage(channel.Guild.Id, channel.Id, cachedMessage.Id), false);
+                new HighlightsTrackingService.QueuedMessage(
+                    channel.Guild.Id,
+                    channel.Id,
+                    cachedMessage.Id
+                ),
+                false
+            );
         }
     }
 
@@ -159,6 +197,11 @@ public class BotService(
 
     private Task Client_Log(LogMessage message)
     {
+        return Client_Log(logger, message);
+    }
+
+    public static Task Client_Log(ILogger logger, LogMessage message)
+    {
         var level = message.Severity switch
         {
             LogSeverity.Critical => LogLevel.Critical,
@@ -172,7 +215,13 @@ public class BotService(
 
         if (message.Exception is not null)
         {
-            logger.Log(level, message.Exception, "{Source} | {Message}", message.Source, message.Message);
+            logger.Log(
+                level,
+                message.Exception,
+                "{Source} | {Message}",
+                message.Source,
+                message.Message
+            );
         }
         else
         {
@@ -183,11 +232,17 @@ public class BotService(
 
     private async Task Client_Ready()
     {
-        logger.LogInformation("Logged in as {user}#{discriminator} ({id})", client.CurrentUser?.Username, client.CurrentUser?.Discriminator, client.CurrentUser?.Id);
+        logger.LogInformation(
+            "Logged in as {user}#{discriminator} ({id})",
+            client.CurrentUser?.Username,
+            client.CurrentUser?.Discriminator,
+            client.CurrentUser?.Id
+        );
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
         // TODO: Merge all these timer tasks into one big thing to avoid potential rate-limits?
+        // no then everything would be single-threaded
         hts.StartBackgroundTask(cts.Token);
 
         css.StartBackgroundTask(cts.Token);

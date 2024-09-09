@@ -126,6 +126,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                 foreach (var feedListener in feedGroup)
                 {
+                    DiscordWebhookClient? webhookClient = null;
                     try
                     {
                         var guild = client.GetGuild(feedListener.GuildId);
@@ -137,8 +138,11 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             continue;
                         }
 
-                        var messages = embedGenerator!.GenerateFeedItemMessages(feedListener, seenArticles, processedArticles,
-                            QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default), !unseenUrl).ToArray();
+                        var messages = embedGenerator!.GenerateFeedItemMessages(feedListener, seenArticles,
+                                processedArticles,
+                                QuotingHelpers.GetUserRoleColorWithFallback(guild.CurrentUser, Color.Default),
+                                !unseenUrl)
+                            .ToArray();
 
                         if (messages.All(x => x.embeds is { Length: > 0 } && x.embeds[0].Timestamp.HasValue))
                         {
@@ -150,16 +154,20 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
 
                         // this may look wasteful (only taking the top 10) but im trying to avoid some feed with like 100 new contents ruining the rate limits
                         // Also doing this after the ToArray so that the reads are marked correctly
-                        DiscordWebhookClient? webhookClient = null;
                         var threadChannel = channel as SocketThreadChannel;
                         if (feedListener.WebhookName != null)
                         {
-                            var webhookCh = threadChannel != null ? threadChannel.ParentChannel as IIntegrationChannel : channel;
+                            var webhookCh = threadChannel != null
+                                ? threadChannel.ParentChannel as IIntegrationChannel
+                                : channel;
                             if (webhookCh != null)
                             {
-                                var webhook = await webhookCh.GetOrCreateWebhookAsync(feedListener.WebhookName, client.CurrentUser);
+                                var webhook =
+                                    await webhookCh.GetOrCreateWebhookAsync(feedListener.WebhookName,
+                                        client.CurrentUser);
 
-                                webhookClient = new DiscordWebhookClient(webhook);
+                                webhookClient = new DiscordWebhookClient(webhook, BotService.WebhookRestConfig);
+                                webhookClient.Log += msg => BotService.Client_Log(logger, msg);
                             }
                         }
 
@@ -172,11 +180,10 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                             }
                             else
                             {
-                                await channel.SendMessageAsync(message.body, embeds: message.embeds, components: message.components);
+                                await channel.SendMessageAsync(message.body, embeds: message.embeds,
+                                    components: message.components);
                             }
                         }
-
-                        webhookClient?.Dispose();
 
                         //foreach (var feedItem in feedsArray)
                         //{
@@ -190,6 +197,10 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                     {
                         logger.LogWarning(ex, "Failed to send feed {url} to guild {guildId}, channel {channelId}",
                             feedGroup.Key, feedListener.GuildId, feedListener.ChannelId);
+                    }
+                    finally
+                    {
+                        webhookClient?.Dispose();
                     }
                 }
 
