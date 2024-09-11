@@ -166,7 +166,7 @@ public class RssTimerService(IHttpClientFactory clientFactory, DbService dbServi
                                     await webhookCh.GetOrCreateWebhookAsync(feedListener.WebhookName,
                                         client.CurrentUser);
 
-                                webhookClient = new DiscordWebhookClient(webhook, BotService.WebhookRestConfig);
+                                webhookClient = new DiscordWebhookClient(webhook.Id, webhook.Token, BotService.WebhookRestConfig);
                                 webhookClient.Log += msg => BotService.Client_Log(logger, msg);
                             }
                         }

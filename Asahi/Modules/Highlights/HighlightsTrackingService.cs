@@ -287,7 +287,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
                     var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
 
-                    using var webhookClient = new DiscordWebhookClient(webhook, BotService.WebhookRestConfig);
+                    using var webhookClient = new DiscordWebhookClient(webhook.Id, webhook.Token, BotService.WebhookRestConfig);
                     webhookClient.Log += msg => BotService.Client_Log(logger, msg);
 
                     await webhookClient.ModifyMessageAsync(reactorsMessage.Id, messageProperties =>
@@ -562,7 +562,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
                 });
 
         var webhook = await loggingChannel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
-        using var webhookClient = new DiscordWebhookClient(webhook, BotService.WebhookRestConfig);
+        using var webhookClient = new DiscordWebhookClient(webhook.Id, webhook.Token, BotService.WebhookRestConfig);
         webhookClient.Log += msg => BotService.Client_Log(logger, msg);
         List<ulong> highlightMessages = [];
 
