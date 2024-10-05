@@ -137,7 +137,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
                         andysRoleGroup.Where(x => andysRoleGroup.Key.Members.All(y => y.Id != x.User.Id)));
                 }
 
-                //logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count, guild.Name);
+                logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count, guild.Name);
 
                 foreach (var andy in andysToRemove)
                 {
@@ -145,7 +145,7 @@ public class BirthdayTimerService(DiscordSocketClient client, DbService dbServic
                         new RequestOptions { AuditLogReason = "It's no longer their birthday :(" });
                 }
 
-                //logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count, guild.Name);
+                logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count, guild.Name);
 
                 foreach (var andy in andysToAdd)
                 {

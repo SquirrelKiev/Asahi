@@ -77,7 +77,7 @@ public class ModSpoilerService(
             using var http = clientFactory.CreateClient();
             foreach (var attachment in message.Attachments)
             {
-                using var req = await http.GetAsync(attachment.Url);
+                var req = await http.GetAsync(attachment.Url);
                 attachmentStreams.Add(new FileAttachment(await req.Content.ReadAsStreamAsync(), attachment.Filename, attachment.Description, true));
                 disposables.Add(req);
             }

@@ -1,14 +1,15 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using Asahi.Modules.BirthdayRoles;
 using Discord.Interactions;
+using Discord.WebSocket;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using NodaTime;
 using NodaTime.TimeZones;
 
 namespace Asahi.Modules.Utilities;
 
-public class UtilitiesModule(IClock clock) : BotModule
+public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : BotModule
 {
     [DefaultMemberPermissions(GuildPermission.ManageRoles)]
     [SlashCommand("hide-channel", "Hides a channel from a list of users.")]
@@ -132,5 +133,65 @@ public class UtilitiesModule(IClock clock) : BotModule
             $"The time in `{canonicalTimeZone}` is "
                 + $"`{time.LocalDateTime.Date.ToString("D", culture)}, {time.LocalDateTime.TimeOfDay.ToString("T", culture)}`."
         );
+    }
+
+    [SlashCommand("quote", "Quote a message")]
+    public async Task QuoteSlash(string messageLink)
+    {
+        await DeferAsync();
+
+        var messageProcessed = CompiledRegex.MessageLinkRegex().Match(messageLink);
+
+        if (!messageProcessed.Success)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
+                new ConfigChangeResult(false, "Message link provided could not be parsed.")));
+            return;
+        }
+
+        var guildId = ulong.Parse(messageProcessed.Groups["guild"].Value);
+        var channelId = ulong.Parse(messageProcessed.Groups["channel"].Value);
+        var messageId = ulong.Parse(messageProcessed.Groups["message"].Value);
+
+        var guild = await Context.Client.GetGuildAsync(guildId);
+
+        var executorGuildUser = await guild.GetUserAsync(Context.User.Id);
+        if (executorGuildUser == null)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
+                new ConfigChangeResult(false, "No permission.")));
+            return;
+        }
+
+        var channel = await guild.GetTextChannelAsync(channelId);
+        var perms = executorGuildUser.GetPermissions(channel);
+        if (!perms.ViewChannel || !perms.ReadMessageHistory)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
+                new ConfigChangeResult(false, "No permission.")));
+            return;
+        }
+
+        if (channel is SocketThreadChannel { Type: ThreadType.PrivateThread } threadChannel)
+        {
+            _ = await threadChannel.GetUsersAsync();
+            if (threadChannel.GetUser(Context.User.Id) == null)
+            {
+                await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
+                    new ConfigChangeResult(false, "No permission.")));
+                return;
+            }
+        }
+        var message = await channel.GetMessageAsync(messageId);
+
+        var author = await guild.GetUserAsync(message.Author.Id);
+
+        var quoteMessages = QuotingHelpers.QuoteMessage(message, QuotingHelpers.GetUserRoleColorWithFallback(author, Color.Green), logger,
+            true);
+
+        foreach (var quoteMessage in quoteMessages)
+        {
+            await FollowupAsync(quoteMessage);
+        }
     }
 }
