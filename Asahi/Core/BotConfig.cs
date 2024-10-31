@@ -23,7 +23,7 @@ public class BotConfig
 
     public string LoadingEmote { get; set; } = "\ud83e\udd14"; // 🤔
 
-    public string PixivEmote { get; set; } = "<:pixivicon:1255352423028097134>";
+    public string PixivEmote { get; set; } = "\ud83c\udfa8"; // 🎨
 
     [YamlMember(Description = "A set of UserIDs. Users in this set will be granted permission to use commands to manage the instance itself.\n" +
                               "This is a dangerous permission to grant.")]

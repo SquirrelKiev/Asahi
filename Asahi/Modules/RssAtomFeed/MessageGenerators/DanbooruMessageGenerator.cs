@@ -107,8 +107,11 @@ namespace Asahi.Modules.RssAtomFeed
             return new MessageContents(eb, components);
         }
 
-        public static DanbooruVariant? GetBestVariant(DanbooruVariant[] variants)
+        public static DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants)
         {
+            if (variants == null)
+                return null;
+            
             // we only want embeddable variants
             var validVariants = variants
                 .Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower()))

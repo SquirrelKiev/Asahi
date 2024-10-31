@@ -153,7 +153,7 @@ public class DanbooruMediaAsset
     public string PixelHash { get; set; } = null!;
 
     [JsonProperty("variants")]
-    public DanbooruVariant[] Variants { get; set; } = null!;
+    public DanbooruVariant[]? Variants { get; set; }
 }
 
 public class DanbooruVariant
