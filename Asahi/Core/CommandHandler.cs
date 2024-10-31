@@ -82,6 +82,7 @@ public class CommandHandler(
         await commandService.ExecuteAsync(context, argPos, services);
     }
 
+    // TODO: Cache!!!
     protected async Task<string> GetPrefix(ISocketMessageChannel? channel)
     {
         var prefix = GuildConfig.DefaultPrefix;

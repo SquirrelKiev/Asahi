@@ -1,0 +1,19 @@
+{
+  "name": "magnet-redirector",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241011.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.80.4"
+  },
+  "dependencies": {
+    "itty-router": "^5.0.18"
+  }
+}

@@ -4,7 +4,7 @@ using Discord.Interactions;
 
 namespace Asahi.Modules;
 
-public class TrustedMemberAttribute(TrustedId.TrustedUserPerms requiredPerms) : PreconditionAttribute
+public class TrustedMemberAttribute(TrustedUserPerms requiredPerms) : PreconditionAttribute
 {
     public override async Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context, ICommandInfo commandInfo, IServiceProvider services)
     {

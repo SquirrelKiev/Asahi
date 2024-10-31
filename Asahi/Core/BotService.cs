@@ -37,10 +37,8 @@ public class BotService(
         "Asahi Webhook";
     public CancellationTokenSource cts = new();
 
-    public static readonly DiscordRestConfig WebhookRestConfig = new()
-    {
-        LogLevel = LogSeverity.Verbose
-    };
+    public static readonly DiscordRestConfig WebhookRestConfig =
+        new() { LogLevel = LogSeverity.Verbose };
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {

@@ -42,8 +42,12 @@ public class BotConfig
 
     [YamlMember(Description = "The default UserAgent to use when making web requests.")]
     public string UserAgent { get; set; } = "AsahiBot/NoSetVersion (https://github.com/SquirrelKiev/Asahi)";
+    
     [YamlMember(Description = "The App ID to use for the Wolfram command. Can get one from https://developer.wolframalpha.com/.")]
     public string WolframAppId { get; set; } = "";
+
+    [YamlMember(Description = "The token of the test bot. This is only used for /bot nuke-test-commands at present. Optional.")]
+    public string TestingBotToken { get; set; } = "BOT_TOKEN_HERE";
 
     [YamlMember(Description = "Any users in this list are banned from ever making it to highlights.")]
     public HashSet<ulong> BannedHighlightsUsers { get; set; } = [];
@@ -92,7 +96,7 @@ public class BotConfig
         }
     ];
 
-    public virtual bool IsValid()
+    public bool IsValid()
     {
         try
         {
@@ -101,6 +105,17 @@ public class BotConfig
         catch (Exception ex)
         {
             Log.Fatal(ex, "Supplied bot token is invalid.");
+            return false;
+        }
+        
+        try
+        {
+            if (TestingBotToken != "BOT_TOKEN_HERE")
+                TokenUtils.ValidateToken(TokenType.Bot, TestingBotToken);
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Supplied testing bot token is invalid. Set as BOT_TOKEN_HERE if unwanted.");
             return false;
         }
 

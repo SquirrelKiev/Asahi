@@ -337,6 +337,9 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
 
         var msg = await channel.GetMessageAsync(messageId);
 
+        if (msg == null)
+            return;
+
         if (botConfig.BannedHighlightsUsers.Contains(msg.Author.Id))
             return;
 

@@ -6,18 +6,6 @@ namespace Asahi.Database.Models;
 
 public class TrustedId
 {
-    [Flags]
-    [JsonConverter(typeof(StringEnumConverter))]
-    public enum TrustedUserPerms
-    {
-        None = 0,
-        WolframPerms = 1,
-        TrustedUserEditPerms = 2,
-        StatusPerms = 4,
-        BotGuildManagementPerms = 8,
-        CodeExecutionPerms = 16,
-    }
-
     public const int CommentMaxLength = 200;
 
     [Key]
@@ -30,4 +18,17 @@ public class TrustedId
 
     [JsonIgnore]
     public required BotWideConfig BotWideConfig { get; set; }
+}
+
+[Flags]
+[JsonConverter(typeof(StringEnumConverter))]
+public enum TrustedUserPerms
+{
+    None = 0,
+    WolframPerms = 1 << 0,
+    TrustedUserEditPerms = 1 << 1,
+    StatusPerms = 1 << 2,
+    BotGuildManagementPerms = 1 << 3,
+    CodeExecutionPerms = 1 << 4,
+    TestCommandNukingPerms = 1 << 5
 }

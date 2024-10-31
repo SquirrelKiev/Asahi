@@ -9,7 +9,7 @@ public static partial class CompiledRegex
     public static partial Regex RedditFeedRegex();
 
     [GeneratedRegex(@"^[\w-]+$")]
-    public static partial Regex IsValidId();
+    public static partial Regex IsValidIdRegex();
     
     [GeneratedRegex(@"^https:\/\/(?:\w*.)?discord.com\/channels\/(?<guild>\d*)\/(?<channel>\d*)\/(?<message>\d*)$")]
     public static partial Regex MessageLinkRegex();
@@ -20,4 +20,9 @@ public static partial class CompiledRegex
     // https://regexr.com/3dqa0
     [GeneratedRegex(@"^(?:https?:\/\/)?(?:[\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+)(?:[\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?$", RegexOptions.IgnoreCase)]
     public static partial Regex GenericLinkRegex();
+
+    [GeneratedRegex("""
+                    href="(https:\/\/nyaa\.si/view/\d+)"
+                    """)]
+    public static partial Regex NyaaATagRegex();
 }

@@ -1456,7 +1456,7 @@ public class HighlightsModule(
 
         name = name.ToLowerInvariant();
 
-        if (!CompiledRegex.IsValidId().IsMatch(name))
+        if (!CompiledRegex.IsValidIdRegex().IsMatch(name))
         {
             await FollowupAsync(
                 new MessageContents(
@@ -1539,7 +1539,7 @@ public class HighlightsModule(
 
         name = name.ToLowerInvariant();
 
-        if (!CompiledRegex.IsValidId().IsMatch(name))
+        if (!CompiledRegex.IsValidIdRegex().IsMatch(name))
         {
             await FollowupAsync(
                 new MessageContents(
@@ -1946,7 +1946,7 @@ public static class HighlightsModuleUtility
             {
                 name = name.ToLowerInvariant();
 
-                if (!CompiledRegex.IsValidId().IsMatch(name))
+                if (!CompiledRegex.IsValidIdRegex().IsMatch(name))
                 {
                     return Task.FromResult(
                         new ConfigChangeResult(false, $"`{name}` is not valid.")

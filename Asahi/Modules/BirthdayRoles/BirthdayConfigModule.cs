@@ -248,7 +248,7 @@ public class UserFacingBirthdayConfigModule(
 
             name = name.ToLowerInvariant();
 
-            if (!CompiledRegex.IsValidId().IsMatch(name))
+            if (!CompiledRegex.IsValidIdRegex().IsMatch(name))
             {
                 return new ConfigChangeResult(false, $"`{name}` is not valid.");
             }
@@ -288,7 +288,7 @@ public class BirthdayConfigModule(
         {
             name = name.ToLowerInvariant();
 
-            if (!CompiledRegex.IsValidId().IsMatch(name))
+            if (!CompiledRegex.IsValidIdRegex().IsMatch(name))
             {
                 return new ConfigChangeResult(false, $"`{name}` is not valid.");
             }
@@ -657,7 +657,7 @@ public class BirthdayConfigModule(
 
         name = name.ToLowerInvariant();
 
-        if (!CompiledRegex.IsValidId().IsMatch(name))
+        if (!CompiledRegex.IsValidIdRegex().IsMatch(name))
         {
             throw new ConfigException($"`{name}` is not valid.");
         }

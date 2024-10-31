@@ -211,6 +211,8 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
             return;
         }
 
+        logger.LogTrace("Retrieved {embedBuilderType} embed builder.", thing.embedGenerator!.GetType());
+
         var testFeedListener = new FeedListener()
         {
             GuildId = Context.Guild.Id,
@@ -257,6 +259,7 @@ public class RssModule(DbService dbService, RssTimerService rts, InteractiveServ
             switch (feedHandler)
             {
                 case RssTimerService.FeedHandler.RssAtom:
+                case RssTimerService.FeedHandler.Nyaa:
                     {
                         http.MaxResponseContentBufferSize = 8000000;
                         using var req = await http.GetAsync(url);
