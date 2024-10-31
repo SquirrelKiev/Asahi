@@ -136,7 +136,7 @@ public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : Bo
     }
 
     [SlashCommand("quote", "Quote a message")]
-    public async Task QuoteSlash(string messageLink)
+    public async Task QuoteSlash([Summary(description: "A link to the message to quote.")] string messageLink)
     {
         await DeferAsync();
 

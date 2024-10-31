@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace DibariBot.Analyzers;
+namespace Asahi.Analyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class SlashCommandSummaryAnalyzer : DiagnosticAnalyzer

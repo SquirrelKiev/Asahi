@@ -21,10 +21,24 @@ public class CommandHandler(
     ILogger<CommandHandler> logger
 )
 {
+    private bool runOnce = false;
+    
     public async Task OnReady(params Assembly[] assemblies)
     {
-        await InitializeInteractionService(assemblies);
-        await InitializeCommandService(assemblies);
+        if (runOnce)
+            return;
+
+        try
+        {
+            await InitializeInteractionService(assemblies);
+            await InitializeCommandService(assemblies);
+            
+            runOnce = true;
+        }
+        catch (Exception e)
+        {
+            logger.LogCritical(e, "Failed to register commands/interactions!");
+        }
     }
 
     #region Prefix Command Handling

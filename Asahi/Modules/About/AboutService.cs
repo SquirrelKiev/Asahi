@@ -3,7 +3,7 @@
 [Inject(Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton)]
 public class AboutService(BotConfig botConfig, OverrideTrackerService overrideService)
 {
-    /// <remarks>About page is also used as a secret place for the manager stuff (like overrides). For more info, see <see cref="BotConfigBase.ManagerUserIds"/></remarks>
+    /// <remarks>About page is also used as a secret place for the manager stuff (like overrides). For more info, see <see cref="BotConfig.ManagerUserIds"/></remarks>
     ///
     /// <param name="placeholders">Array of KVPs, with key as the phrase to replace and value as what to replace with.
     /// Recommended to use with <see cref="GetPlaceholders"/>.</param>

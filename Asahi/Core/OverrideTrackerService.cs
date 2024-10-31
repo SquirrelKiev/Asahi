@@ -2,7 +2,7 @@
 
 // officially the stupidest service to exist.
 // 100% could be extension methods on ICacheProvider, but that felt wrong.
-/// <remarks>None of the functions check or care if the user is allowed to have an override. Make sure to check with <see cref="BotConfigBase"/> before using these.</remarks>
+/// <remarks>None of the functions check or care if the user is allowed to have an override. Make sure to check with <see cref="BotConfig"/> before using these.</remarks>
 public class OverrideTrackerService(BotConfig botConfig)
 {
     private readonly HashSet<ulong> OverriddenIds = [];
