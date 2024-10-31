@@ -213,13 +213,26 @@ public class BotService(
 
         if (message.Exception is not null)
         {
-            logger.Log(
-                level,
-                message.Exception,
-                "{Source} | {Message}",
-                message.Source,
-                message.Message
-            );
+            if (message.Exception.GetType() == typeof(GatewayReconnectException))
+            {
+                logger.Log(
+                    LogLevel.Trace,
+                    message.Exception,
+                    "{Source} | {Message}",
+                    message.Source,
+                    message.Exception.Message
+                );
+            }
+            else
+            {
+                logger.Log(
+                    level,
+                    message.Exception,
+                    "{Source} | {Message}",
+                    message.Source,
+                    message.Message
+                );
+            }
         }
         else
         {
