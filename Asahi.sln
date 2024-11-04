@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Asahi", "Asahi\Asahi.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Asahi.Analyzers", "Asahi.Analyzers\Asahi.Analyzers.csproj", "{11B6B1C5-10DC-49A1-B40B-5F8ABEEB8FC2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asahi.Tests", "Asahi.Tests\Asahi.Tests.csproj", "{DDCAFEF5-38EF-4160-BCB8-A8158F619601}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{11B6B1C5-10DC-49A1-B40B-5F8ABEEB8FC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{11B6B1C5-10DC-49A1-B40B-5F8ABEEB8FC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{11B6B1C5-10DC-49A1-B40B-5F8ABEEB8FC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDCAFEF5-38EF-4160-BCB8-A8158F619601}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDCAFEF5-38EF-4160-BCB8-A8158F619601}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDCAFEF5-38EF-4160-BCB8-A8158F619601}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDCAFEF5-38EF-4160-BCB8-A8158F619601}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

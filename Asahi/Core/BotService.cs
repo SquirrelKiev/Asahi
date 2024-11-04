@@ -252,8 +252,6 @@ public class BotService(
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
-        // TODO: Merge all these timer tasks into one big thing to avoid potential rate-limits?
-        // no then everything would be single-threaded
         hts.StartBackgroundTask(cts.Token);
 
         css.StartBackgroundTask(cts.Token);

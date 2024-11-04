@@ -429,7 +429,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         {
             completedBoards.Add(board);
 
-            await SendAndTrackHighlightMessage(board, aliases, msg, reactionEmotes.Select(x => new ReactionInfo(x)), uniqueReactionUsers.Count);
+            await SendAndTrackHighlightMessage(board, aliases, msg, reactionEmotes.Select(x => new ReactionInfo(x)).ToArray(), uniqueReactionUsers.Count);
         }
 
 
@@ -523,7 +523,7 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
     }
 
     public async Task SendAndTrackHighlightMessage(HighlightBoard board, EmoteAlias[] aliases, IMessage message,
-        IEnumerable<ReactionInfo> reactions, int totalUniqueReactions)
+        ICollection<ReactionInfo> reactions, int totalUniqueReactions)
     {
         var loggingChannelId = board.LoggingChannelId;
 
@@ -596,7 +596,11 @@ public class HighlightsTrackingService(DbService dbService, ILogger<HighlightsTr
         {
             HighlightMessageIds = highlightMessages,
             OriginalMessageChannelId = message.Channel.Id,
-            OriginalMessageId = message.Id
+            OriginalMessageId = message.Id,
+            HighlightedMessageSendDate = message.Timestamp.DateTime,
+            AssistAuthorId = replyMessage?.Author.Id,
+            AuthorId = message.Author.Id,
+            TotalUniqueReactions = totalUniqueReactions,
         });
 
         logger.LogDebug("Sent and tracked highlight {messageCount} messages", highlightMessages.Count);
