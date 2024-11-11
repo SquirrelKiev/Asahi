@@ -1,11 +1,15 @@
-﻿namespace Asahi.Database.Models;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Asahi.Database.Models;
 
 public class CachedHighlightedMessage : DbModel
 {
+    public const int LatestVersion = 1;
+    
     /// <summary>
     /// For statistics
     /// </summary>
-    public int Version { get; set; } = 2;
+    public int Version { get; set; } = LatestVersion;
 
     public required ulong OriginalMessageChannelId { get; set; }
 
@@ -40,17 +44,16 @@ public class CachedHighlightedMessage : DbModel
     /// The IDs of the messages sent by the bot in the highlights channel
     /// </summary>
     public required List<ulong> HighlightMessageIds { get; set; }
+    //
+    // public string HighlightBoardName { get; set; } = null!;
+    //
+    // public ulong HighlightBoardGuildId { get; set; }
+    
+    public HighlightBoard HighlightBoard { get; set; } = null!;
 
     public void UpdateReactions(Dictionary<IEmote, HashSet<ulong>> emoteUserMap)
     {
-        UpdateReactions(emoteUserMap, CachedMessageReactions);
-    }
-    
-    public static void UpdateReactions(
-        Dictionary<IEmote, HashSet<ulong>> emoteUserMap,
-        ICollection<CachedMessageReaction> existingReactions)
-    {
-        var reactionLookup = existingReactions.ToDictionary(
+        var reactionLookup = CachedMessageReactions.ToDictionary(
             r => (r.EmoteId, r.EmoteName),
             r => r
         );
@@ -78,29 +81,27 @@ public class CachedHighlightedMessage : DbModel
             }
             else
             {
-                existingReactions.Add(new CachedMessageReaction
+                CachedMessageReactions.Add(new CachedMessageReaction
                 {
                     EmoteName = emoteName,
                     EmoteId = emoteId,
                     Count = userCount,
                     IsAnimated = isAnimated,
-                    HighlightedMessageId = existingReactions.FirstOrDefault()?.HighlightedMessageId ?? 0
+                    HighlightedMessage = this
                 });
             }
         }
 
         if (reactionLookup.Count > 0)
         {
-            var reactionsToRemove = existingReactions
+            var reactionsToRemove = CachedMessageReactions
                 .Where(r => reactionLookup.ContainsKey((r.EmoteId, r.EmoteName)))
                 .ToList();
             
             foreach (var reaction in reactionsToRemove)
             {
-                existingReactions.Remove(reaction);
+                CachedMessageReactions.Remove(reaction);
             }
         }
     }
-
-    public HighlightBoard HighlightBoard { get; set; } = null!;
 }

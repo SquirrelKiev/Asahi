@@ -252,13 +252,13 @@ public class BotService(
         hts.StartBackgroundTask(cts.Token);
 
         css.StartBackgroundTask(cts.Token);
-
+        
         var birthdayTimer = services.GetRequiredService<BirthdayTimerService>();
         birthdayTimer.StartBackgroundTask(cts.Token);
-
+        
         var rssTimerService = services.GetRequiredService<RssTimerService>();
         rssTimerService.StartBackgroundTask(cts.Token);
-
+        
         var roleManagement = services.GetRequiredService<RoleManagementService>();
         await roleManagement.CacheAndResolve();
     }

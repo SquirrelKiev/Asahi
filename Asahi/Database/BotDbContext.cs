@@ -17,6 +17,10 @@ public abstract class BotDbContext(ILoggerFactory? loggerFactory) : DbContext
 
     public DbSet<HighlightBoard> HighlightBoards { get; set; }
     public DbSet<CachedHighlightedMessage> CachedHighlightedMessages { get; set; }
+
+    public IQueryable<CachedHighlightedMessage> CachedHighlightedMessagesWithStats =>
+        CachedHighlightedMessages.Where(x => x.Version == CachedHighlightedMessage.LatestVersion);
+    
     public DbSet<CachedMessageReaction> CachedMessageReactions { get; set; }
     public DbSet<EmoteAlias> EmoteAliases { get; set; }
 
