@@ -10,7 +10,7 @@ namespace Asahi.Modules.Seigen;
 [CommandContextType(InteractionContextType.Guild)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [Group("trackables", "Commands relating to managing trackables and their users.")]
-public class TrackablesModule(DbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
+public class TrackablesModule(IDbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";
     public const string ASSIGNABLE_GUILD_PARAM_NAME = "assignable-guild";

@@ -13,7 +13,7 @@ namespace Asahi.Modules.RssAtomFeed;
 
 [Group("rss", "Commands relating to RSS/Atom feeds.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
-public class RssModule(DbService dbService, RssTimerService rts, InteractiveService interactive, HttpClient http,
+public class RssModule(IDbService dbService, RssTimerService rts, InteractiveService interactive, HttpClient http,
     IRedditApi redditApi,
     ILogger<RssModule> logger) : BotModule
 {

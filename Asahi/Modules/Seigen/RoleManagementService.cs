@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Asahi.Modules.Seigen;
 
 [Inject(ServiceLifetime.Singleton)]
-public class RoleManagementService(DbService dbService, DiscordSocketClient client, ILogger<BotService> logger)
+public class RoleManagementService(IDbService dbService, DiscordSocketClient client, ILogger<BotService> logger)
 {
     public async Task OnUserLeft(SocketGuild guild, SocketUser user)
     {

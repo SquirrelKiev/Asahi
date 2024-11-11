@@ -12,7 +12,7 @@ public class AliasedEmoteAutocomplete : AutocompleteHandler
         if (context.Guild == null)
             return AutocompletionResult.FromSuccess();
 
-        var dbService = services.GetRequiredService<DbService>();
+        var dbService = services.GetRequiredService<IDbService>();
 
         await using var dbContext = dbService.GetDbContext();
 

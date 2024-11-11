@@ -5,7 +5,7 @@ namespace Asahi.Modules;
 
 public static partial class ConfigUtilities
 {
-    public static async Task<bool> CommonConfig(IInteractionContext botContext, DbService dbService,
+    public static async Task<bool> CommonConfig(IInteractionContext botContext, IDbService dbService,
         Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction, bool ephemeral = false)
     {
         await botContext.Interaction.DeferAsync(ephemeral);

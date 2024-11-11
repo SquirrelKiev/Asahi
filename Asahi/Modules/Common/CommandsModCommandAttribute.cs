@@ -8,7 +8,7 @@ public class CommandsModCommandAttribute : PreconditionAttribute
 {
     public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
     {
-        var dbService = services.GetRequiredService<DbService>();
+        var dbService = services.GetRequiredService<IDbService>();
 
         await using var dbContext = dbService.GetDbContext();
 

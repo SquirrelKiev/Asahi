@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 namespace Asahi.Modules.CustomCommands;
 
 [Inject(ServiceLifetime.Singleton)]
-public class CustomCommandService(DbService dbService)
+public class CustomCommandService(IDbService dbService)
 {
     public async Task<MessageContents> AddCustomCommand(IGuildUser commandOwner, string name, string contents)
     {

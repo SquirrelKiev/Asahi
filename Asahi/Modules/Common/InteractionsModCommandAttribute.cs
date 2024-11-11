@@ -8,7 +8,7 @@ public class InteractionsModCommandAttribute : PreconditionAttribute
 {
     public override async Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context, ICommandInfo commandInfo, IServiceProvider services)
     {
-        var dbService = services.GetRequiredService<DbService>();
+        var dbService = services.GetRequiredService<IDbService>();
 
         await using var dbContext = dbService.GetDbContext();
 

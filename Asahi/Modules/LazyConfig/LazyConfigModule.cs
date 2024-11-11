@@ -7,7 +7,7 @@ namespace Asahi.Modules.LazyConfig;
 [CommandContextType(InteractionContextType.Guild)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 // [Group("config", "Configuration commands.")]
-public class LazyConfigModule(DbService dbService) : BotModule
+public class LazyConfigModule(IDbService dbService) : BotModule
 {
     [SlashCommand("prefix", "Gets/sets the bot prefix.")]
     public async Task SetPrefix(

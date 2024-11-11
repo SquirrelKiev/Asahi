@@ -13,7 +13,7 @@ public class HighlightsThresholdAutocomplete : AutocompleteHandler
             return AutocompletionResult.FromSuccess();
 
         //var logger = services.GetRequiredService<ILogger<HighlightsThresholdAutocomplete>>();
-        var dbService = services.GetRequiredService<DbService>();
+        var dbService = services.GetRequiredService<IDbService>();
 
         var boardOption = autocompleteInteraction.Data.Options.FirstOrDefault(x => x.Name == "name");
 

@@ -65,7 +65,7 @@ namespace Asahi.Modules.RssAtomFeed
 
             eb.WithTitle(
                 !string.IsNullOrWhiteSpace(post.TagStringCharacter)
-                    ? post.TagStringCharacter.Split(' ').Select(x => x.Titleize()).Humanize()
+                    ? post.TagStringCharacter.Split(' ').Select(x => x.Titleize()).HumanizeStringArrayWithTruncation()
                     : "Danbooru"
             );
 

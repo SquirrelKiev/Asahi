@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Asahi.Modules.Statistics;
 
 [Group("stats", "Commands relating to statistics")]
-public class StatisticsModule(DbService dbService) : BotModule
+public class StatisticsModule(IDbService dbService) : BotModule
 {
     [SlashCommand("guild", "Bot-related statistics about the Guild.")]
     public async Task StatsSlash()

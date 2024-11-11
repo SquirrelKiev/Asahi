@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Asahi.Database;
 using Asahi.Modules.Highlights;
+using Discord.Rest;
 using Discord.Webhook;
 using Discord.WebSocket;
 using Fergun.Interactive;
@@ -15,10 +16,11 @@ namespace Asahi.Modules.ModSpoilers;
 public class ModSpoilerService(
     DiscordSocketClient client,
     IHttpClientFactory clientFactory,
-    DbService dbService,
+    IDbService dbService,
     InteractiveService interactive,
     BotConfig botConfig,
     HighlightsTrackingService hts,
+    DiscordRestConfig webhookRestConfig,
     ILogger<ModSpoilerModule> logger)
 {
     [method: SetsRequiredMembers]
@@ -61,7 +63,7 @@ public class ModSpoilerService(
         }
 
         var webhook = await channel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
-        using var webhookClient = new DiscordWebhookClient(webhook.Id, webhook.Token, BotService.WebhookRestConfig);
+        using var webhookClient = new DiscordWebhookClient(webhook.Id, webhook.Token, webhookRestConfig);
         webhookClient.Log += msg => BotService.Client_Log(logger, msg);
 
         var cachedHighlightedMessage = await
@@ -128,8 +130,10 @@ public class ModSpoilerService(
             }
 
             var firstMessageObj = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
-            var (uniqueReactionUsersAutoReact, uniqueReactionEmotes) =
+            var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap) =
                 await hts.GetReactions([ogMessage, firstMessageObj], [ogMessage], []);
+            
+            cachedHighlightedMessage.UpdateReactions(emoteUserMap);
 
             var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, false, true, context, 
                 replyMessage, eb =>

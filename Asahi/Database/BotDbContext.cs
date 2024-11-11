@@ -17,6 +17,7 @@ public abstract class BotDbContext(ILoggerFactory? loggerFactory) : DbContext
 
     public DbSet<HighlightBoard> HighlightBoards { get; set; }
     public DbSet<CachedHighlightedMessage> CachedHighlightedMessages { get; set; }
+    public DbSet<CachedMessageReaction> CachedMessageReactions { get; set; }
     public DbSet<EmoteAlias> EmoteAliases { get; set; }
 
     public DbSet<BotWideConfig> BotWideConfig { get; set; }
@@ -57,6 +58,9 @@ public abstract class BotDbContext(ILoggerFactory? loggerFactory) : DbContext
         modelBuilder.Entity<CachedHighlightedMessage>()
             .HasIndex(x => x.HighlightMessageIds)
             .IsUnique();
+
+        modelBuilder.Entity<CachedMessageReaction>()
+            .HasKey(x => new { x.EmoteName, x.EmoteId, x.HighlightedMessageId });
 
         modelBuilder.Entity<HighlightThreshold>()
             .HasKey(

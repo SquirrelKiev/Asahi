@@ -20,7 +20,7 @@ namespace Asahi;
 public class BotService(
     DiscordSocketClient client,
     BotConfig config,
-    DbService dbService,
+    IDbService dbService,
     ILogger<BotService> logger,
     CommandHandler commandHandler,
     // TODO: Remove the request for services and just inject manually
@@ -36,9 +36,6 @@ public class BotService(
 #endif
         "Asahi Webhook";
     public CancellationTokenSource cts = new();
-
-    public static readonly DiscordRestConfig WebhookRestConfig =
-        new() { LogLevel = LogSeverity.Verbose };
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
