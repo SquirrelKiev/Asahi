@@ -288,6 +288,7 @@ public class HighlightsTrackingService(
                 catch (Exception e)
                 {
                     logger.LogError(e, "Message {messageId} failed to process! Please take a look manually.", outdatedMessage.OriginalMessageId);
+                    continue;
                 }
 
                 outdatedMessage.Version = 1;
