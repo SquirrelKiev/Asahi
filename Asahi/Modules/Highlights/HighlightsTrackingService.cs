@@ -91,7 +91,7 @@ public class HighlightsTrackingService(
     /// <remarks>Should only be one of these running!</remarks>
     private async Task TimerTask(CancellationToken cancellationToken)
     {
-        await MigrateOldMessages();
+        _ = MigrateOldMessages();
 
         logger.LogTrace("Highlights timer task started");
 
@@ -122,7 +122,7 @@ public class HighlightsTrackingService(
             return;
 
         logger.LogInformation(
-            "Out of date messages in highlights! Will be migrating {outdatedMessageCount} messages. Highlights will be in queue hell until migration completes successfully.",
+            "Out of date messages in highlights! Will be migrating {outdatedMessageCount} messages.",
             outdatedMessages.Count);
 
         CachedHighlightedMessage? currentMessage = null;
@@ -135,10 +135,9 @@ public class HighlightsTrackingService(
             int currentMessageIndex = 0;
             foreach (var outdatedMessage in outdatedMessages)
             {
-                var messageStopwatch = System.Diagnostics.Stopwatch.StartNew();
+                var messageStopwatch = Stopwatch.StartNew();
                 currentMessageIndex++;
 
-                // Calculate ETA
                 string eta = "Calculating...";
                 if (processedMessages.Count > 0)
                 {
@@ -316,7 +315,6 @@ public class HighlightsTrackingService(
                 "Failed to migrate highlights to latest! Please take a look manually. (Failed on message {messageId})",
                 currentMessage?.OriginalMessageId
             );
-            throw;
         }
     }
 
