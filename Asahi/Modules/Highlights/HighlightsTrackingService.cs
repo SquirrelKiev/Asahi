@@ -135,155 +135,162 @@ public class HighlightsTrackingService(
             int currentMessageIndex = 0;
             foreach (var outdatedMessage in outdatedMessages)
             {
-                var messageStopwatch = Stopwatch.StartNew();
-                currentMessageIndex++;
-
-                string eta = "Calculating...";
-                if (processedMessages.Count > 0)
-                {
-                    var averageTime = TimeSpan.FromTicks((long)processedMessages.Average(t => t.Ticks));
-                    var remainingMessages = outdatedMessages.Count - currentMessageIndex;
-                    var estimatedTimeRemaining = TimeSpan.FromTicks(averageTime.Ticks * remainingMessages);
-                    eta = estimatedTimeRemaining.TotalMinutes >= 1
-                        ? $"{estimatedTimeRemaining.TotalMinutes:F1} minutes"
-                        : $"{estimatedTimeRemaining.TotalSeconds:F0} seconds";
-                }
-
-                logger.LogInformation(
-                    "migrating message {messageId} (channel {channelId}) ({currentMessageIndex}/{outdatedMessagesCount}) - ETA: {eta}",
-                    outdatedMessage.OriginalMessageId,
-                    outdatedMessage.OriginalMessageChannelId,
-                    currentMessageIndex,
-                    outdatedMessages.Count,
-                    eta
-                );
-                currentMessage = outdatedMessage;
-
-                ITextChannel? channel;
-
                 try
                 {
-                    channel = (ITextChannel)
-                        await client.GetChannelAsync(outdatedMessage.OriginalMessageChannelId);
-                }
-                catch (HttpException ex)
-                {
-                    if (ex.DiscordCode != DiscordErrorCode.MissingPermissions)
-                        throw;
+                    var messageStopwatch = Stopwatch.StartNew();
+                    currentMessageIndex++;
 
-                    logger.LogWarning(
-                        "Bot does not have access to channel {channelId}! Please take a look later, or this will be in migration hell.",
-                        outdatedMessage.OriginalMessageChannelId
-                    );
-                    continue;
-                }
-
-                var originalMessage = await channel.GetMessageAsync(
-                    outdatedMessage.OriginalMessageId
-                );
-
-                if (originalMessage == null)
-                {
-                    logger.LogTrace(
-                        "Could not find message {messageId}, will be removing entry {highlightId} from database.",
-                        outdatedMessage.OriginalMessageId,
-                        outdatedMessage.Id
-                    );
-
-                    messagesToNuke.Add(outdatedMessage);
-                    continue;
-                }
-
-                var highlightMessages = new List<IMessage>();
-
-                ITextChannel? loggingChannel;
-                try
-                {
-                    loggingChannel = (ITextChannel)
-                        await client.GetChannelAsync(outdatedMessage.HighlightBoard.LoggingChannelId);
-                }
-                catch (HttpException ex)
-                {
-                    if (ex.DiscordCode != DiscordErrorCode.MissingPermissions)
-                        throw;
-
-                    logger.LogWarning(
-                        "Bot does not have access to channel {channelId}! Please take a look later, or this will be in migration hell.",
-                        outdatedMessage.OriginalMessageChannelId
-                    );
-                    continue;
-                }
-
-                foreach (var highlightMessageId in outdatedMessage.HighlightMessageIds)
-                {
-                    var highlightMessage = await loggingChannel.GetMessageAsync(highlightMessageId);
-
-                    if (highlightMessage == null)
+                    string eta = "Calculating...";
+                    if (processedMessages.Count > 0)
                     {
-                        logger.LogTrace(
-                            "Could not find message {messageId} (IN LOGGING CHANNEL {loggingChannelId}), will be ignoring",
-                            outdatedMessage.OriginalMessageId,
-                            loggingChannel.Id
+                        var averageTime = TimeSpan.FromTicks((long)processedMessages.Average(t => t.Ticks));
+                        var remainingMessages = outdatedMessages.Count - currentMessageIndex;
+                        var estimatedTimeRemaining = TimeSpan.FromTicks(averageTime.Ticks * remainingMessages);
+                        eta = estimatedTimeRemaining.TotalMinutes >= 1
+                            ? $"{estimatedTimeRemaining.TotalMinutes:F1} minutes"
+                            : $"{estimatedTimeRemaining.TotalSeconds:F0} seconds";
+                    }
+
+                    logger.LogInformation(
+                        "migrating message {messageId} (channel {channelId}) ({currentMessageIndex}/{outdatedMessagesCount}) - ETA: {eta}",
+                        outdatedMessage.OriginalMessageId,
+                        outdatedMessage.OriginalMessageChannelId,
+                        currentMessageIndex,
+                        outdatedMessages.Count,
+                        eta
+                    );
+                    currentMessage = outdatedMessage;
+
+                    ITextChannel? channel;
+
+                    try
+                    {
+                        channel = (ITextChannel)
+                            await client.GetChannelAsync(outdatedMessage.OriginalMessageChannelId);
+                    }
+                    catch (HttpException ex)
+                    {
+                        if (ex.DiscordCode != DiscordErrorCode.MissingPermissions)
+                            throw;
+
+                        logger.LogWarning(
+                            "Bot does not have access to channel {channelId}! Please take a look later, or this will be in migration hell.",
+                            outdatedMessage.OriginalMessageChannelId
                         );
                         continue;
                     }
 
-                    highlightMessages.Add(highlightMessage);
-                }
-
-                if (highlightMessages.Count == 0)
-                {
-                    logger.LogTrace(
-                        "Could not find a single message in logging channel {loggingChannelId} for message {messageId}, will be nuking",
-                        loggingChannel.Id,
+                    var originalMessage = await channel.GetMessageAsync(
                         outdatedMessage.OriginalMessageId
                     );
 
-                    messagesToNuke.Add(outdatedMessage);
-                    continue;
-                }
-
-                outdatedMessage.AuthorId = originalMessage.Author.Id;
-                outdatedMessage.HighlightedMessageSendDate = originalMessage.Timestamp.UtcDateTime;
-
-                var reactionsCache = new Dictionary<int, IUser[]>();
-                var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap) =
-                    await GetReactions(
-                        [originalMessage, highlightMessages[^1]],
-                        [originalMessage],
-                        reactionsCache
-                    );
-
-                outdatedMessage.TotalUniqueReactions = uniqueReactionUsersAutoReact.Count;
-
-                outdatedMessage.UpdateReactions(emoteUserMap);
-
-                // assist messages
-                if (
-                    originalMessage.Reference
-                        is
-                        {
-                            ReferenceType:
-                            { IsSpecified: true, Value: MessageReferenceType.Default },
-                            MessageId.IsSpecified: true
-                        }
-                    && originalMessage.Channel.Id == channel.Id
-                )
-                {
-                    var assistMsg = await channel.GetMessageAsync(
-                        originalMessage.Reference.MessageId.Value
-                    );
-
-                    if (assistMsg != null)
+                    if (originalMessage == null)
                     {
-                        outdatedMessage.AssistAuthorId = assistMsg.Author.Id;
+                        logger.LogTrace(
+                            "Could not find message {messageId}, will be removing entry {highlightId} from database.",
+                            outdatedMessage.OriginalMessageId,
+                            outdatedMessage.Id
+                        );
+
+                        messagesToNuke.Add(outdatedMessage);
+                        continue;
                     }
+
+                    var highlightMessages = new List<IMessage>();
+
+                    ITextChannel? loggingChannel;
+                    try
+                    {
+                        loggingChannel = (ITextChannel)
+                            await client.GetChannelAsync(outdatedMessage.HighlightBoard.LoggingChannelId);
+                    }
+                    catch (HttpException ex)
+                    {
+                        if (ex.DiscordCode != DiscordErrorCode.MissingPermissions)
+                            throw;
+
+                        logger.LogWarning(
+                            "Bot does not have access to channel {channelId}! Please take a look later, or this will be in migration hell.",
+                            outdatedMessage.OriginalMessageChannelId
+                        );
+                        continue;
+                    }
+
+                    foreach (var highlightMessageId in outdatedMessage.HighlightMessageIds)
+                    {
+                        var highlightMessage = await loggingChannel.GetMessageAsync(highlightMessageId);
+
+                        if (highlightMessage == null)
+                        {
+                            logger.LogTrace(
+                                "Could not find message {messageId} (IN LOGGING CHANNEL {loggingChannelId}), will be ignoring",
+                                outdatedMessage.OriginalMessageId,
+                                loggingChannel.Id
+                            );
+                            continue;
+                        }
+
+                        highlightMessages.Add(highlightMessage);
+                    }
+
+                    if (highlightMessages.Count == 0)
+                    {
+                        logger.LogTrace(
+                            "Could not find a single message in logging channel {loggingChannelId} for message {messageId}, will be nuking",
+                            loggingChannel.Id,
+                            outdatedMessage.OriginalMessageId
+                        );
+
+                        messagesToNuke.Add(outdatedMessage);
+                        continue;
+                    }
+
+                    outdatedMessage.AuthorId = originalMessage.Author.Id;
+                    outdatedMessage.HighlightedMessageSendDate = originalMessage.Timestamp.UtcDateTime;
+
+                    var reactionsCache = new Dictionary<int, IUser[]>();
+                    var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap) =
+                        await GetReactions(
+                            [originalMessage, highlightMessages[^1]],
+                            [originalMessage],
+                            reactionsCache
+                        );
+
+                    outdatedMessage.TotalUniqueReactions = uniqueReactionUsersAutoReact.Count;
+
+                    outdatedMessage.UpdateReactions(emoteUserMap);
+
+                    // assist messages
+                    if (
+                        originalMessage.Reference
+                            is
+                            {
+                                ReferenceType:
+                                { IsSpecified: true, Value: MessageReferenceType.Default },
+                                MessageId.IsSpecified: true
+                            }
+                        && originalMessage.Channel.Id == channel.Id
+                    )
+                    {
+                        var assistMsg = await channel.GetMessageAsync(
+                            originalMessage.Reference.MessageId.Value
+                        );
+
+                        if (assistMsg != null)
+                        {
+                            outdatedMessage.AssistAuthorId = assistMsg.Author.Id;
+                        }
+                    }
+
+                    messageStopwatch.Stop();
+                    processedMessages.Add(messageStopwatch.Elapsed);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Message {messageId} failed to process! Please take a look manually.", outdatedMessage.OriginalMessageId);
                 }
 
                 outdatedMessage.Version = 1;
-
-                messageStopwatch.Stop();
-                processedMessages.Add(messageStopwatch.Elapsed);
             }
 
             if (messagesToNuke.Count != 0)
