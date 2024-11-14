@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.Statistics;
 
+// TODO: Something about sqlite. just disable for this?
 [Group("stats", "Commands relating to statistics")]
 public class StatisticsModule(IDbService dbService, ILogger<StatisticsModule> logger) : BotModule
 {

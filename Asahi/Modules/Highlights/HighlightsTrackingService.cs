@@ -91,7 +91,7 @@ public class HighlightsTrackingService(
     /// <remarks>Should only be one of these running!</remarks>
     private async Task TimerTask(CancellationToken cancellationToken)
     {
-        _ = MigrateOldMessages();
+        await MigrateOldMessages();
 
         logger.LogTrace("Highlights timer task started");
 
