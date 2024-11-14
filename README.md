@@ -1,4 +1,4 @@
-# Asahi
+# <p align="center"><img src="/Asahi/IconSources/icon-256.png" width="32px" height="32px"/> Asahi</p>
 
 > I need to fill this out properly
 
