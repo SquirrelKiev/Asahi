@@ -25,4 +25,7 @@ public static partial class CompiledRegex
                     href="(https:\/\/nyaa\.si/view/\d+)"
                     """)]
     public static partial Regex NyaaATagRegex();
+
+    [GeneratedRegex("https:\\/\\/bsky\\.app\\/profile\\/[a-zA-Z0-9:\\.]*\\/rss")]
+    public static partial Regex BskyPostRegex();
 }

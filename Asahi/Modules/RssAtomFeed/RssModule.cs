@@ -260,6 +260,7 @@ public class RssModule(IDbService dbService, RssTimerService rts, InteractiveSer
             {
                 case RssTimerService.FeedHandler.RssAtom:
                 case RssTimerService.FeedHandler.Nyaa:
+                case RssTimerService.FeedHandler.Bsky:
                     {
                         http.MaxResponseContentBufferSize = 8000000;
                         using var req = await http.GetAsync(url);

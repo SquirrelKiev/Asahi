@@ -27,6 +27,7 @@ public class RssTimerService(
         Danbooru,
         Reddit,
         Nyaa,
+        Bsky,
     }
 
     public Task? timerTask;
@@ -336,6 +337,16 @@ public class RssTimerService(
                     embedGenerator = new NyaaFeedMessageGenerator(feed, feedsArray);
                     break;
                 }
+            case FeedHandler.Bsky:
+                {
+                    var feed = FeedReader.ReadFromString(reqContent);
+
+                    IEnumerable<FeedItem> feedsEnumerable = feed.Items;
+                    var feedsArray = feedsEnumerable.ToArray();
+
+                    embedGenerator = new BskyMessageGenerator(feedsArray);
+                    break;
+                }
             default:
                 throw new ArgumentOutOfRangeException();
         }
@@ -349,6 +360,8 @@ public class RssTimerService(
             return FeedHandler.Danbooru;
         if (url.StartsWith("https://nyaa.si"))
             return FeedHandler.Nyaa;
+        if (CompiledRegex.BskyPostRegex().IsMatch(url))
+            return FeedHandler.Bsky;
         if (CompiledRegex.RedditFeedRegex().IsMatch(url))
             return FeedHandler.Reddit;
 
