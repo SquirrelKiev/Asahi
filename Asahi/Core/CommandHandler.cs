@@ -16,7 +16,7 @@ public class CommandHandler(
     DiscordSocketClient client,
     BotConfig botConfig,
     IServiceProvider services,
-    DbService dbService,
+    IDbService dbService,
     InteractiveService interactiveService,
     ILogger<CommandHandler> logger
 )

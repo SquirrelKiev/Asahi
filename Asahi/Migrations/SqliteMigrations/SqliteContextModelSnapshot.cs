@@ -15,7 +15,7 @@ namespace Asahi.Migrations.SqliteMigrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.7");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.10");
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayConfig", b =>
                 {
@@ -149,6 +149,12 @@ namespace Asahi.Migrations.SqliteMigrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<ulong?>("AssistAuthorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<ulong>("AuthorId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<ulong>("HighlightBoardGuildId")
                         .HasColumnType("INTEGER");
 
@@ -160,10 +166,19 @@ namespace Asahi.Migrations.SqliteMigrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("HighlightedMessageSendDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<ulong>("OriginalMessageChannelId")
                         .HasColumnType("INTEGER");
 
                     b.Property<ulong>("OriginalMessageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalUniqueReactions")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Version")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -174,6 +189,31 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
                     b.ToTable("CachedHighlightedMessages");
+                });
+
+            modelBuilder.Entity("Asahi.Database.Models.CachedMessageReaction", b =>
+                {
+                    b.Property<string>("EmoteName")
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<ulong>("EmoteId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<uint>("HighlightedMessageId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAnimated")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("EmoteName", "EmoteId", "HighlightedMessageId");
+
+                    b.HasIndex("HighlightedMessageId");
+
+                    b.ToTable("CachedMessageReactions");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedUserRole", b =>
@@ -546,6 +586,17 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.Navigation("HighlightBoard");
                 });
 
+            modelBuilder.Entity("Asahi.Database.Models.CachedMessageReaction", b =>
+                {
+                    b.HasOne("Asahi.Database.Models.CachedHighlightedMessage", "HighlightedMessage")
+                        .WithMany("CachedMessageReactions")
+                        .HasForeignKey("HighlightedMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("HighlightedMessage");
+                });
+
             modelBuilder.Entity("Asahi.Database.Models.GuildConfig", b =>
                 {
                     b.HasOne("Asahi.Database.Models.BirthdayConfig", "DefaultBirthdayConfig")
@@ -613,6 +664,11 @@ namespace Asahi.Migrations.SqliteMigrations
             modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
                 {
                     b.Navigation("TrustedIds");
+                });
+
+            modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
+                {
+                    b.Navigation("CachedMessageReactions");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>

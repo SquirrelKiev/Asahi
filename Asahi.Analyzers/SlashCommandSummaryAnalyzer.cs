@@ -19,7 +19,8 @@ public class SlashCommandSummaryAnalyzer : DiagnosticAnalyzer
 
 #pragma warning disable RS2008 // Enable analyzer release tracking
     private static readonly DiagnosticDescriptor Rule =
-        new(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: Description);
+        new(DiagnosticId, Title, MessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true,
+            description: Description);
 #pragma warning restore RS2008 // Enable analyzer release tracking
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
@@ -27,7 +28,8 @@ public class SlashCommandSummaryAnalyzer : DiagnosticAnalyzer
     public override void Initialize(AnalysisContext context)
     {
         context.EnableConcurrentExecution();
-        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
+        context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze |
+                                               GeneratedCodeAnalysisFlags.ReportDiagnostics);
         context.RegisterSyntaxNodeAction(AnalyzeMethod, SyntaxKind.MethodDeclaration);
     }
 
@@ -55,7 +57,22 @@ public class SlashCommandSummaryAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            // should probably check if the attribute has a description set but this is probably fine
+            var hasNamedDescription = summaryAttribute.NamedArguments
+                .Any(na => na.Key == "description" && !string.IsNullOrWhiteSpace(na.Value.Value?.ToString()));
+
+            if (hasNamedDescription)
+            {
+                continue;
+            }
+
+            var hasPositionalDescription = summaryAttribute.ConstructorArguments.Length >= 2 && 
+                                           !string.IsNullOrWhiteSpace(summaryAttribute.ConstructorArguments[1].Value?.ToString());
+
+            if (!hasPositionalDescription)
+            {
+                var diagnostic = Diagnostic.Create(Rule, parameter.GetLocation(), parameter.Identifier.Text);
+                context.ReportDiagnostic(diagnostic);
+            }
         }
     }
 }

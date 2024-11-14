@@ -303,7 +303,7 @@ public static class QuotingHelpers
         }
     }
 
-    public static async ValueTask<Color> GetQuoteEmbedColor(EmbedColorSource colorSource, Color fallbackColor, IGuildUser? embedAuthor, DiscordSocketClient client)
+    public static async ValueTask<Color> GetQuoteEmbedColor(EmbedColorSource colorSource, Color fallbackColor, IGuildUser? embedAuthor, IDiscordClient client)
     {
         Color embedColor = fallbackColor;
 
@@ -314,41 +314,11 @@ public static class QuotingHelpers
             case EmbedColorSource.UsersRoleColor:
                 embedColor = GetUserRoleColorWithFallback(user, embedColor);
                 break;
-            case EmbedColorSource.UsersBannerColor:
-                if (user != null)
-                {
-                    var restUser = await client.Rest.GetUserAsync(user.Id);
-
-                    embedColor = restUser.BannerColor ?? embedColor;
-                }
-                break;
-            case EmbedColorSource.UsersAccentColor:
-                if (user != null)
-                {
-                    var restUser = await client.Rest.GetUserAsync(user.Id);
-
-                    embedColor = restUser.AccentColor ?? embedColor;
-                }
-                break;
             case EmbedColorSource.BotsRoleColor:
                 if (embedAuthor != null)
                 {
                     user = await embedAuthor.Guild.GetCurrentUserAsync();
                     goto case EmbedColorSource.UsersRoleColor;
-                }
-                break;
-            case EmbedColorSource.BotsBannerColor:
-                if (embedAuthor != null)
-                {
-                    user = await embedAuthor.Guild.GetCurrentUserAsync();
-                    goto case EmbedColorSource.UsersBannerColor;
-                }
-                break;
-            case EmbedColorSource.BotsAccentColor:
-                if (embedAuthor != null)
-                {
-                    user = await embedAuthor.Guild.GetCurrentUserAsync();
-                    goto case EmbedColorSource.UsersAccentColor;
                 }
                 break;
             case EmbedColorSource.AlwaysUseFallbackColor:

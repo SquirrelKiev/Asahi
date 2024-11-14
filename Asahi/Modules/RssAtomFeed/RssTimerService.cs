@@ -1,6 +1,7 @@
 ﻿using Asahi.Database;
 using Asahi.Modules.RssAtomFeed.Models;
 using CodeHollow.FeedReader;
+using Discord.Rest;
 using Discord.Webhook;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,11 @@ namespace Asahi.Modules.RssAtomFeed;
 [Inject(ServiceLifetime.Singleton)]
 public class RssTimerService(
     IHttpClientFactory clientFactory,
-    DbService dbService,
+    IDbService dbService,
     DiscordSocketClient client,
     ILogger<RssTimerService> logger,
     BotConfig config,
+    DiscordRestConfig webhookRestConfig,
     IRedditApi redditApi
 )
 {
@@ -194,7 +196,7 @@ public class RssTimerService(
                                 webhookClient = new DiscordWebhookClient(
                                     webhook.Id,
                                     webhook.Token,
-                                    BotService.WebhookRestConfig
+                                    webhookRestConfig
                                 );
                                 webhookClient.Log += msg => BotService.Client_Log(logger, msg);
                             }

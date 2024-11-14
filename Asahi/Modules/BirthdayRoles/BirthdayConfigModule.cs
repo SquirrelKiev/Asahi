@@ -33,7 +33,7 @@ public enum Months
 // dumb I have to do this
 [Group("birthday", "User facing birthday commands")]
 public class UserFacingBirthdayConfigModule(
-    DbService dbService,
+    IDbService dbService,
     IClock clock,
     InteractiveService interactive) : BotModule
 {
@@ -274,7 +274,7 @@ public class UserFacingBirthdayConfigModule(
 [Group("birthday-config", "Commands relating to birthday management.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 public class BirthdayConfigModule(
-        DbService dbService,
+        IDbService dbService,
         BirthdayTimerService bts,
         IClock clock) : BotModule
 {

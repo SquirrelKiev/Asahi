@@ -20,7 +20,7 @@ namespace Asahi;
 public class BotService(
     DiscordSocketClient client,
     BotConfig config,
-    DbService dbService,
+    IDbService dbService,
     ILogger<BotService> logger,
     CommandHandler commandHandler,
     // TODO: Remove the request for services and just inject manually
@@ -36,9 +36,6 @@ public class BotService(
 #endif
         "Asahi Webhook";
     public CancellationTokenSource cts = new();
-
-    public static readonly DiscordRestConfig WebhookRestConfig =
-        new() { LogLevel = LogSeverity.Verbose };
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -120,8 +117,6 @@ public class BotService(
         SocketReaction reaction
     )
     {
-        logger.LogTrace("Reaction added");
-
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
             return;
 
@@ -155,8 +150,6 @@ public class BotService(
         SocketReaction reaction
     )
     {
-        logger.LogTrace("Reaction removed");
-
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
             return;
 
@@ -252,18 +245,16 @@ public class BotService(
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
-        // TODO: Merge all these timer tasks into one big thing to avoid potential rate-limits?
-        // no then everything would be single-threaded
         hts.StartBackgroundTask(cts.Token);
 
         css.StartBackgroundTask(cts.Token);
-
+        
         var birthdayTimer = services.GetRequiredService<BirthdayTimerService>();
         birthdayTimer.StartBackgroundTask(cts.Token);
-
+        
         var rssTimerService = services.GetRequiredService<RssTimerService>();
         rssTimerService.StartBackgroundTask(cts.Token);
-
+        
         var roleManagement = services.GetRequiredService<RoleManagementService>();
         await roleManagement.CacheAndResolve();
     }

@@ -1,4 +1,6 @@
-﻿namespace Asahi;
+﻿using Humanizer;
+
+namespace Asahi;
 
 public static class StringExtensions
 {
@@ -41,5 +43,43 @@ public static class StringExtensions
     public static string StringOrDefault(this string? potential, string def)
     {
         return string.IsNullOrWhiteSpace(potential) ? def : potential;
+    }
+    
+    public static string HumanizeStringArrayWithTruncation(this IEnumerable<string> strings, int maxLength = 256)
+    {
+        var characters = strings.ToList();
+    
+        for (int i = 1; i <= characters.Count; i++)
+        {
+            var tempList = characters.Take(i).ToList();
+            var remainingCount = characters.Count - i;
+        
+            // check what the string would look like if we include this item and potentially the "X more" suffix
+            var potentialList = remainingCount > 0 
+                ? tempList.Concat(new[] { $"{remainingCount} more" }).ToList()
+                : tempList;
+            
+            var formatted = potentialList.Humanize();
+        
+            if (formatted.Length > maxLength)
+            {
+                // go back one step and add the "more" count
+                var finalList = characters.Take(i - 1)
+                    .Concat(new[] { $"{characters.Count - (i - 1)} more" });
+
+                var finalString = finalList.Humanize();
+                
+                if(finalString.Length > maxLength)
+                    finalString = characters[0].Truncate(maxLength, false);
+                
+                return finalString;
+            }
+        
+            if (i == characters.Count)
+                return formatted;
+        }
+
+        //reached if the enumerable is empty
+        return "";
     }
 }

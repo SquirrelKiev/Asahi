@@ -8,7 +8,7 @@ using NodaTime;
 namespace Asahi.Modules.BirthdayRoles;
 
 [Inject(ServiceLifetime.Singleton)]
-public class BirthdayTimerService(DiscordSocketClient client, DbService dbService, IClock clock, ILogger<BirthdayTimerService> logger)
+public class BirthdayTimerService(DiscordSocketClient client, IDbService dbService, IClock clock, ILogger<BirthdayTimerService> logger)
 {
     public Task? timerTask;
 

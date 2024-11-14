@@ -5,16 +5,21 @@ using Serilog.Core;
 
 namespace Asahi.Database;
 
-public class DbService(BotConfig botConfig, ILoggerFactory loggerFactory, ILogger<DbService> logger)
+public interface IDbService
+{
+    Task Initialize(bool migrationEnabled);
+    BotDbContext GetDbContext();
+    Task ResetDatabase();
+}
+
+public class DbService(BotConfig botConfig, ILoggerFactory loggerFactory, ILogger<DbService> logger) : IDbService
 {
     public async Task Initialize(bool migrationEnabled)
     {
         logger.LogDebug("Database migration: {migrationStatus}", migrationEnabled);
 
         var context = GetDbContext();
-
-        PreMigration(context);
-
+        
         if (migrationEnabled)
         {
             await context.Database.MigrateAsync();
@@ -40,6 +45,4 @@ public class DbService(BotConfig botConfig, ILoggerFactory loggerFactory, ILogge
         await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.EnsureCreatedAsync();
     }
-
-    public void PreMigration(BotDbContext context) {}
 }

@@ -20,7 +20,7 @@ namespace Asahi.Modules.BotManagement;
 
 [Group("bot", "Commands relating to configuring the bot.")]
 public class BotManagementModule(
-    DbService dbService,
+    IDbService dbService,
     CustomStatusService css,
     BotConfig config,
     InteractiveService interactive,

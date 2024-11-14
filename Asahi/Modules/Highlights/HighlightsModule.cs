@@ -17,7 +17,7 @@ namespace Asahi.Modules.Highlights;
 //[DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [Group("highlights", "Commands relating to the highlights system.")]
 public class HighlightsModule(
-    DbService dbService,
+    IDbService dbService,
     HighlightsTrackingService hts,
     ILogger<HighlightsModule> logger,
     InteractiveService interactive
@@ -94,7 +94,7 @@ public class HighlightsModule(
     #region Override Threshold
 
     [Group("threshold", "Commands relating to threshold overrides.")]
-    public class HighlightsThresholdSubmodule(DbService dbService) : HighlightsSubmodule(dbService)
+    public class HighlightsThresholdSubmodule(IDbService dbService) : HighlightsSubmodule(dbService)
     {
         [SlashCommand("add", "Adds a new threshold override for the specified channel.")]
         public Task ThresholdAddOverrideSlash(
@@ -857,7 +857,7 @@ public class HighlightsModule(
     #region Filtered Channels
 
     [Group("filtered-channel", "Commands relating to channel filters.")]
-    public class HighlightsFilteredChannelsSubmodule(DbService dbService)
+    public class HighlightsFilteredChannelsSubmodule(IDbService dbService)
         : HighlightsSubmodule(dbService)
     {
         [SlashCommand(
@@ -1210,7 +1210,7 @@ public class HighlightsModule(
     #region Auto Reacts
 
     [Group("auto-react", "Commands relating to auto reacts.")]
-    public class HighlightsAutoReactSubmodule(DbService dbService) : HighlightsSubmodule(dbService)
+    public class HighlightsAutoReactSubmodule(IDbService dbService) : HighlightsSubmodule(dbService)
     {
         [SlashCommand(
             "max-attempts",
@@ -1934,7 +1934,7 @@ public static class HighlightsModuleUtility
 {
     public static async Task<bool> CommonConfig(
         IInteractionContext botContext,
-        DbService dbService,
+        IDbService dbService,
         string name,
         Func<BotDbContext, string, EmbedBuilder, Task<ConfigChangeResult>> updateAction
     )
@@ -1960,7 +1960,7 @@ public static class HighlightsModuleUtility
 
     public static Task<bool> CommonBoardConfig(
         IInteractionContext botContext,
-        DbService dbService,
+        IDbService dbService,
         string userSetName,
         Func<ConfigChangeOptions, Task<ConfigChangeResult>> updateAction,
         Func<IQueryable<HighlightBoard>, IQueryable<HighlightBoard>>? highlightBoardModifier = null
@@ -1989,7 +1989,7 @@ public static class HighlightsModuleUtility
 
     public static Task<bool> CommonThresholdConfig(
         IInteractionContext botContext,
-        DbService dbService,
+        IDbService dbService,
         string userSetName,
         string channelId,
         Func<ConfigChangeOptions, HighlightThreshold, Task<ConfigChangeResult>> updateAction
@@ -2033,9 +2033,9 @@ public static class HighlightsModuleUtility
     }
 }
 
-public class HighlightsSubmodule(DbService dbService) : BotModule
+public class HighlightsSubmodule(IDbService dbService) : BotModule
 {
-    protected readonly DbService dbService = dbService;
+    protected readonly IDbService dbService = dbService;
 
     protected Task<bool> CommonConfig(
         Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction

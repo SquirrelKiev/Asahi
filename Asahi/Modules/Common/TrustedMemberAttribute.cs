@@ -13,7 +13,7 @@ public class TrustedMemberAttribute(TrustedUserPerms requiredPerms) : Preconditi
         var isTrusted = config.ManagerUserIds.Contains(context.User.Id);
         if (!isTrusted)
         {
-            await using var dbContext = services.GetRequiredService<DbService>().GetDbContext();
+            await using var dbContext = services.GetRequiredService<IDbService>().GetDbContext();
 
             var botWideConfig = await dbContext.GetBotWideConfig(context.Client.CurrentUser.Id);
 

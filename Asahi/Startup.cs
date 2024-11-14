@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using Asahi.Database;
 using Asahi.Modules.About;
 using Asahi.Modules.AnimeThemes;
@@ -6,6 +7,7 @@ using Asahi.Modules.RssAtomFeed;
 using Asahi.Modules.Tatsu;
 using Discord.Commands;
 using Discord.Interactions;
+using Discord.Rest;
 using Discord.WebSocket;
 using Fergun.Interactive;
 using Microsoft.Extensions.Configuration;
@@ -23,6 +25,9 @@ public static class Startup
 {
     public static async Task Main()
     {
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+        
         Console.OutputEncoding = Encoding.UTF8;
         Log.Logger = new LoggerConfiguration().WriteTo.Console(outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}").CreateLogger();
 
@@ -81,6 +86,8 @@ public static class Startup
                 LogLevel = LogSeverity.Verbose,
                 AlwaysDownloadUsers = true
             }))
+            .AddTransient(x => new DiscordRestConfig() { LogLevel = LogSeverity.Verbose })
+            .AddSingleton<IDiscordClient>(x => x.GetRequiredService<DiscordSocketClient>())
             .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>(),
                 new InteractionServiceConfig()
                 {
@@ -93,7 +100,7 @@ public static class Startup
                 DefaultRunMode = Discord.Commands.RunMode.Async
             }))
             .AddSingleton<CommandHandler>()
-            .AddSingleton<DbService>()
+            .AddSingleton<IDbService, DbService>()
             .AddSingleton(new InteractiveConfig()
             { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true })
             .AddSingleton<InteractiveService>()

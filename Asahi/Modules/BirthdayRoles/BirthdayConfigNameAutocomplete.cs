@@ -13,7 +13,7 @@ public class BirthdayConfigNameAutocomplete : AutocompleteHandler
             return AutocompletionResult.FromSuccess();
 
         var autocompletes = new List<AutocompleteResult>();
-        var dbService = services.GetRequiredService<DbService>();
+        var dbService = services.GetRequiredService<IDbService>();
 
         await using var dbContext = dbService.GetDbContext();
 

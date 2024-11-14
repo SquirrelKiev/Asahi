@@ -11,25 +11,13 @@ public enum EmbedColorSource
 {
     [ChoiceDisplay("Always use the fallback color.")]
     [Description("Always use the fallback color.")]
-    AlwaysUseFallbackColor,
+    AlwaysUseFallbackColor = 0,
     [ChoiceDisplay("Use the user's role color.")]
     [Description("Use the user's role color.")]
-    UsersRoleColor,
-    [ChoiceDisplay("Use the user's banner color.")]
-    [Description("Use the user's banner color.")]
-    UsersBannerColor,
-    [ChoiceDisplay("Use the user's accent color.")]
-    [Description("Use the user's accent color.")]
-    UsersAccentColor,
+    UsersRoleColor = 1,
     [ChoiceDisplay("Use the bot's role color.")]
     [Description("Use the bot's role color.")]
-    BotsRoleColor,
-    [ChoiceDisplay("Use the bot's banner color.")]
-    [Description("Use the bot's banner color.")]
-    BotsBannerColor,
-    [ChoiceDisplay("Use the bot's accent color.")]
-    [Description("Use the bot's accent color.")]
-    BotsAccentColor
+    BotsRoleColor = 4,
 }
 
 [JsonConverter(typeof(StringEnumConverter))]
