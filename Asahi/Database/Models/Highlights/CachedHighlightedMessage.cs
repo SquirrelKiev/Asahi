@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Asahi.Database.Models;
 
@@ -44,11 +45,13 @@ public class CachedHighlightedMessage : DbModel
     /// The IDs of the messages sent by the bot in the highlights channel
     /// </summary>
     public required List<ulong> HighlightMessageIds { get; set; }
-    //
-    // public string HighlightBoardName { get; set; } = null!;
-    //
-    // public ulong HighlightBoardGuildId { get; set; }
     
+    [MaxLength(HighlightBoard.MaxNameLength)]
+    public string HighlightBoardName { get; set; } = null!;
+    
+    public ulong HighlightBoardGuildId { get; set; }
+    
+    [ForeignKey($"{nameof(HighlightBoardGuildId)},{nameof(HighlightBoardName)}")]
     public HighlightBoard HighlightBoard { get; set; } = null!;
 
     public void UpdateReactions(Dictionary<IEmote, HashSet<ulong>> emoteUserMap)

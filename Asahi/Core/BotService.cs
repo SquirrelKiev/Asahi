@@ -117,8 +117,6 @@ public class BotService(
         SocketReaction reaction
     )
     {
-        logger.LogTrace("Reaction added");
-
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
             return;
 
@@ -152,8 +150,6 @@ public class BotService(
         SocketReaction reaction
     )
     {
-        logger.LogTrace("Reaction removed");
-
         if (reaction.User.IsSpecified && reaction.User.Value.IsBot)
             return;
 
@@ -249,17 +245,17 @@ public class BotService(
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
-        hts.StartBackgroundTask(cts.Token);
+        // hts.StartBackgroundTask(cts.Token);
 
         css.StartBackgroundTask(cts.Token);
         
         var birthdayTimer = services.GetRequiredService<BirthdayTimerService>();
-        birthdayTimer.StartBackgroundTask(cts.Token);
+        // birthdayTimer.StartBackgroundTask(cts.Token);
         
         var rssTimerService = services.GetRequiredService<RssTimerService>();
-        rssTimerService.StartBackgroundTask(cts.Token);
+        // rssTimerService.StartBackgroundTask(cts.Token);
         
         var roleManagement = services.GetRequiredService<RoleManagementService>();
-        await roleManagement.CacheAndResolve();
+        // await roleManagement.CacheAndResolve();
     }
 }
