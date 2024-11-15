@@ -109,14 +109,16 @@ public class StatisticsModule(IDbService dbService, ILogger<StatisticsModule> lo
     public async Task ChannelsWithMostReactionsSlash(
         [Summary(description: "Optional board to filter results by.")]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string? board = null
+        string board = "",
+        [Summary(description: "Optional user to filter results by.")]
+        IUser? user = null
     )
     {
         await DeferAsync();
 
+        var postgresHappyUserId = user?.Id ?? 0;
+        
         await using var context = dbService.GetDbContext();
-
-        var postgresHappyBoard = board ?? "";
 
         var results = await context.Database
             .SqlQuery<IdToReactionCount>($"""
@@ -126,7 +128,8 @@ public class StatisticsModule(IDbService dbService, ILogger<StatisticsModule> lo
                                                   "TotalUniqueReactions"
                                               FROM "CachedHighlightedMessages"
                                               WHERE "HighlightBoardGuildId" = {Context.Guild.Id}
-                                              AND ({postgresHappyBoard} = '' OR "HighlightBoardName" = {postgresHappyBoard})
+                                              AND ({board} = '' OR "HighlightBoardName" = {board})
+                                              AND ({postgresHappyUserId} = 0 OR "AuthorId" = {postgresHappyUserId})
                                               ORDER BY "OriginalMessageId", "TotalUniqueReactions" DESC
                                           )
                                           SELECT "OriginalMessageChannelId" AS Id, SUM("TotalUniqueReactions") as TotalReactions FROM UniqueMessages
