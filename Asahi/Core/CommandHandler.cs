@@ -210,9 +210,8 @@ public class CommandHandler(
 
         if (ctx.Interaction is SocketMessageComponent componentInteraction)
         {
-            if (
-                componentInteraction.Data.CustomId != ModulePrefixes.RED_BUTTON
-                && interactiveService.Callbacks.ContainsKey(componentInteraction.Message.Id)
+            if (   interactiveService.IsManaged(componentInteraction)
+                || interactiveService.TriggersAnyFilter(componentInteraction)
             )
                 return;
 
@@ -220,16 +219,7 @@ public class CommandHandler(
 
             var ogAuthor = ogRes.Interaction?.User.Id;
 
-            // horrible
-            if (ogAuthor == null)
-            {
-                var channel = (ISocketMessageChannel)
-                    await client.GetChannelAsync(ogRes.Reference.ChannelId);
-                var message = await channel.GetMessageAsync(ogRes.Reference.MessageId.Value);
-                ogAuthor = message?.Author?.Id;
-            }
-
-            if (ogAuthor != null && ogAuthor != ctx.Interaction.User.Id)
+            if (ogAuthor == null || ogAuthor != ctx.Interaction.User.Id)
             {
                 await componentInteraction.RespondAsync(
                     "You did not originally trigger this. Please run the command yourself.",

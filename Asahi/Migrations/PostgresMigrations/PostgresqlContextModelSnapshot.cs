@@ -18,7 +18,7 @@ namespace Asahi.Migrations.PostgresMigrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -32,7 +32,7 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.Property<decimal>("GuildId")
                         .HasColumnType("numeric(20,0)");
 
-                    b.Property<decimal[]>("AllowedRoles")
+                    b.PrimitiveCollection<decimal[]>("AllowedRoles")
                         .IsRequired()
                         .HasColumnType("numeric(20,0)[]");
 
@@ -49,7 +49,7 @@ namespace Asahi.Migrations.PostgresMigrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<decimal[]>("DeniedRoles")
+                    b.PrimitiveCollection<decimal[]>("DeniedRoles")
                         .IsRequired()
                         .HasColumnType("numeric(20,0)[]");
 
@@ -133,7 +133,7 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.Property<int>("ActivityType")
                         .HasColumnType("integer");
 
-                    b.Property<string[]>("BotActivities")
+                    b.PrimitiveCollection<string[]>("BotActivities")
                         .IsRequired()
                         .HasColumnType("text[]");
 
@@ -167,9 +167,10 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.Property<string>("HighlightBoardName")
                         .IsRequired()
+                        .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<decimal[]>("HighlightMessageIds")
+                    b.PrimitiveCollection<decimal[]>("HighlightMessageIds")
                         .IsRequired()
                         .HasColumnType("numeric(20,0)[]");
 
@@ -307,6 +308,9 @@ namespace Asahi.Migrations.PostgresMigrations
                         .HasMaxLength(8)
                         .HasColumnType("character varying(8)");
 
+                    b.Property<bool>("ShouldSendWelcomeMessage")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("SpoilerBotAutoDeleteContextSetting")
                         .HasColumnType("boolean");
 
@@ -317,6 +321,13 @@ namespace Asahi.Migrations.PostgresMigrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("WelcomeMessageChannelId")
+                        .HasColumnType("numeric(20,0)");
+
+                    b.Property<string>("WelcomeMessageJson")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("GuildId");
 
@@ -357,7 +368,7 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.Property<bool>("FilterSelfReactions")
                         .HasColumnType("boolean");
 
-                    b.Property<decimal[]>("FilteredChannels")
+                    b.PrimitiveCollection<decimal[]>("FilteredChannels")
                         .IsRequired()
                         .HasColumnType("numeric(20,0)[]");
 

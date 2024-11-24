@@ -1,5 +1,7 @@
 ﻿using Asahi.Database;
 using System.Text.RegularExpressions;
+using Discord.Interactions;
+using FluentResults;
 
 namespace Asahi.Modules;
 
@@ -53,6 +55,10 @@ public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraE
     public bool shouldSave = shouldSave;
 
     public ConfigChangeResult(bool wasSuccess, string message) : this(wasSuccess, message, [])
+    {
+    }
+
+    public ConfigChangeResult(List<IError> errorReasons) : this(false, $"Failed. {string.Join("; ", errorReasons.Select(x => $"`{x}`"))}", [])
     {
     }
 }

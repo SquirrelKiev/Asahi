@@ -7,6 +7,7 @@ using Asahi.Modules.Highlights;
 using Asahi.Modules.ModSpoilers;
 using Asahi.Modules.RssAtomFeed;
 using Asahi.Modules.Seigen;
+using Asahi.Modules.Welcome;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.Rest;
@@ -27,7 +28,8 @@ public class BotService(
     IServiceProvider services,
     HighlightsTrackingService hts,
     CustomStatusService css,
-    ModSpoilerService mss
+    ModSpoilerService mss,
+    WelcomeService ws
 ) : BackgroundService
 {
     public const string WebhookDefaultName =
@@ -92,8 +94,12 @@ public class BotService(
     private Task Client_UserLeft(SocketGuild guild, SocketUser user) =>
         services.GetRequiredService<RoleManagementService>().OnUserLeft(guild, user);
 
-    private Task Client_UserJoined(SocketGuildUser user) =>
-        services.GetRequiredService<RoleManagementService>().OnUserJoined(user);
+    private async Task Client_UserJoined(SocketGuildUser user)
+    {
+        await ws.OnUserJoined(user);
+        
+        await services.GetRequiredService<RoleManagementService>().OnUserJoined(user);
+    }
 
     private async Task Client_GuildMemberUpdated(
         Cacheable<SocketGuildUser, ulong> cacheable,

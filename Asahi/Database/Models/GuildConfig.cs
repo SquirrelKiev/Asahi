@@ -16,6 +16,10 @@ public class GuildConfig
     public bool SpoilerBotAutoDeleteOriginal { get; set; } = true;
 
     public bool SpoilerBotAutoDeleteContextSetting { get; set; } = true;
+    
+    public bool ShouldSendWelcomeMessage { get; set; } = false;
+    public string WelcomeMessageJson { get; set; } = "";
+    public ulong WelcomeMessageChannelId { get; set; } = 0ul;
 
     [MaxLength(100)]
     public string SpoilerReactionEmote { get; set; } = "";

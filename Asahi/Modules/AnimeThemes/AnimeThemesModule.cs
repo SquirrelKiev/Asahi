@@ -13,13 +13,6 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
     private const string NEXT_PAGE_BUTTON = "at-np:";
     private const string SELECT_PREFIX = "at-s:";
 
-    // HACK: interactive.NextMessageComponentAsync doesn't register anything with CommandHandler,
-    // causing issues as it thinks nothing is able to respond to the components. This makes it happy.
-    // Has the added bonus of giving a response to people interacting with it who shouldn't be (people who didn't trigger the command)
-    // honestly I'm blown away by my genius sometimes
-    [ComponentInteraction($"({BACK_BUTTON}|{PREVIOUS_PAGE_BUTTON}|{NEXT_PAGE_BUTTON}|{SELECT_PREFIX})", TreatAsRegex = true)]
-    public Task DummyComponent() => Task.CompletedTask;
-
     [SlashCommand("theme", "Searches for anime theme songs via animethemes.moe.")]
     [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
     [IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
