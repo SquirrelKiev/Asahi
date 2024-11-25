@@ -2,10 +2,11 @@
 
 namespace Asahi.Modules.About;
 
+[CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 public class AboutModule(AboutService aboutService, OverrideTrackerService overrideTrackerService) : BotModule
 {
     [SlashCommand("about", "Info about the bot.")]
-    [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm)]
     public async Task AboutSlash()
     {
         await DeferAsync();

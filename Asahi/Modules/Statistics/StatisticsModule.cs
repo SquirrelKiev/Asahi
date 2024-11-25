@@ -3,13 +3,14 @@ using Asahi.Database;
 using Asahi.Modules.Highlights;
 using Discord.Interactions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.Statistics;
 
 // TODO: Something about sqlite. just disable for this?
 [Group("stats", "Commands relating to statistics")]
-public class StatisticsModule(IDbService dbService, ILogger<StatisticsModule> logger) : BotModule
+[CommandContextType(InteractionContextType.Guild)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
+public class StatisticsModule(IDbService dbService) : BotModule
 {
     // One day you shall work...
     // .GroupBy(x => x.OriginalMessageId)

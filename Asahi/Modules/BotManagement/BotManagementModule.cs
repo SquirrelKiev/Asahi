@@ -19,6 +19,9 @@ using Newtonsoft.Json;
 namespace Asahi.Modules.BotManagement;
 
 [Group("bot", "Commands relating to configuring the bot.")]
+[CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
+[DefaultMemberPermissions(GuildPermission.ManageGuild)]
 public class BotManagementModule(
     IDbService dbService,
     CustomStatusService css,

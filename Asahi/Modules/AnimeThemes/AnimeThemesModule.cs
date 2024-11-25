@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.AnimeThemes;
 
+[CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService interactive, BotConfig config, ILogger<AnimeThemesModule> logger) : BotModule
 {
     private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(3);
@@ -14,8 +16,6 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
     private const string SELECT_PREFIX = "at-s:";
 
     [SlashCommand("theme", "Searches for anime theme songs via animethemes.moe.")]
-    [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
-    [IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
     public async Task ThemeSlash([Summary(description: "The anime to look for the theme songs of.")] string query)
     {
         const int maxPageLength = 5;

@@ -10,6 +10,8 @@ namespace Asahi.Modules.Welcome;
 
 [Group("welcome-config", "Commands related to configuration of the welcome module.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
+[CommandContextType(InteractionContextType.Guild)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class WelcomeConfigModule(IDbService dbService, WelcomeService welcomeService) : BotModule
 {
     [SlashCommand("set-template", "Sets the welcome message template.")]
@@ -115,11 +117,11 @@ public class WelcomeConfigModule(IDbService dbService, WelcomeService welcomeSer
         [Summary(description: "True to send welcome messages; False to not.")]
         bool toggle)
     {
-        await CommonWelcomeConfig(Context.Guild.Id, async (context) =>
+        await CommonWelcomeConfig(Context.Guild.Id, (context) =>
         {
             if (context.Config.WelcomeMessageJson == "")
             {
-                return new ConfigChangeResult(false, "Welcome message template not set!");
+                return Task.FromResult(new ConfigChangeResult(false, "Welcome message template not set!"));
             }
 
             if (context.Config.WelcomeMessageChannelId == 0ul)
@@ -130,13 +132,13 @@ public class WelcomeConfigModule(IDbService dbService, WelcomeService welcomeSer
                 }
                 else
                 {
-                    return new ConfigChangeResult(false, "Channel to send welcome messages to is not set!");
+                    return Task.FromResult(new ConfigChangeResult(false, "Channel to send welcome messages to is not set!"));
                 }
             }
 
             context.Config.ShouldSendWelcomeMessage = toggle;
 
-            return new ConfigChangeResult(true, $"Welcome messages are now {(toggle ? "enabled" : "disabled")}.");
+            return Task.FromResult(new ConfigChangeResult(true, $"Welcome messages are now {(toggle ? "enabled" : "disabled")}."));
         });
     }
 

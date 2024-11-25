@@ -9,8 +9,12 @@ using NodaTime.TimeZones;
 
 namespace Asahi.Modules.Utilities;
 
+[CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : BotModule
 {
+    [CommandContextType(InteractionContextType.Guild)]
+    [IntegrationType(ApplicationIntegrationType.GuildInstall)]
     [DefaultMemberPermissions(GuildPermission.ManageRoles)]
     [SlashCommand("hide-channel", "Hides a channel from a list of users.")]
     public async Task HideChannelSlash(
@@ -57,6 +61,8 @@ public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : Bo
         await FollowupAsync(body, allowedMentions: AllowedMentions.None);
     }
 
+    [CommandContextType(InteractionContextType.Guild)]
+    [IntegrationType(ApplicationIntegrationType.GuildInstall)]
     [DefaultMemberPermissions(GuildPermission.ManageRoles)]
     [SlashCommand("unhide-channel", "Unhides a channel from a list of users.")]
     public async Task UnhideChannelSlash(

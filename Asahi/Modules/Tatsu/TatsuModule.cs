@@ -4,6 +4,8 @@ namespace Asahi.Modules.Tatsu;
 
 [Group("tatsu", "Commands for managing tatsu. All involving API keys are ephemeral.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
+[CommandContextType(InteractionContextType.Guild)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class TatsuModule : BotModule
 {
     [Group("score", "Tatsu score stuff.")]

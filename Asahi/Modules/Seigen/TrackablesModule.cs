@@ -9,6 +9,7 @@ namespace Asahi.Modules.Seigen;
 
 [CommandContextType(InteractionContextType.Guild)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
 [Group("trackables", "Commands relating to managing trackables and their users.")]
 public class TrackablesModule(IDbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {
@@ -348,7 +349,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
     [SlashCommand("untrack-user", "Force adds a user to the specified trackable.")]
     public async Task UntrackUser(
         [Autocomplete(typeof(TrackableAutocompleteHandler))]
-        [Summary(ID_PARAM_NAME)]
+        [Summary(ID_PARAM_NAME, ID_PARAM_DESCRIPTION)]
         string idStr, 
         [Summary(description: "The user to forcefully untrack.")]
         IUser user)
@@ -400,7 +401,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
     }
 
     [SlashCommand("list-users", "Lists all the users for the current trackable.")]
-    public async Task ListUsers([Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME)] string idStr)
+    public async Task ListUsers([Autocomplete(typeof(TrackableAutocompleteHandler)), Summary(ID_PARAM_NAME, ID_PARAM_DESCRIPTION)] string idStr)
     {
         await DeferAsync();
 

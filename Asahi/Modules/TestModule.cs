@@ -6,6 +6,8 @@ using Newtonsoft.Json;
 
 namespace Asahi.Modules;
 
+[CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 public class TestModule(
     HttpClient client
     //ILogger<TestModule> logger

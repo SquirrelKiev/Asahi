@@ -5,6 +5,8 @@ namespace Asahi.Modules.ModSpoilers;
 
 [Group("spoiler", "Commands relating to mod spoiler tagging.")]
 [DefaultMemberPermissions(GuildPermission.ManageMessages)]
+[CommandContextType(InteractionContextType.Guild)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class ModSpoilerModule(ModSpoilerService mss, IDbService dbService) : BotModule
 {
     public class SetContextModal : IModal

@@ -3,6 +3,7 @@ using System.Composition;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Discord.Interactions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -15,7 +16,7 @@ namespace Asahi.Analyzers;
 [ExportCodeFixProvider(LanguageNames.CSharp), Shared]
 public class SlashCommandSummaryCodeFixProvider : CodeFixProvider
 {
-    public sealed override ImmutableArray<string> FixableDiagnosticIds => ["DA0001"];
+    public sealed override ImmutableArray<string> FixableDiagnosticIds => [SlashCommandSummaryAnalyzer.DiagnosticId];
 
     public sealed override FixAllProvider GetFixAllProvider() => WellKnownFixAllProviders.BatchFixer;
 
@@ -46,7 +47,7 @@ public class SlashCommandSummaryCodeFixProvider : CodeFixProvider
         var attributeList = SyntaxFactory.AttributeList(
             SyntaxFactory.SingletonSeparatedList(
                 SyntaxFactory.Attribute(
-                    SyntaxFactory.IdentifierName("Summary"),
+                    SyntaxFactory.IdentifierName(nameof(SummaryAttribute)),
                     SyntaxFactory.AttributeArgumentList(
                         SyntaxFactory.SingletonSeparatedList(
                             SyntaxFactory.AttributeArgument(
@@ -55,6 +56,7 @@ public class SlashCommandSummaryCodeFixProvider : CodeFixProvider
                                     SyntaxFactory.Literal($"Description for {parameter.Identifier.Text}")))
                             .WithNameColon(
                                 SyntaxFactory.NameColon(
+                                    // nameof doesnt work on parameters
                                     SyntaxFactory.IdentifierName("description"))))))));
 
         var newParameter = parameter.AddAttributeLists(attributeList.WithAdditionalAnnotations(Formatter.Annotation));

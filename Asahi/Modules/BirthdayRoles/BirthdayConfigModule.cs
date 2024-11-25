@@ -30,8 +30,9 @@ public enum Months
     December = 12
 }
 
-// dumb I have to do this
 [Group("birthday", "User facing birthday commands")]
+[CommandContextType(InteractionContextType.Guild)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class UserFacingBirthdayConfigModule(
     IDbService dbService,
     IClock clock,
@@ -273,6 +274,8 @@ public class UserFacingBirthdayConfigModule(
 
 [Group("birthday-config", "Commands relating to birthday management.")]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
+[CommandContextType(InteractionContextType.Guild)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class BirthdayConfigModule(
         IDbService dbService,
         BirthdayTimerService bts,

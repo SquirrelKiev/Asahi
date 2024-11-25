@@ -11,7 +11,7 @@ namespace Asahi.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class SlashCommandSummaryAnalyzer : DiagnosticAnalyzer
 {
-    private const string DiagnosticId = "DA0001";
+    public const string DiagnosticId = "DA0001";
     private const string Title = "Slash command parameter is missing a description";
     private const string MessageFormat = "Slash command parameter '{0}' is missing a description";
     private const string Description = "Slash command parameters should have a description.";

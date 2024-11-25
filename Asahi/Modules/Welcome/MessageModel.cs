@@ -199,6 +199,5 @@ public class FooterModel
 
 public class ImageModel
 {
-    [JsonProperty("url")]
-    public string Url { get; set; }
+    [JsonProperty("url")] public string Url { get; set; } = null!;
 }
