@@ -86,7 +86,10 @@ public class BirthdayTimerService(DiscordSocketClient client, IDbService dbServi
 
             foreach (var entry in group)
             {
-                birthdayAndys.Add(new BirthdayAndy(role, guild.GetUser(entry.UserId)));
+                var user = guild.GetUser(entry.UserId);
+                
+                if(user != null)
+                    birthdayAndys.Add(new BirthdayAndy(role, user));
             }
         }
 

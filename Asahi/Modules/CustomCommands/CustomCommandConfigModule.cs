@@ -8,7 +8,7 @@ namespace Asahi.Modules.CustomCommands;
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [Group("commands-config", "Stuff related to managing custom commands.")]
-public class CustomCommandConfigModule(CustomCommandService commandService, InteractiveService interactiveService) : BotModule
+public class CustomCommandConfigModule(CustomCommandService commandService) : BotModule
 {
     [SlashCommand("add", "Adds a custom command.")]
     public async Task AddCommand(
