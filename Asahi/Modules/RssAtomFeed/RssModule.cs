@@ -228,7 +228,7 @@ public class RssModule(IDbService dbService, RssTimerService rts, InteractiveSer
             QuotingHelpers.GetUserRoleColorWithFallback(currentUser, Color.Default), true);
 
         int i = 0;
-        foreach (var message in messages.Take(entriesToSend))
+        foreach (var message in messages.Take(entriesToSend).Reverse())
         {
             //logger.LogTrace($"message {i++}: {message.embeds?[0].Title} {message.embeds?[0].Timestamp}");
             await Context.Channel.SendMessageAsync(message.body, embeds: message.embeds,

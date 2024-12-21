@@ -87,8 +87,6 @@ public class RssTimerService(
         using var http = clientFactory.CreateClient();
         http.MaxResponseContentBufferSize = 8000000;
 
-        var channelsToPurgeFeedsOf = new List<ulong>();
-
         foreach (var feedGroup in feedsGrouped)
         {
             try
@@ -142,11 +140,10 @@ public class RssTimerService(
 
                         if (guild.GetChannel(feedListener.ChannelId) is not ITextChannel channel)
                         {
-                            logger.LogDebug(
-                                "unknown channel {channel}, added to purge queue",
+                            logger.LogWarning(
+                                "Unknown channel {channel}!",
                                 feedListener.ChannelId
                             );
-                            channelsToPurgeFeedsOf.Add(feedListener.ChannelId);
                             continue;
                         }
 
@@ -260,13 +257,6 @@ public class RssTimerService(
             {
                 logger.LogWarning(ex, "Failed to fetch feed {url}", feedGroup.Key);
             }
-        }
-
-        foreach (var channelId in channelsToPurgeFeedsOf)
-        {
-            await context
-                .RssFeedListeners.Where(x => x.ChannelId == channelId)
-                .ExecuteDeleteAsync();
         }
     }
 
