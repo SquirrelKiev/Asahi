@@ -53,6 +53,7 @@ public class RssTimerService(
             {
                 logger.LogError(ex, "Unhandled exception in TimerTask! {message}", ex.Message);
             }
+
             using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
@@ -66,8 +67,12 @@ public class RssTimerService(
                 }
             }
         }
-        catch (TaskCanceledException) { }
-        catch (OperationCanceledException) { }
+        catch (TaskCanceledException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception e)
         {
             logger.LogCritical(
@@ -141,8 +146,10 @@ public class RssTimerService(
                         if (guild.GetChannel(feedListener.ChannelId) is not ITextChannel channel)
                         {
                             logger.LogWarning(
-                                "Unknown channel {channel}!",
-                                feedListener.ChannelId
+                                "Unknown channel {channel}! Guild {guildId}, ID {feedListenerId}",
+                                feedListener.ChannelId,
+                                feedListener.GuildId,
+                                feedListener.Id
                             );
                             continue;
                         }
@@ -263,80 +270,80 @@ public class RssTimerService(
     public async Task<(
         bool isSuccess,
         IEmbedGenerator? embedGenerator
-    )> TryGetEmbedGeneratorForFeed(string url, string? reqContent)
+        )> TryGetEmbedGeneratorForFeed(string url, string? reqContent)
     {
         var feedHandler = FeedHandlerForUrl(url);
         IEmbedGenerator? embedGenerator;
         switch (feedHandler)
         {
             case FeedHandler.RssAtom:
+            {
+                var feed = FeedReader.ReadFromString(reqContent);
+
+                if (!ValidateFeed(feed))
                 {
-                    var feed = FeedReader.ReadFromString(reqContent);
-
-                    if (!ValidateFeed(feed))
-                    {
-                        embedGenerator = null;
-                        return (false, embedGenerator);
-                    }
-
-                    IEnumerable<FeedItem> feedsEnumerable = feed.Items;
-                    var feedsArray = feedsEnumerable.ToArray();
-
-                    embedGenerator = new RssFeedMessageGenerator(feed, feedsArray);
-                    break;
+                    embedGenerator = null;
+                    return (false, embedGenerator);
                 }
+
+                IEnumerable<FeedItem> feedsEnumerable = feed.Items;
+                var feedsArray = feedsEnumerable.ToArray();
+
+                embedGenerator = new RssFeedMessageGenerator(feed, feedsArray);
+                break;
+            }
             case FeedHandler.Danbooru:
+            {
+                var posts = JsonConvert.DeserializeObject<DanbooruPost[]>(reqContent!);
+
+                if (posts == null)
                 {
-                    var posts = JsonConvert.DeserializeObject<DanbooruPost[]>(reqContent!);
-
-                    if (posts == null)
-                    {
-                        embedGenerator = null;
-                        return (false, embedGenerator);
-                    }
-
-                    embedGenerator = new DanbooruMessageGenerator(posts, config);
-                    break;
+                    embedGenerator = null;
+                    return (false, embedGenerator);
                 }
+
+                embedGenerator = new DanbooruMessageGenerator(posts, config);
+                break;
+            }
             case FeedHandler.Reddit:
+            {
+                var regex = CompiledRegex.RedditFeedRegex().Match(url);
+
+                var feedType = regex.Groups["type"].Value;
+
+                if (feedType != "r")
                 {
-                    var regex = CompiledRegex.RedditFeedRegex().Match(url);
-
-                    var feedType = regex.Groups["type"].Value;
-
-                    if (feedType != "r")
-                    {
-                        embedGenerator = null;
-                        return (false, embedGenerator);
-                    }
-
-                    var subreddit = regex.Groups["subreddit"].Value;
-
-                    var posts = await redditApi.GetSubredditPosts(subreddit);
-
-                    embedGenerator = new RedditMessageGenerator(posts.Data.Children);
-                    break;
+                    embedGenerator = null;
+                    return (false, embedGenerator);
                 }
+
+                var subreddit = regex.Groups["subreddit"].Value;
+
+                var posts = await redditApi.GetSubredditPosts(subreddit);
+
+                embedGenerator = new RedditMessageGenerator(posts.Data.Children);
+                break;
+            }
             case FeedHandler.Nyaa:
-                {
-                    var feed = FeedReader.ReadFromString(reqContent);
+            {
+                var feed = FeedReader.ReadFromString(reqContent);
 
-                    IEnumerable<FeedItem> feedsEnumerable = feed.Items;
-                    var feedsArray = feedsEnumerable.ToArray();
+                IEnumerable<FeedItem> feedsEnumerable = feed.Items;
+                var feedsArray = feedsEnumerable.ToArray();
 
-                    embedGenerator = new NyaaFeedMessageGenerator(feed, feedsArray);
-                    break;
-                }
+                embedGenerator = new NyaaFeedMessageGenerator(feed, feedsArray);
+                break;
+            }
             case FeedHandler.Bsky:
-                {
-                    var feed = FeedReader.ReadFromString(reqContent);
+            {
+                var feed = FeedReader.ReadFromString(reqContent);
 
-                    IEnumerable<FeedItem> feedsEnumerable = feed.Items;
-                    var feedsArray = feedsEnumerable.ToArray();
+                IEnumerable<FeedItem> feedsEnumerable = feed.Items;
+                var feedsArray = feedsEnumerable.ToArray();
 
-                    embedGenerator = new BskyMessageGenerator(feedsArray);
-                    break;
-                }
+                embedGenerator = new BskyMessageGenerator(feedsArray);
+                break;
+            }
             default:
                 throw new ArgumentOutOfRangeException();
         }
