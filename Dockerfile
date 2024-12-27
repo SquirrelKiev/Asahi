@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 as build-env
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build-env
 
 WORKDIR /source
 
@@ -17,7 +17,7 @@ RUN set -xe; \
 dotnet publish Asahi/ -c Release -a $TARGETARCH -o /app; \
 chmod +x /app/Asahi
 
-FROM mcr.microsoft.com/dotnet/runtime:9.0 as runtime
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS runtime
 
 WORKDIR /app
 
@@ -25,6 +25,6 @@ COPY --from=build-env /app .
 
 VOLUME [ "/data" ]
 
-ENV BOT_CONFIG_LOCATION /data/botconfig.yaml
+ENV BOT_CONFIG_LOCATION="/data/botconfig.yaml"
 
-CMD dotnet Asahi.dll
+CMD [ "dotnet", "Asahi.dll" ]
