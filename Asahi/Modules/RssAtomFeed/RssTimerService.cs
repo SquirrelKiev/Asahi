@@ -206,7 +206,7 @@ public class RssTimerService(
                             }
                         }
 
-                        foreach (var message in messages.Take(10))
+                        foreach (var message in messages.Take(10).Reverse())
                         {
                             if (webhookClient != null)
                             {
