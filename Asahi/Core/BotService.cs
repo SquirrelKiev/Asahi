@@ -62,7 +62,7 @@ public class BotService(
 
         client.Ready += Client_Ready;
 
-        // should make these work for more than just RoleManagementService really but the need hasn't appeared yet so
+        // could make these dynamic (reflection or smth) but the need hasn't appeared yet so
         client.GuildMemberUpdated += Client_GuildMemberUpdated;
         client.UserLeft += Client_UserLeft;
         client.UserJoined += Client_UserJoined;

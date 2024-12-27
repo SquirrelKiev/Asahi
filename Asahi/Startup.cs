@@ -52,6 +52,8 @@ public static class Startup
                 .WriteTo.Console(theme: AnsiConsoleTheme.Literate)
             ;
 
+        Directory.CreateDirectory(BotConfigFactory.DefaultDataDirectory);
+
         if (!string.IsNullOrWhiteSpace(botConfig.SeqUrl))
         {
             logConfig.WriteTo.Seq(botConfig.SeqUrl, apiKey: botConfig.SeqApiKey);
@@ -86,7 +88,7 @@ public static class Startup
                 LogLevel = LogSeverity.Verbose,
                 AlwaysDownloadUsers = true
             }))
-            .AddTransient(x => new DiscordRestConfig() { LogLevel = LogSeverity.Verbose })
+            .AddTransient(_ => new DiscordRestConfig() { LogLevel = LogSeverity.Verbose })
             .AddSingleton<IDiscordClient>(x => x.GetRequiredService<DiscordSocketClient>())
             .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>(),
                 new InteractionServiceConfig()
@@ -113,7 +115,7 @@ public static class Startup
 
         serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
 
-        // Anime themes says its implementing the JSON:API spec but it's so different lol
+        // Anime themes says its implementing the JSON:API spec, but it's so different lol
         // new JsonApiSerializerSettings()
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 

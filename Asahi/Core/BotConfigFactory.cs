@@ -8,8 +8,9 @@ namespace Asahi;
 
 public static class BotConfigFactory
 {
-    private static readonly string configPath = Environment.GetEnvironmentVariable("BOT_CONFIG_LOCATION") ??
-                                                Path.Combine(Path.Combine(AppContext.BaseDirectory, "data"), "bot_config.yaml");
+    public static readonly string DefaultDataDirectory = Path.Combine(Path.Combine(AppContext.BaseDirectory, "data"));
+    private static readonly string ConfigPath = Environment.GetEnvironmentVariable("BOT_CONFIG_LOCATION") ??
+                                                Path.Combine(DefaultDataDirectory, "bot_config.yaml");
 
     public static bool GetConfig([NotNullWhen(true)] out BotConfig? botConfig)
     {
@@ -23,23 +24,23 @@ public static class BotConfigFactory
             .IgnoreUnmatchedProperties()
             .Build();
 
-        if (!File.Exists(configPath))
+        if (!File.Exists(ConfigPath))
         {
             botConfig = new BotConfig();
 
-            Log.Fatal("Config not found. Creating new config at {ConfigPath}. Please edit this file and restart the bot.", configPath);
+            Log.Fatal("Config not found. Creating new config at {ConfigPath}. Please edit this file and restart the bot.", ConfigPath);
 
-            var dirName = Path.GetDirectoryName(configPath);
+            var dirName = Path.GetDirectoryName(ConfigPath);
             if (dirName != null)
                 Directory.CreateDirectory(dirName);
 
-            File.WriteAllText(configPath, serializer.Serialize(botConfig));
+            File.WriteAllText(ConfigPath, serializer.Serialize(botConfig));
             return false;
         }
 
         try
         {
-            botConfig = deserializer.Deserialize<BotConfig>(File.ReadAllText(configPath));
+            botConfig = deserializer.Deserialize<BotConfig>(File.ReadAllText(ConfigPath));
         }
         catch (Exception ex)
         {
@@ -50,7 +51,7 @@ public static class BotConfigFactory
 
         //#if DEBUG
         //botConfig.GenerateMetadata();
-        File.WriteAllText(configPath, serializer.Serialize(botConfig));
+        File.WriteAllText(ConfigPath, serializer.Serialize(botConfig));
         //#endif
 
         return true;
