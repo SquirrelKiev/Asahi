@@ -1,4 +1,5 @@
-﻿using Asahi.Database;
+﻿using System.Net.Http.Headers;
+using Asahi.Database;
 using Asahi.Modules.RssAtomFeed.Models;
 using CodeHollow.FeedReader;
 using Discord.Rest;
@@ -91,6 +92,12 @@ public class RssTimerService(
         var feedsGrouped = feeds.GroupBy(x => x.FeedUrl);
         using var http = clientFactory.CreateClient();
         http.MaxResponseContentBufferSize = 8000000;
+        
+        http.DefaultRequestHeaders.Accept.Clear();
+        http.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/atom+xml"));
+        http.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/rss+xml"));
+        http.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("text/xml"));
+        http.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/xml"));
 
         foreach (var feedGroup in feedsGrouped)
         {
@@ -357,7 +364,7 @@ public class RssTimerService(
             return FeedHandler.Danbooru;
         if (url.StartsWith("https://nyaa.si"))
             return FeedHandler.Nyaa;
-        if (CompiledRegex.BskyPostRegex().IsMatch(url))
+        if (CompiledRegex.BskyPostRegex().IsMatch(url) || CompiledRegex.OpenRssBskyPostRegex().IsMatch(url))
             return FeedHandler.Bsky;
         if (CompiledRegex.RedditFeedRegex().IsMatch(url))
             return FeedHandler.Reddit;

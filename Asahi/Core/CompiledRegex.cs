@@ -26,6 +26,9 @@ public static partial class CompiledRegex
                     """)]
     public static partial Regex NyaaATagRegex();
 
-    [GeneratedRegex("https:\\/\\/bsky\\.app\\/profile\\/[a-zA-Z0-9:\\.]*\\/rss")]
+    [GeneratedRegex(@"https:\/\/bsky\.app\/profile\/[a-zA-Z0-9:\.]*\/rss")]
     public static partial Regex BskyPostRegex();
+    
+    [GeneratedRegex(@"https:\/\/openrss\.org\/bsky\.app\/profile\/[a-zA-Z0-9:\.]*")]
+    public static partial Regex OpenRssBskyPostRegex();
 }
