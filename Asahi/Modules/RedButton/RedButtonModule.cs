@@ -3,7 +3,6 @@ using Discord.Interactions;
 
 namespace Asahi.Modules.RedButton
 {
-
     public class RedButtonModule : BotModule
     {
         [ComponentInteraction(ModulePrefixes.RED_BUTTON)]

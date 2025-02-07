@@ -91,6 +91,8 @@ public static class Startup
 
     private static IServiceCollection AddBotServices(this IServiceCollection serviceCollection, BotConfig config)
     {
+        const LogSeverity logLevel = LogSeverity.Verbose;
+        
         serviceCollection
             .AddSingleton(config)
             .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
@@ -101,26 +103,26 @@ public static class Startup
                                  GatewayIntents.GuildMessages |
                                  GatewayIntents.DirectMessages |
                                  GatewayIntents.GuildMembers,
-                LogLevel = LogSeverity.Verbose,
+                LogLevel = logLevel,
                 AlwaysDownloadUsers = true
             }))
-            .AddTransient(_ => new DiscordRestConfig() { LogLevel = LogSeverity.Verbose })
+            .AddTransient(_ => new DiscordRestConfig() { LogLevel = logLevel })
             .AddSingleton<IDiscordClient>(x => x.GetRequiredService<DiscordSocketClient>())
             .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>(),
                 new InteractionServiceConfig()
                 {
-                    LogLevel = LogSeverity.Verbose,
+                    LogLevel = logLevel,
                     DefaultRunMode = Discord.Interactions.RunMode.Async
                 }))
             .AddSingleton(new CommandService(new CommandServiceConfig
             {
-                LogLevel = LogSeverity.Verbose,
+                LogLevel = logLevel,
                 DefaultRunMode = Discord.Commands.RunMode.Async
             }))
             .AddSingleton<CommandHandler>()
             .AddSingleton<IDbService, DbService>()
             .AddSingleton(new InteractiveConfig()
-            { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true })
+            { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel})
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()
             .AddSingleton<IClock>(SystemClock.Instance)

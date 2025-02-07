@@ -210,8 +210,9 @@ public class CommandHandler(
 
         if (ctx.Interaction is SocketMessageComponent componentInteraction)
         {
-            if (   interactiveService.IsManaged(componentInteraction)
-                || interactiveService.TriggersAnyFilter(componentInteraction)
+            if ((   interactiveService.IsManaged(componentInteraction)
+                 || interactiveService.TriggersAnyFilter(componentInteraction))
+                 && componentInteraction.Data.CustomId != ModulePrefixes.RED_BUTTON
             )
                 return;
 
