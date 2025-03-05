@@ -17,18 +17,26 @@ public static partial class CompiledRegex
     [GeneratedRegex(@"```cs\n([\s\S]+?)\n```")]
     public static partial Regex CsharpCodeBlock();
 
-    // https://regexr.com/3dqa0
-    [GeneratedRegex(@"^(?:https?:\/\/)?(?:[\da-z\.-]+\.[a-z\.]{2,6}|[\d\.]+)(?:[\/:?=&#]{1}[\da-z\.-]+)*[\/\?]?$", RegexOptions.IgnoreCase)]
-    public static partial Regex GenericLinkRegex();
-
     [GeneratedRegex("""
                     href="(https:\/\/nyaa\.si/view/\d+)"
                     """)]
     public static partial Regex NyaaATagRegex();
 
-    [GeneratedRegex(@"https:\/\/bsky\.app\/profile\/[a-zA-Z0-9:\.]*\/rss")]
+    [GeneratedRegex(@"^https:\/\/bsky\.app\/profile\/[a-zA-Z0-9:\.]*\/rss")]
     public static partial Regex BskyPostRegex();
     
-    [GeneratedRegex(@"https:\/\/openrss\.org\/bsky\.app\/profile\/[a-zA-Z0-9:\.]*")]
+    [GeneratedRegex(@"^https:\/\/openrss\.org\/bsky\.app\/profile\/[a-zA-Z0-9:\.]*")]
     public static partial Regex OpenRssBskyPostRegex();
+
+    [GeneratedRegex(@"^https:\/\/i\.pximg\.net\/.+\.([a-z]*)")]
+    public static partial Regex ValidPixivDirectImageUrlRegex();
+
+    [GeneratedRegex(@"^https:\/\/twitter\.com\/[a-zA-Z0-9_]+\/status\/(\d+)$")]
+    public static partial Regex TwitterStatusIdRegex();
+
+    [GeneratedRegex(@"^https:\/\/[a-zA-Z0-9]+\.fanbox.cc")]
+    public static partial Regex IsAFanboxLinkRegex();
+
+    [GeneratedRegex(@"^https:\/\/c\.fantia\.jp/uploads/post/file/(\d+)\/")]
+    public static partial Regex FantiaPostIdRegex();
 }

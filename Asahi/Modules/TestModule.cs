@@ -9,7 +9,9 @@ namespace Asahi.Modules;
 [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 public class TestModule(
-    HttpClient client
+    HttpClient client,
+    IFxTwitterApi fxTwitterApi,
+    BotConfig config
     //ILogger<TestModule> logger
     ) : BotModule
 {
@@ -24,9 +26,9 @@ public class TestModule(
 
         var content = JsonConvert.DeserializeObject<DanbooruPost>(json)!;
 
-        var variant = DanbooruMessageGenerator.GetBestVariant(content.MediaAsset.Variants);
+        var variant = await DanbooruMessageGenerator.GetBestVariantOrFallback(content, config, fxTwitterApi);
 
-        await FollowupAsync(variant?.Url ?? "uh oh");
+        await FollowupAsync(variant?.Variant.Url ?? "uh oh");
     }
 }
 #endif

@@ -3,9 +3,17 @@ using Asahi.Modules.RssAtomFeed.Models;
 
 namespace Asahi.Modules.RssAtomFeed;
 
-public class RedditMessageGenerator(List<PostChild> posts) : IEmbedGenerator
+public class RedditMessageGenerator(List<PostChild> posts) : IEmbedGeneratorAsync
 {
-    public IEnumerable<MessageContents> GenerateFeedItemMessages(
+    public IAsyncEnumerable<MessageContents> GenerateFeedItemMessages(
+        FeedListener feedListener,
+        HashSet<int> seenArticles,
+        HashSet<int> processedArticles,
+        Color embedColor,
+        bool shouldCreateEmbeds
+    ) => GenerateFeedItemMessagesSync(feedListener, seenArticles, processedArticles, embedColor, shouldCreateEmbeds).ToAsyncEnumerable();
+    
+    public IEnumerable<MessageContents> GenerateFeedItemMessagesSync(
         FeedListener feedListener,
         HashSet<int> seenArticles,
         HashSet<int> processedArticles,

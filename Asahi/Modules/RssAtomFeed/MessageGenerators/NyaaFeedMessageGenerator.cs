@@ -1,12 +1,22 @@
-﻿using System.Xml.Linq;
+﻿using System.Text;
+using System.Xml.Linq;
 using Asahi.Database.Models.Rss;
 using CodeHollow.FeedReader;
 
 namespace Asahi.Modules.RssAtomFeed;
 
-public class NyaaFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : IEmbedGenerator
+public class NyaaFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : IEmbedGeneratorAsync
 {
-    public IEnumerable<MessageContents> GenerateFeedItemMessages(
+    public IAsyncEnumerable<MessageContents> GenerateFeedItemMessages(
+        FeedListener feedListener,
+        HashSet<int> seenArticles,
+        HashSet<int> processedArticles,
+        Color embedColor,
+        bool shouldCreateEmbeds
+    ) => GenerateFeedItemMessagesSync(feedListener, seenArticles, processedArticles, embedColor, shouldCreateEmbeds).ToAsyncEnumerable();
+    
+    public IEnumerable<MessageContents> GenerateFeedItemMessagesSync
+    (
         FeedListener feedListener,
         HashSet<int> seenArticles,
         HashSet<int> processedArticles,
@@ -81,9 +91,26 @@ public class NyaaFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : 
         eb.WithOptionalColor(embedColor);
 
         var cb = new ComponentBuilder();
-        
-        cb.WithButton(label: "Torrent File", style: ButtonStyle.Link, url: genericItem.Link);
+
+        if (genericItem.Link.StartsWith("https://nyaa.si/"))
+        {
+            cb.WithButton(label: "Torrent File", style: ButtonStyle.Link, url: genericItem.Link);
+        }
+        // else if (genericItem.Link.StartsWith("magnet:?"))
+        // {
+        //     cb.WithButton(label: "Magnet Link", style: ButtonStyle.Link, url: GenerateMagnetRedirectLink(genericItem.Link));
+        // }
         
         return new MessageContents(eb, cb);
     }
+
+    // not used because the links were too long for Discord (512 char max)
+    // private string GenerateMagnetRedirectLink(string magnetLink)
+    // {
+    //     var uriBuilder = new UriBuilder(config.MagnetRedirectorBaseUrl);
+    //     var base64Magnet = Convert.ToBase64String(Encoding.UTF8.GetBytes(magnetLink));
+    //     uriBuilder.Path = $"/v1/magnet/{base64Magnet}";
+    //
+    //     return uriBuilder.ToString();
+    // }
 }

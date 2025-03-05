@@ -24,6 +24,16 @@ public class BotConfig
     public string LoadingEmote { get; set; } = "\ud83e\udd14"; // 🤔
 
     public string PixivEmote { get; set; } = "\ud83c\udfa8"; // 🎨
+    
+    public string TwitterEmote { get; set; } = "\ud83d\udc26"; // 🐦
+    
+    public string BaraagEmote { get; set; } = "\ud83c\udfa8"; // 🎨
+    
+    public string ArcaLiveEmote { get; set; } = "\ud83c\udfa8"; // 🎨
+    
+    public string FanboxCcEmote { get; set; } = "\ud83d\udce6"; // 📦
+    
+    public string FantiaEmote { get; set; } = "\ud83c\udfa8"; // 🎨
 
     [YamlMember(Description = "A set of UserIDs. Users in this set will be granted permission to use commands to manage the instance itself.\n" +
                               "This is a dangerous permission to grant.")]
@@ -51,6 +61,15 @@ public class BotConfig
 
     [YamlMember(Description = "Any users in this list are banned from ever making it to highlights.")]
     public HashSet<ulong> BannedHighlightsUsers { get; set; } = [];
+
+    // [YamlMember(Description = "The base url to use for magnet redirector links. Used for the Nyaa RSS feed.")]
+    // public string MagnetRedirectorBaseUrl { get; set; } = "https://redirector.onk.moe";
+
+    [YamlMember(Description = "The URL pattern to use for proxying images (if necessary).\n{{URL}} will be replaced with the URL, encoded in base64.")]
+    public string ProxyUrl { get; set; } = "https://services.f-ck.me/v1/image/{{URL}}?source=asahi_bot";
+
+    [YamlMember(Description = "The fxtwitter API url to use as a base.")]
+    public string FxTwitterApiUrl { get; set; } = "https://api.fxtwitter.com";
 
     /// <summary>
     /// For any string here, the following will be replaced:
@@ -92,7 +111,7 @@ public class BotConfig
         new AboutField
         {
             Name = "Source Code:",
-            Value = "https://github.com/SquirrelKiev/Seigen"
+            Value = "https://github.com/SquirrelKiev/Asahi"
         }
     ];
 
@@ -126,6 +145,12 @@ public class BotConfig
     {
         Sqlite,
         Postgresql
+    }
+    
+    public enum ProxyUrlEncodingFormat
+    {
+        UrlEscaped,
+        Base64
     }
 
     public struct AboutField

@@ -408,6 +408,7 @@ using Discord.WebSocket;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 
 // context here is a required parameter. Class is activated via DI.
@@ -427,7 +428,7 @@ public class {className}(IInteractionContext context)
                 x.Channel.Id == Context.Channel.Id
                 && x.Author.Id == Context.User.Id
                 && x.Reference.MessageId.GetValueOrDefault() == slashCommandMsg.Id,
-            timeout: TimeSpan.FromMinutes(5)
+            timeout: TimeSpan.FromMinutes(10)
         );
 
         if (res.IsCanceled || res.IsSuccess && res.Value.Content == "cancel")
@@ -500,7 +501,7 @@ public class {className}(IInteractionContext context)
             "SuperDangerousCode",
             [syntaxTree],
             references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable)
         );
 
         using var ms = new MemoryStream();

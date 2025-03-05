@@ -1,10 +1,14 @@
 ﻿using Asahi.Database.Models.Rss;
 using Asahi.Modules.RssAtomFeed.Models;
 using Humanizer;
+using Microsoft.CodeAnalysis.CodeFixes;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Newtonsoft.Json;
 
 namespace Asahi.Modules.RssAtomFeed
 {
-    public class DanbooruMessageGenerator(DanbooruPost[] posts, BotConfig config) : IEmbedGenerator
+    public class DanbooruMessageGenerator(DanbooruPost[] posts, IFxTwitterApi fxTwitterApi, BotConfig config)
+        : IEmbedGeneratorAsync
     {
         private static readonly HashSet<string> KnownImageExtensions =
         [
@@ -16,7 +20,7 @@ namespace Asahi.Modules.RssAtomFeed
             "webp",
         ];
 
-        public IEnumerable<MessageContents> GenerateFeedItemMessages(
+        public async IAsyncEnumerable<MessageContents> GenerateFeedItemMessages(
             FeedListener feedListener,
             HashSet<int> seenArticles,
             HashSet<int> processedArticles,
@@ -33,17 +37,18 @@ namespace Asahi.Modules.RssAtomFeed
                 if (!shouldCreateEmbeds)
                     continue;
 
-                yield return GenerateFeedItemMessage(feedListener, post, embedColor);
+                yield return await GenerateFeedItemMessage(feedListener, post, embedColor);
             }
         }
 
-        private MessageContents GenerateFeedItemMessage(
+        private async ValueTask<MessageContents> GenerateFeedItemMessage(
             FeedListener? feedListener,
             DanbooruPost post,
             Color embedColor
         )
         {
             var eb = new EmbedBuilder();
+            EmbedBuilder[]? extrasForMultiImage = null;
 
             eb.WithColor(embedColor);
             if (!string.IsNullOrWhiteSpace(post.TagStringArtist))
@@ -69,49 +74,105 @@ namespace Asahi.Modules.RssAtomFeed
                     : "Danbooru"
             );
 
-            eb.WithUrl($"https://danbooru.donmai.us/posts/{post.Id}/");
+            var url = $"https://danbooru.donmai.us/posts/{post.Id}/";
+            eb.WithUrl(url);
 
-            var bestVariant = GetBestVariant(post.MediaAsset.Variants);
+            var bestVariant = await GetBestVariantOrFallback(post, config, fxTwitterApi);
             if (bestVariant != null)
             {
-                eb.WithImageUrl(bestVariant.Url);
+                eb.WithImageUrl(bestVariant.Variant.Url);
+                if (bestVariant.ExtraUrls != null)
+                {
+                    extrasForMultiImage =
+                        bestVariant.ExtraUrls.Select(x => new EmbedBuilder().WithUrl(url).WithImageUrl(x)).ToArray();
+                }
             }
 
-            eb.WithDescription(
-                $"{post.MediaAsset.FileExtension.ToUpperInvariant()} file | "
-                + $"embed is {bestVariant?.Type} quality{(bestVariant?.Type != "original" ? $" ({bestVariant?.FileExt.ToUpperInvariant()} file)" : "")}"
-            );
+            if (bestVariant == null)
+            {
+                eb.WithDescription($"No known image link found.");
+            }
+            else
+            {
+                eb.WithDescription(
+                    $"{post.MediaAsset.FileExtension.ToUpperInvariant()} file | "
+                    + $"embed is {bestVariant.Variant.Type} quality{(bestVariant.Variant.Type != "original" ? $" ({bestVariant.Variant.FileExt.ToUpperInvariant()} file)" : "")}"
+                );
+            }
 
             var components = new ComponentBuilder();
 
-            if (post.PixivId != null)
+            if (!string.IsNullOrWhiteSpace(post.Source) && (post.Source.StartsWith("http://") || post.Source.StartsWith("https://")))
             {
-                QuotingHelpers.TryParseEmote(config.PixivEmote, out var pixivEmote);
+                IEmote? buttonEmote = null;
+                string platformName = "Source";
+                string sourceUrl = post.Source;
 
-                var pixivUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
-                components.WithButton(
-                    "Pixiv",
-                    emote: pixivEmote,
-                    url: pixivUrl,
-                    style: ButtonStyle.Link
-                );
+                if(post.PixivId != null)
+                {
+                    QuotingHelpers.TryParseEmote(config.PixivEmote, out var pixivEmote);
+
+                    sourceUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
+                    buttonEmote = pixivEmote;
+                    platformName = "Pixiv";
+                }
+                else if (CompiledRegex.TwitterStatusIdRegex().IsMatch(post.Source))
+                {
+                    QuotingHelpers.TryParseEmote(config.TwitterEmote, out var emote);
+
+                    buttonEmote = emote;
+                    platformName = "Twitter";
+                }
+                else if (CompiledRegex.IsAFanboxLinkRegex().IsMatch(post.Source))
+                {
+                    QuotingHelpers.TryParseEmote(config.FanboxCcEmote, out var emote);
+
+                    buttonEmote = emote;
+                    platformName = "fanbox.cc";
+                }
+                else if (CompiledRegex.FantiaPostIdRegex().IsMatch(post.Source))
+                {
+                    var id = CompiledRegex.FantiaPostIdRegex().Match(post.Source).Groups[1].Value;
+
+                    QuotingHelpers.TryParseEmote(config.FantiaEmote, out var emote);
+
+                    sourceUrl = $"https://fantia.jp/posts/{id}";
+                    buttonEmote = emote;
+                    platformName = "Fantia";
+                }
+                else if (post.Source.StartsWith("https://baraag.net"))
+                {
+                    QuotingHelpers.TryParseEmote(config.BaraagEmote, out var emote);
+
+                    buttonEmote = emote;
+                    platformName = "Baraag";
+                }
+                else if (post.Source.StartsWith("https://arca.live/"))
+                {
+                    QuotingHelpers.TryParseEmote(config.ArcaLiveEmote, out var emote);
+
+                    buttonEmote = emote;
+                    platformName = "arca.live";
+                }
+                
+                components.WithButton(platformName, url: sourceUrl, emote: buttonEmote, style: ButtonStyle.Link);
             }
-            else if (
-                !string.IsNullOrWhiteSpace(post.Source)
-                && CompiledRegex.GenericLinkRegex().IsMatch(post.Source)
-            )
+
+            if (extrasForMultiImage == null)
             {
-                components.WithButton("Source", url: post.Source, style: ButtonStyle.Link);
+                return new MessageContents(eb, components);
             }
-
-            return new MessageContents(eb, components);
+            else
+            {
+                return new MessageContents("", embeds: extrasForMultiImage.Prepend(eb).Select(x => x.Build()).ToArray(), components: components);
+            }
         }
 
         public static DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants)
         {
             if (variants == null)
                 return null;
-            
+
             // we only want embeddable variants
             var validVariants = variants
                 .Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower()))
@@ -126,7 +187,75 @@ namespace Asahi.Modules.RssAtomFeed
             }
 
             // original doesn't exist/work oh god lets just hope the rest of the options are ok
-            return validVariants.MaxBy(v => v.Width * v.Height);
+            var worseResFallback = validVariants.MaxBy(v => v.Width * v.Height);
+
+            return worseResFallback;
+        }
+
+        public static async ValueTask<DanbooruVariantWithFallback?> GetBestVariantOrFallback(DanbooruPost post,
+            BotConfig config, IFxTwitterApi fxTwitterApi)
+        {
+            var bestVariant = GetBestVariant(post.MediaAsset.Variants);
+
+            if (bestVariant != null)
+                return new DanbooruVariantWithFallback(bestVariant);
+
+            var fallbackPixivMatch = CompiledRegex.ValidPixivDirectImageUrlRegex().Match(post.Source);
+            if (fallbackPixivMatch.Success)
+            {
+                var extension = fallbackPixivMatch.Groups[1].Value;
+                if (KnownImageExtensions.Contains(extension))
+                {
+                    var fallbackUrl = config.ProxyUrl.Replace("{{URL}}",
+                        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(post.Source)));
+
+                    return new DanbooruVariantWithFallback(new DanbooruVariant
+                        { FileExt = extension, Height = 0, Width = 0, Type = "fallback (pixiv)", Url = fallbackUrl });
+                }
+            }
+
+            var fallbackTwitterMatch = CompiledRegex.TwitterStatusIdRegex().Match(post.Source);
+            if (fallbackTwitterMatch.Success)
+            {
+                var id = ulong.Parse(fallbackTwitterMatch.Groups[1].Value);
+
+                var status = await fxTwitterApi.GetStatusInfo(id);
+
+                if (status is { Code: 200, Tweet: not null } && status.Tweet.Media.Photos.Length != 0)
+                {
+                    var firstImg = status.Tweet.Media.Photos[0];
+
+                    var extraUrls = status.Tweet.Media.Photos.Length > 1 ? status.Tweet.Media.Photos.Skip(1).Select(x => x.Url + "?name=orig").ToArray() : null;
+                    
+                    return new DanbooruVariantWithFallback(new DanbooruVariant()
+                    {
+                        FileExt = firstImg.Url.Split('.')[^1],
+                        Height = firstImg.Height,
+                        Width = firstImg.Width,
+                        Type = "fallback (twitter)",
+                        Url = firstImg.Url + "?name=orig"
+                    })
+                    {
+                        ExtraUrls = extraUrls
+                    };
+                }
+            }
+
+            if (CompiledRegex.FantiaPostIdRegex().IsMatch(post.Source))
+            {
+                var extension = post.Source.Split('.')[^1];
+                if (KnownImageExtensions.Contains(extension))
+                {
+                    var fallbackUrl = config.ProxyUrl.Replace("{{URL}}",
+                        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(post.Source)));
+
+                    return new DanbooruVariantWithFallback(new DanbooruVariant
+                        { FileExt = extension, Height = 0, Width = 0, Type = "fallback (fantia)", Url = fallbackUrl });
+                }
+            }
+
+            // even the fallbacks has failed us
+            return null;
         }
     }
 }

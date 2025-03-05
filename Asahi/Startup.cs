@@ -57,7 +57,7 @@ public static class Startup
                     .Enrich.FromLogContext()
                     .Enrich.WithThreadId()
                     .Enrich.WithThreadName()
-                    .WriteTo.Console(theme: AnsiConsoleTheme.Literate)
+                    .WriteTo.Console(theme: AnsiConsoleTheme.Sixteen)
                 ;
 
             Directory.CreateDirectory(BotConfigFactory.DefaultDataDirectory);
@@ -149,6 +149,13 @@ public static class Startup
                 AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com");
             }
         );
+        
+        serviceCollection.AddRefitClient<IFxTwitterApi>(settings)
+            .ConfigureHttpClient(x =>
+                {
+                    AddDefaultProperties(x).BaseAddress = new Uri(config.FxTwitterApiUrl);
+                }
+            );
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
                 .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

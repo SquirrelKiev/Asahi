@@ -173,3 +173,10 @@ public class DanbooruVariant
     [JsonProperty("file_ext")]
     public string FileExt { get; set; } = null!;
 }
+
+public class DanbooruVariantWithFallback(DanbooruVariant variant)
+{
+    public DanbooruVariant Variant { get; set; } = variant;
+    
+    public string[]? ExtraUrls { get; set; } = null;
+}

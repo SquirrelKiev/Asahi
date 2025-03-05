@@ -4,9 +4,17 @@ using CodeHollow.FeedReader;
 
 namespace Asahi.Modules.RssAtomFeed;
 
-public class BskyMessageGenerator(FeedItem[] feedItems) : IEmbedGenerator
+public class BskyMessageGenerator(FeedItem[] feedItems) : IEmbedGeneratorAsync
 {
-    public IEnumerable<MessageContents> GenerateFeedItemMessages(
+    public IAsyncEnumerable<MessageContents> GenerateFeedItemMessages(
+        FeedListener feedListener,
+        HashSet<int> seenArticles,
+        HashSet<int> processedArticles,
+        Color embedColor,
+        bool shouldCreateEmbeds
+    ) => GenerateFeedItemMessagesSync(feedListener, seenArticles, processedArticles, embedColor, shouldCreateEmbeds).ToAsyncEnumerable();
+    
+    public IEnumerable<MessageContents> GenerateFeedItemMessagesSync(
         FeedListener feedListener,
         HashSet<int> seenArticles,
         HashSet<int> processedArticles,
@@ -23,12 +31,7 @@ public class BskyMessageGenerator(FeedItem[] feedItems) : IEmbedGenerator
             if (!shouldCreateEmbeds)
                 continue;
 
-            yield return GenerateFeedItemEmbed(feedItem);
+            yield return new MessageContents(feedItem.Link);
         }
-    }
-
-    public MessageContents GenerateFeedItemEmbed(FeedItem genericItem)
-    {
-        return new MessageContents(genericItem.Link.Replace("https://bsky.app/", "https://bskye.app/"));
     }
 }

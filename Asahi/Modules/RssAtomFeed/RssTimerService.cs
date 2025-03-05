@@ -19,7 +19,8 @@ public class RssTimerService(
     ILogger<RssTimerService> logger,
     BotConfig config,
     DiscordRestConfig webhookRestConfig,
-    IRedditApi redditApi
+    IRedditApi redditApi,
+    IFxTwitterApi fxTwitterApi
 )
 {
     public enum FeedHandler
@@ -126,7 +127,7 @@ public class RssTimerService(
 
                 var processedArticles = new HashSet<int>();
 
-                IEmbedGenerator? embedGenerator;
+                IEmbedGeneratorAsync? embedGenerator;
                 try
                 {
                     var thing = await TryGetEmbedGeneratorForFeed(url, reqContent);
@@ -161,7 +162,8 @@ public class RssTimerService(
                             continue;
                         }
 
-                        var messages = embedGenerator!
+                        // TODO: need to handle this better so error handling doesnt cause the send the top 10 bug
+                        var messages = await embedGenerator!
                             .GenerateFeedItemMessages(
                                 feedListener,
                                 seenArticles,
@@ -172,7 +174,7 @@ public class RssTimerService(
                                 ),
                                 !unseenUrl
                             )
-                            .ToArray();
+                            .ToArrayAsync();
 
                         if (
                             messages.All(x =>
@@ -276,11 +278,11 @@ public class RssTimerService(
 
     public async Task<(
         bool isSuccess,
-        IEmbedGenerator? embedGenerator
+        IEmbedGeneratorAsync? embedGenerator
         )> TryGetEmbedGeneratorForFeed(string url, string? reqContent)
     {
         var feedHandler = FeedHandlerForUrl(url);
-        IEmbedGenerator? embedGenerator;
+        IEmbedGeneratorAsync? embedGenerator;
         switch (feedHandler)
         {
             case FeedHandler.RssAtom:
@@ -309,7 +311,7 @@ public class RssTimerService(
                     return (false, embedGenerator);
                 }
 
-                embedGenerator = new DanbooruMessageGenerator(posts, config);
+                embedGenerator = new DanbooruMessageGenerator(posts, fxTwitterApi, config);
                 break;
             }
             case FeedHandler.Reddit:
