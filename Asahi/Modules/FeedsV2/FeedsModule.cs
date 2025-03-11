@@ -168,6 +168,7 @@ public class FeedsModule(
         });
     }
 
+        // TODO: Update to work with FeedsV2 stuff - namely the new naming stuff. ideally we just have the feed name as null and pull from the cache in FeedsStateTracker. (Also a TODO)
     [SlashCommand("list-feeds", "Lists the feeds within the server.")]
     public async Task ListFeedsSlash(
         [Summary(description: "Filters the list to only show feeds for the specified channel.")]

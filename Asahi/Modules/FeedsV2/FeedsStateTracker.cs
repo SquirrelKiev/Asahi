@@ -6,7 +6,7 @@ namespace Asahi.Modules.FeedsV2;
 public class FeedsStateTracker
 {
     private readonly Dictionary<int, HashSet<int>> seenArticleHashes = [];
-    private readonly Dictionary<int, string> feedSourceToTitleDictionary = []; // TODO
+    private readonly Dictionary<int, string> feedSourceToTitleDictionary = [];
 
     [Pure]
     public bool IsFirstTimeSeeingFeedSource(string feedSource)

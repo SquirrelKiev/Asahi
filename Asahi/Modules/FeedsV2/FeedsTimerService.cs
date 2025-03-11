@@ -12,8 +12,6 @@ public class FeedsTimerService(ILogger<FeedsTimerService> logger, FeedsProcessor
     
     public void StartBackgroundTask(CancellationToken token)
     {
-        return;
-        
         timerTask ??= Task.Run(() => TimerTask(token), token);
     }
         
