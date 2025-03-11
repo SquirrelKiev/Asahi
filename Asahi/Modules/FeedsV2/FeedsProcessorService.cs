@@ -46,7 +46,7 @@ public class FeedsProcessorService(
         {
             if (!stateTracker.IsNewArticle(feedSource, articleId))
             {
-                logger.LogTrace("Already seen article {articleId} for feed {feedSource}.", articleId, feedSource);
+                // logger.LogTrace("Already seen article {articleId} for feed {feedSource}.", articleId, feedSource);
                 continue;
             }
 
@@ -54,7 +54,7 @@ public class FeedsProcessorService(
             {
                 try
                 {
-                    logger.LogTrace("Processing listener {listenerId}.", listener.Id);
+                    // logger.LogTrace("Processing listener {listenerId}.", listener.Id);
 
                     Debug.Assert(listener.FeedUrl == feedSource);
 
