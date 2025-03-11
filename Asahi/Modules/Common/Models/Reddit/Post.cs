@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿#nullable disable
+
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-#nullable disable
-
-namespace Asahi.Modules.RssAtomFeed.Models
+namespace Asahi.Modules.Models
 {
     [Serializable]
     public class Post
@@ -36,7 +36,6 @@ namespace Asahi.Modules.RssAtomFeed.Models
         [JsonProperty("title")]
         public string Title { get; set; }
 
-        // TODO - Only had an empty example so not sure if the structure is right.  --Kris
         [JsonProperty("link_flair_richtext")]
         public object PublicFlairRichtext { get; set; }
 
@@ -46,7 +45,6 @@ namespace Asahi.Modules.RssAtomFeed.Models
         [JsonProperty("hidden")]
         public bool Hidden { get; set; }
 
-        // TODO - No idea what this is.  --Kris
         [JsonProperty("pwls")]
         public string Pwls { get; set; }
 
@@ -89,7 +87,6 @@ namespace Asahi.Modules.RssAtomFeed.Models
         [JsonProperty("domain")]
         public string Domain { get; set; }
 
-        // TODO - No idea what this does.  It's always empty when I see it.  --Kris
         [JsonProperty("media_embed")]
         public object MediaEmbed { get; set; }
 
@@ -120,7 +117,6 @@ namespace Asahi.Modules.RssAtomFeed.Models
         [JsonProperty("num_comments")]
         public int NumComments { get; set; }
 
-        // TODO - Same as MediaEmbed.  Not sure what this is supposed to be.  --Kris
         [JsonProperty("secure_media_embed")]
         public object SecureMediaEmbed { get; set; }
 
@@ -153,7 +149,6 @@ namespace Asahi.Modules.RssAtomFeed.Models
         //[JsonConverter(typeof(List<TimestampConvert>))]
         public object PreviousVisits { get; set; }
 
-        // TODO - Is this a list or a string or what?  --Kris
         [JsonProperty("author_flair_richtext")]
         public List<object> AuthorFlairRichtext { get; set; }
 
@@ -180,7 +175,6 @@ namespace Asahi.Modules.RssAtomFeed.Models
         [JsonProperty("link_flair_type")]
         public string LinkFlairType { get; set; }
 
-        // TODO - No idea what this is.  --Kris
         [JsonProperty("wls")]
         public string Wls { get; set; }
 

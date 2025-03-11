@@ -1,7 +1,7 @@
-﻿using Asahi.Modules.RssAtomFeed.Models;
+﻿using Asahi.Modules.Models;
 using Refit;
 
-namespace Asahi.Modules.RssAtomFeed;
+namespace Asahi.Modules;
 
 public interface IRedditApi
 {

@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Refit;
 
-namespace Asahi.Modules.RssAtomFeed;
+namespace Asahi.Modules;
 
 public interface IFxTwitterApi
 {

@@ -1,9 +1,11 @@
 ﻿using System.Globalization;
+using System.Net.Http.Headers;
 using System.Text;
 using Asahi.Database;
+using Asahi.Modules;
 using Asahi.Modules.About;
 using Asahi.Modules.AnimeThemes;
-using Asahi.Modules.RssAtomFeed;
+using Asahi.Modules.FeedsV2;
 using Asahi.Modules.Tatsu;
 using Discord.Commands;
 using Discord.Interactions;
@@ -92,7 +94,7 @@ public static class Startup
     private static IServiceCollection AddBotServices(this IServiceCollection serviceCollection, BotConfig config)
     {
         const LogSeverity logLevel = LogSeverity.Verbose;
-        
+
         serviceCollection
             .AddSingleton(config)
             .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
@@ -121,8 +123,10 @@ public static class Startup
             }))
             .AddSingleton<CommandHandler>()
             .AddSingleton<IDbService, DbService>()
+            .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
+            .AddTransient<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
             .AddSingleton(new InteractiveConfig()
-            { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel})
+                { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel })
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()
             .AddSingleton<IClock>(SystemClock.Instance)
@@ -130,6 +134,19 @@ public static class Startup
             .AddSingleton<AboutService>()
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
             .ConfigureHttpClient(x => AddDefaultProperties(x));
+
+        serviceCollection.AddHttpClient("rss")
+            .ConfigureHttpClient(x =>
+            {
+                AddDefaultProperties(x);
+                x.MaxResponseContentBufferSize = 8000000;
+
+                x.DefaultRequestHeaders.Accept.Clear();
+                x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/atom+xml"));
+                x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/rss+xml"));
+                x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("text/xml"));
+                x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/xml"));
+            });
 
         serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
 

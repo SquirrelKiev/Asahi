@@ -1,46 +1,66 @@
-﻿using Asahi.Database.Models.Rss;
+﻿using System.Diagnostics;
 using CodeHollow.FeedReader;
 using CodeHollow.FeedReader.Feeds;
+using CodeHollow.FeedReader.Parser;
 
-namespace Asahi.Modules.RssAtomFeed;
+namespace Asahi.Modules.FeedsV2.FeedProviders;
 
-public class RssFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : IEmbedGeneratorAsync
+public class RssFeedProvider(HttpClient client) : IFeedProvider
 {
-    public IAsyncEnumerable<MessageContents> GenerateFeedItemMessages(
-        FeedListener feedListener,
-        HashSet<int> seenArticles,
-        HashSet<int> processedArticles,
-        Color embedColor,
-        bool shouldCreateEmbeds
-    ) => GenerateFeedItemMessagesSync(feedListener, seenArticles, processedArticles, embedColor, shouldCreateEmbeds).ToAsyncEnumerable();
-    
-    public IEnumerable<MessageContents> GenerateFeedItemMessagesSync(
-        FeedListener feedListener,
-        HashSet<int> seenArticles,
-        HashSet<int> processedArticles,
-        Color embedColor,
-        bool shouldCreateEmbeds
-    )
+    public string? FeedSource { get; private set; }
+
+    public virtual string DefaultFeedTitle
     {
-        foreach (var feedItem in feedItems)
+        get
         {
-            processedArticles.Add(feedItem.Id.GetHashCode(StringComparison.Ordinal));
+            if (genericFeed == null) return "RSS Feed";
 
-            if (seenArticles.Contains(feedItem.Id.GetHashCode(StringComparison.Ordinal)))
-                continue;
-            if (!shouldCreateEmbeds)
-                continue;
-
-            yield return GenerateFeedItemEmbed(feedListener, feedItem, embedColor);
+            return genericFeed.Title;
         }
     }
 
-    public virtual MessageContents GenerateFeedItemEmbed(
-        FeedListener feedListener,
-        FeedItem genericItem,
-        Color embedColor
-    )
+    protected Feed? genericFeed;
+
+    // TODO: This should use FeedReader.ParseFeedUrlsFromHtml() or smth
+    public async Task<bool> Initialize(string feedSource)
     {
+        FeedSource = feedSource;
+
+        var req = await client.GetAsync(feedSource);
+
+        var reqContent = await req.Content.ReadAsStringAsync();
+        
+        var feed = FeedReader.ReadFromString(reqContent);
+
+        if (feed?.Type == FeedType.Unknown)
+            throw new FeedTypeNotSupportedException();
+
+        genericFeed = feed;
+
+        return true;
+    }
+    public IEnumerable<int> ListArticleIds()
+    {
+        Debug.Assert(genericFeed != null);
+        
+        return genericFeed.Items.Select(x => x.Id.GetHashCode());
+    }
+
+    public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor, string? feedTitle)
+    {
+        Debug.Assert(genericFeed != null);
+        
+        var article = genericFeed.Items.First(x => x.Id.GetHashCode() == articleId);
+
+        IEnumerable<MessageContents> enumerable = [ArticleToMessageContents(article, embedColor, feedTitle)];
+
+        return enumerable.ToAsyncEnumerable();
+    }
+
+    protected virtual MessageContents ArticleToMessageContents(FeedItem genericItem, Color embedColor, string? feedTitle)
+    {
+        Debug.Assert(genericFeed != null);
+        
         var eb = new EmbedBuilder();
 
         switch (genericFeed.Type)
@@ -96,9 +116,9 @@ public class RssFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : I
                     }
                 }
 
-                if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
+                if (!string.IsNullOrWhiteSpace(feedTitle))
                 {
-                    footer.Text = $"{feedListener.FeedTitle} • {item.Id}";
+                    footer.Text = $"{feedTitle} • {item.Id}";
                 }
                 else if (!string.IsNullOrWhiteSpace(feed.Title))
                 {
@@ -149,9 +169,9 @@ public class RssFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : I
                     eb.WithThumbnailUrl(genericFeed.ImageUrl);
                 }
 
-                if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
+                if (!string.IsNullOrWhiteSpace(feedTitle))
                 {
-                    footer.Text = $"{feedListener.FeedTitle} • {genericItem.Id}";
+                    footer.Text = $"{feedTitle} • {genericItem.Id}";
                 }
                 else if (!string.IsNullOrWhiteSpace(genericFeed.Title))
                 {

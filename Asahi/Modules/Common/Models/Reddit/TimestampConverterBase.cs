@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Asahi.Modules.RssAtomFeed.Models
+namespace Asahi.Modules.Models
 {
     abstract class TimestampConverterBase : DateTimeConverterBase
     {

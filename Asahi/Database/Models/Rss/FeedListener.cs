@@ -4,6 +4,7 @@ namespace Asahi.Database.Models.Rss;
 
 public class FeedListener : DbModel
 {
+    ///  <remarks>More of a feed source than a feed url. For example, reddit feeds do not use a URL format.</remarks>
     [MaxLength(512)]
     public required string FeedUrl { get; set; }
 

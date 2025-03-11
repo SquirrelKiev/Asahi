@@ -1,4 +1,4 @@
-﻿namespace Asahi.Modules.RssAtomFeed.Models
+﻿namespace Asahi.Modules.Models
 {
     class UtcTimestampConverter : TimestampConverterBase
     {

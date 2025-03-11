@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿#nullable disable
 
-#nullable disable
+using Newtonsoft.Json;
 
-namespace Asahi.Modules.RssAtomFeed.Models
+namespace Asahi.Modules.Models
 {
     [Serializable]
     public class PostChild

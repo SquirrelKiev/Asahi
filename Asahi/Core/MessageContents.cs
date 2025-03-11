@@ -1,4 +1,6 @@
-﻿namespace Asahi;
+﻿using Asahi.Modules.RedButton;
+
+namespace Asahi;
 
 public struct MessageContents
 {

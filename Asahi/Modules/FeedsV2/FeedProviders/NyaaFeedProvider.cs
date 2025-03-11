@@ -1,48 +1,25 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
 using System.Xml.Linq;
-using Asahi.Database.Models.Rss;
 using CodeHollow.FeedReader;
 
-namespace Asahi.Modules.RssAtomFeed;
+namespace Asahi.Modules.FeedsV2.FeedProviders;
 
-public class NyaaFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : IEmbedGeneratorAsync
+public class NyaaFeedProvider(HttpClient client) : RssFeedProvider(client)
 {
-    public IAsyncEnumerable<MessageContents> GenerateFeedItemMessages(
-        FeedListener feedListener,
-        HashSet<int> seenArticles,
-        HashSet<int> processedArticles,
-        Color embedColor,
-        bool shouldCreateEmbeds
-    ) => GenerateFeedItemMessagesSync(feedListener, seenArticles, processedArticles, embedColor, shouldCreateEmbeds).ToAsyncEnumerable();
-    
-    public IEnumerable<MessageContents> GenerateFeedItemMessagesSync
-    (
-        FeedListener feedListener,
-        HashSet<int> seenArticles,
-        HashSet<int> processedArticles,
-        Color embedColor,
-        bool shouldCreateEmbeds
-    )
+    public override string DefaultFeedTitle
     {
-        foreach (var feedItem in feedItems)
+        get
         {
-            processedArticles.Add(feedItem.Id.GetHashCode(StringComparison.Ordinal));
+            if (genericFeed == null) return "Nyaa Feed";
 
-            if (seenArticles.Contains(feedItem.Id.GetHashCode(StringComparison.Ordinal)))
-                continue;
-            if (!shouldCreateEmbeds)
-                continue;
-
-            yield return GenerateFeedItemEmbed(feedListener, feedItem, embedColor);
+            return genericFeed.Title;
         }
     }
 
-    public MessageContents GenerateFeedItemEmbed(
-        FeedListener feedListener,
-        FeedItem genericItem,
-        Color embedColor
-    )
+    protected override MessageContents ArticleToMessageContents(FeedItem genericItem, Color embedColor, string? feedTitle)
     {
+        Debug.Assert(genericFeed != null);
+        
         var eb = new EmbedBuilder();
 
         var nyaaUrlMatch = CompiledRegex.NyaaATagRegex().Match(genericItem.Description);
@@ -71,14 +48,7 @@ public class NyaaFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : 
 
         var footer = new EmbedFooterBuilder();
 
-        if (!string.IsNullOrWhiteSpace(feedListener.FeedTitle))
-        {
-            footer.Text = $"{feedListener.FeedTitle} • {genericItem.Id}";
-        }
-        else if (!string.IsNullOrWhiteSpace(genericFeed.Title))
-        {
-            footer.Text = $"{genericFeed.Title} • {genericItem.Id}";
-        }
+        footer.Text = $"{(!string.IsNullOrWhiteSpace(feedTitle) ? feedTitle : DefaultFeedTitle)} • {genericItem.Id}";
 
         if (genericItem.PublishingDate.HasValue)
         {
@@ -105,6 +75,7 @@ public class NyaaFeedMessageGenerator(Feed genericFeed, FeedItem[] feedItems) : 
     }
 
     // not used because the links were too long for Discord (512 char max)
+    // TODO: maybe try compressing the link?
     // private string GenerateMagnetRedirectLink(string magnetLink)
     // {
     //     var uriBuilder = new UriBuilder(config.MagnetRedirectorBaseUrl);

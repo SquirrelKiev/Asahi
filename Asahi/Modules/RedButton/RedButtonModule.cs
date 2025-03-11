@@ -1,5 +1,4 @@
-﻿using Asahi.Modules;
-using Discord.Interactions;
+﻿using Discord.Interactions;
 
 namespace Asahi.Modules.RedButton
 {
@@ -12,10 +11,7 @@ namespace Asahi.Modules.RedButton
             await Context.Interaction.DeleteOriginalResponseAsync();
         }
     }
-}
 
-namespace Asahi
-{
     public static class RedButtonExtensions
     {
         public static ComponentBuilder WithRedButton(this ComponentBuilder componentBuilder, string label = "X", int row = 0)

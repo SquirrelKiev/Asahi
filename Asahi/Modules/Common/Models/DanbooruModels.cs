@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Asahi.Modules.RssAtomFeed.Models;
+namespace Asahi.Modules.Models;
 
 public class DanbooruPost
 {

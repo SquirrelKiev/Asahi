@@ -1,4 +1,6 @@
-﻿namespace Asahi.Modules.About;
+﻿using Asahi.Modules.RedButton;
+
+namespace Asahi.Modules.About;
 
 [Inject(Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton)]
 public class AboutService(BotConfig botConfig, OverrideTrackerService overrideService)

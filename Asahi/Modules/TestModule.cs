@@ -1,6 +1,5 @@
 ﻿#if DEBUG
-using Asahi.Modules.RssAtomFeed;
-using Asahi.Modules.RssAtomFeed.Models;
+using Asahi.Modules.Models;
 using Discord.Interactions;
 using Newtonsoft.Json;
 
@@ -26,7 +25,7 @@ public class TestModule(
 
         var content = JsonConvert.DeserializeObject<DanbooruPost>(json)!;
 
-        var variant = await DanbooruMessageGenerator.GetBestVariantOrFallback(content, config, fxTwitterApi);
+        var variant = await DanbooruUtility.GetBestVariantOrFallback(content, config, fxTwitterApi);
 
         await FollowupAsync(variant?.Variant.Url ?? "uh oh");
     }

@@ -3,9 +3,9 @@ using Asahi.Database;
 using Asahi.Modules;
 using Asahi.Modules.BirthdayRoles;
 using Asahi.Modules.BotManagement;
+using Asahi.Modules.FeedsV2;
 using Asahi.Modules.Highlights;
 using Asahi.Modules.ModSpoilers;
-using Asahi.Modules.RssAtomFeed;
 using Asahi.Modules.Seigen;
 using Asahi.Modules.Welcome;
 using Discord.Commands;
@@ -24,12 +24,16 @@ public class BotService(
     IDbService dbService,
     ILogger<BotService> logger,
     CommandHandler commandHandler,
-    // TODO: Remove the request for services and just inject manually
-    IServiceProvider services,
-    HighlightsTrackingService hts,
-    CustomStatusService css,
-    ModSpoilerService mss,
-    WelcomeService ws
+    HighlightsTrackingService highlightsTrackingService,
+    CustomStatusService customStatusService,
+    ModSpoilerService modSpoilerService,
+    WelcomeService welcomeService,
+    FeedsTimerService feedsTimerService,
+    InteractionService interactionService,
+    InteractiveService interactiveService,
+    CommandService commandService,
+    RoleManagementService roleManagementService,
+    BirthdayTimerService birthdayTimerService
 ) : BackgroundService
 {
     public const string WebhookDefaultName =
@@ -37,6 +41,7 @@ public class BotService(
         "[DEBUG] " +
 #endif
         "Asahi Webhook";
+
     public CancellationTokenSource cts = new();
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -70,9 +75,9 @@ public class BotService(
         client.ReactionRemoved += Client_ReactionRemoved;
         client.MessageReceived += Client_MessageReceived;
 
-        services.GetRequiredService<InteractionService>().Log += Client_Log;
-        services.GetRequiredService<CommandService>().Log += Client_Log;
-        services.GetRequiredService<InteractiveService>().Log += Client_Log;
+        interactionService.Log += Client_Log;
+        commandService.Log += Client_Log;
+        interactiveService.Log += Client_Log;
 
         await client.LoginAsync(TokenType.Bot, config.BotToken);
         await client.StartAsync();
@@ -92,13 +97,13 @@ public class BotService(
     }
 
     private Task Client_UserLeft(SocketGuild guild, SocketUser user) =>
-        services.GetRequiredService<RoleManagementService>().OnUserLeft(guild, user);
+        roleManagementService.OnUserLeft(guild, user);
 
     private async Task Client_UserJoined(SocketGuildUser user)
     {
-        await ws.OnUserJoined(user);
-        
-        await services.GetRequiredService<RoleManagementService>().OnUserJoined(user);
+        await welcomeService.OnUserJoined(user);
+
+        await roleManagementService.OnUserJoined(user);
     }
 
     private async Task Client_GuildMemberUpdated(
@@ -111,9 +116,7 @@ public class BotService(
 
         if (!user.Roles.SequenceEqual(cacheable.Value.Roles))
         {
-            await services
-                .GetRequiredService<RoleManagementService>()
-                .OnUserRolesUpdated(cacheable, user);
+            await roleManagementService.OnUserRolesUpdated(cacheable, user);
         }
     }
 
@@ -137,7 +140,7 @@ public class BotService(
             || !spoilerEmote.Equals(reaction.Emote)
         )
         {
-            hts.QueueMessage(
+            highlightsTrackingService.QueueMessage(
                 new HighlightsTrackingService.QueuedMessage(
                     channel.Guild.Id,
                     channel.Id,
@@ -147,7 +150,7 @@ public class BotService(
             );
         }
 
-        _ = Task.Run(() => mss.ReactionCheck(reaction));
+        _ = Task.Run(() => modSpoilerService.ReactionCheck(reaction));
     }
 
     private async Task Client_ReactionRemoved(
@@ -170,7 +173,7 @@ public class BotService(
             || !spoilerEmote.Equals(reaction.Emote)
         )
         {
-            hts.QueueMessage(
+            highlightsTrackingService.QueueMessage(
                 new HighlightsTrackingService.QueuedMessage(
                     channel.Guild.Id,
                     channel.Id,
@@ -186,8 +189,7 @@ public class BotService(
         if (msg.Channel is not SocketGuildChannel)
             return Task.CompletedTask;
 
-        var highlightsService = services.GetRequiredService<HighlightsTrackingService>();
-        highlightsService.AddMessageToCache(msg);
+        highlightsTrackingService.AddMessageToCache(msg);
 
         return Task.CompletedTask;
     }
@@ -237,6 +239,7 @@ public class BotService(
         {
             logger.Log(level, "{Source} | {Message}", message.Source, message.Message);
         }
+
         return Task.CompletedTask;
     }
 
@@ -251,17 +254,14 @@ public class BotService(
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
-        hts.StartBackgroundTask(cts.Token);
+        highlightsTrackingService.StartBackgroundTask(cts.Token);
 
-        css.StartBackgroundTask(cts.Token);
-        
-        var birthdayTimer = services.GetRequiredService<BirthdayTimerService>();
-        birthdayTimer.StartBackgroundTask(cts.Token);
-        
-        var rssTimerService = services.GetRequiredService<RssTimerService>();
-        rssTimerService.StartBackgroundTask(cts.Token);
-        
-        var roleManagement = services.GetRequiredService<RoleManagementService>();
-        await roleManagement.CacheAndResolve();
+        customStatusService.StartBackgroundTask(cts.Token);
+
+        birthdayTimerService.StartBackgroundTask(cts.Token);
+
+        feedsTimerService.StartBackgroundTask(cts.Token);
+
+        await roleManagementService.CacheAndResolve();
     }
 }

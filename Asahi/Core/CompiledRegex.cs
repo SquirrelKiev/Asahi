@@ -28,7 +28,7 @@ public static partial class CompiledRegex
     [GeneratedRegex(@"^https:\/\/openrss\.org\/bsky\.app\/profile\/[a-zA-Z0-9:\.]*")]
     public static partial Regex OpenRssBskyPostRegex();
 
-    [GeneratedRegex(@"^https:\/\/i\.pximg\.net\/.+\.([a-z]*)")]
+    [GeneratedRegex(@"^https:\/\/i\.pximg\.net\/.+\/(\d+).+\.([a-z]*)")]
     public static partial Regex ValidPixivDirectImageUrlRegex();
 
     [GeneratedRegex(@"^https:\/\/twitter\.com\/[a-zA-Z0-9_]+\/status\/(\d+)$")]

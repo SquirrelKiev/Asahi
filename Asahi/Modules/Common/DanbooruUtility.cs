@@ -1,14 +1,10 @@
-﻿using Asahi.Database.Models.Rss;
-using Asahi.Modules.RssAtomFeed.Models;
+﻿using Asahi.Modules.Models;
 using Humanizer;
-using Microsoft.CodeAnalysis.CodeFixes;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Newtonsoft.Json;
 
-namespace Asahi.Modules.RssAtomFeed
+namespace Asahi.Modules
 {
-    public class DanbooruMessageGenerator(DanbooruPost[] posts, IFxTwitterApi fxTwitterApi, BotConfig config)
-        : IEmbedGeneratorAsync
+    [Inject(ServiceLifetime.Singleton)]
+    public class DanbooruUtility(BotConfig config, IFxTwitterApi fxTwitterApi)
     {
         private static readonly HashSet<string> KnownImageExtensions =
         [
@@ -20,35 +16,18 @@ namespace Asahi.Modules.RssAtomFeed
             "webp",
         ];
 
-        public async IAsyncEnumerable<MessageContents> GenerateFeedItemMessages(
-            FeedListener feedListener,
-            HashSet<int> seenArticles,
-            HashSet<int> processedArticles,
-            Color embedColor,
-            bool shouldCreateEmbeds
-        )
-        {
-            foreach (var post in posts)
-            {
-                processedArticles.Add(post.Id);
+        private static readonly HashSet<string> KnownVideoExtensions =
+        [
+            "zip",
+            "mp4"
+        ];
 
-                if (seenArticles.Contains(post.Id))
-                    continue;
-                if (!shouldCreateEmbeds)
-                    continue;
-
-                yield return await GenerateFeedItemMessage(feedListener, post, embedColor);
-            }
-        }
-
-        private async ValueTask<MessageContents> GenerateFeedItemMessage(
-            FeedListener? feedListener,
-            DanbooruPost post,
-            Color embedColor
-        )
+        public async IAsyncEnumerable<MessageContents> GetEmbeds(DanbooruPost post, Color embedColor,
+            string feedTitle)
         {
             var eb = new EmbedBuilder();
             EmbedBuilder[]? extrasForMultiImage = null;
+            string? videoUrl = null;
 
             eb.WithColor(embedColor);
             if (!string.IsNullOrWhiteSpace(post.TagStringArtist))
@@ -60,9 +39,9 @@ namespace Asahi.Modules.RssAtomFeed
             footer.WithIconUrl(
                 "https://danbooru.donmai.us/packs/static/danbooru-logo-128x128-ea111b6658173e847734.png"
             );
-            if (!string.IsNullOrWhiteSpace(feedListener?.FeedTitle))
+            if (!string.IsNullOrWhiteSpace(feedTitle))
             {
-                footer.WithText($"{feedListener.FeedTitle} • Rating: {post.Rating}");
+                footer.WithText($"{feedTitle} • Rating: {post.Rating}");
             }
 
             eb.WithFooter(footer);
@@ -80,17 +59,26 @@ namespace Asahi.Modules.RssAtomFeed
             var bestVariant = await GetBestVariantOrFallback(post, config, fxTwitterApi);
             if (bestVariant != null)
             {
-                eb.WithImageUrl(bestVariant.Variant.Url);
+                if (KnownVideoExtensions.Contains(bestVariant.Variant.FileExt))
+                {
+                    videoUrl = bestVariant.Variant.Url;
+                }
+                else
+                {
+                    eb.WithImageUrl(bestVariant.Variant.Url);
+                }
+
                 if (bestVariant.ExtraUrls != null)
                 {
                     extrasForMultiImage =
-                        bestVariant.ExtraUrls.Select(x => new EmbedBuilder().WithUrl(url).WithImageUrl(x)).ToArray();
+                        bestVariant.ExtraUrls.Select(x => new EmbedBuilder().WithUrl(url).WithImageUrl(x))
+                            .ToArray();
                 }
             }
 
             if (bestVariant == null)
             {
-                eb.WithDescription($"No known image link found.");
+                eb.WithDescription("No known image link found.");
             }
             else
             {
@@ -102,13 +90,14 @@ namespace Asahi.Modules.RssAtomFeed
 
             var components = new ComponentBuilder();
 
-            if (!string.IsNullOrWhiteSpace(post.Source) && (post.Source.StartsWith("http://") || post.Source.StartsWith("https://")))
+            if (!string.IsNullOrWhiteSpace(post.Source) &&
+                (post.Source.StartsWith("http://") || post.Source.StartsWith("https://")))
             {
                 IEmote? buttonEmote = null;
                 string platformName = "Source";
                 string sourceUrl = post.Source;
 
-                if(post.PixivId != null)
+                if (post.PixivId != null)
                 {
                     QuotingHelpers.TryParseEmote(config.PixivEmote, out var pixivEmote);
 
@@ -154,32 +143,43 @@ namespace Asahi.Modules.RssAtomFeed
                     buttonEmote = emote;
                     platformName = "arca.live";
                 }
-                
+
                 components.WithButton(platformName, url: sourceUrl, emote: buttonEmote, style: ButtonStyle.Link);
             }
 
             if (extrasForMultiImage == null)
             {
-                return new MessageContents(eb, components);
+                yield return new MessageContents(eb, components);
             }
             else
             {
-                return new MessageContents("", embeds: extrasForMultiImage.Prepend(eb).Select(x => x.Build()).ToArray(), components: components);
+                yield return new MessageContents("",
+                    embeds: extrasForMultiImage.Prepend(eb).Select(x => x.Build()).ToArray(), components: components);
             }
+
+            if (videoUrl != null)
+                yield return new MessageContents(videoUrl);
         }
 
-        public static DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants)
+        private static DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants, int? pixivId = null)
         {
             if (variants == null)
                 return null;
 
             // we only want embeddable variants
             var validVariants = variants
-                .Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower()))
+                .Where(v => KnownImageExtensions.Contains(v.FileExt.ToLower()) ||
+                            KnownVideoExtensions.Contains(v.FileExt.ToLower()))
                 .ToArray();
 
             // original is the ideal pick here
             var originalVariant = validVariants.FirstOrDefault(v => v.Type == "original");
+
+            // to force GetBestVariantOrFallback's ugoria handling
+            if (originalVariant != null && originalVariant.FileExt == "zip")
+            {
+                return null;
+            }
 
             if (originalVariant != null)
             {
@@ -203,8 +203,19 @@ namespace Asahi.Modules.RssAtomFeed
             var fallbackPixivMatch = CompiledRegex.ValidPixivDirectImageUrlRegex().Match(post.Source);
             if (fallbackPixivMatch.Success)
             {
-                var extension = fallbackPixivMatch.Groups[1].Value;
-                if (KnownImageExtensions.Contains(extension))
+                var postId = fallbackPixivMatch.Groups[1].Value;
+                var extension = fallbackPixivMatch.Groups[2].Value;
+                if (extension == "zip")
+                {
+                    return new DanbooruVariantWithFallback(new DanbooruVariant
+                    {
+                        FileExt = "mp4", Height = 0, Width = 0, Type = "fallback (pixiv)",
+                        Url = $"https://www.phixiv.net/i/ugoira/{postId}.mp4"
+                    });
+                }
+
+                // not sure if videos are returned by pixiv but
+                if (KnownImageExtensions.Contains(extension) || KnownVideoExtensions.Contains(extension))
                 {
                     var fallbackUrl = config.ProxyUrl.Replace("{{URL}}",
                         Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(post.Source)));
@@ -225,8 +236,10 @@ namespace Asahi.Modules.RssAtomFeed
                 {
                     var firstImg = status.Tweet.Media.Photos[0];
 
-                    var extraUrls = status.Tweet.Media.Photos.Length > 1 ? status.Tweet.Media.Photos.Skip(1).Select(x => x.Url + "?name=orig").ToArray() : null;
-                    
+                    var extraUrls = status.Tweet.Media.Photos.Length > 1
+                        ? status.Tweet.Media.Photos.Skip(1).Select(x => x.Url + "?name=orig").ToArray()
+                        : null;
+
                     return new DanbooruVariantWithFallback(new DanbooruVariant()
                     {
                         FileExt = firstImg.Url.Split('.')[^1],

@@ -1,4 +1,5 @@
-﻿using Discord.Interactions;
+﻿using Asahi.Modules.RedButton;
+using Discord.Interactions;
 using Fergun.Interactive;
 using Humanizer;
 using Microsoft.Extensions.Logging;
