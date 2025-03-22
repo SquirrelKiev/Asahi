@@ -144,7 +144,8 @@ namespace Asahi.Modules
                     platformName = "arca.live";
                 }
 
-                components.WithButton(platformName, url: sourceUrl, emote: buttonEmote, style: ButtonStyle.Link);
+                if(sourceUrl.Length < 512)
+                    components.WithButton(platformName, url: sourceUrl, emote: buttonEmote, style: ButtonStyle.Link);
             }
 
             if (extrasForMultiImage == null)
