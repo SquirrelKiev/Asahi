@@ -23,7 +23,8 @@ public class HighlightsNameAutocomplete : AutocompleteHandler
 
         foreach (var board in await boards.ToArrayAsync())
         {
-            autocompletes.Add(new AutocompleteResult(board.Name, board.Name));
+            var channel = await context.Client.GetChannelAsync(board.LoggingChannelId);
+            autocompletes.Add(new AutocompleteResult($"{board.Name} (#{channel.Name})", board.Name));
         }
 
         return AutocompletionResult.FromSuccess(autocompletes);

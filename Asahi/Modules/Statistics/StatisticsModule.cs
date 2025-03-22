@@ -41,19 +41,29 @@ public class StatisticsModule(IDbService dbService) : BotModule
     )]
     public async Task UsersWithMostReactionsSlash(
         [Summary(description: "Optional emote to filter results by.")]
-        string emoteName = "",
+        string emoteName = "", // TODO: Parse this in case its emote markup
         [Summary(description: "Optional channel to filter results by.")]
         IChannel? channel = null,
         [Summary(description: "Optional board to filter results by.")]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-        string? board = ""
+        string? board = "",
+        [Summary(description: "Optional user to filter results by. Useful for checking your own stats.")]
+        IGuildUser? user = null
     )
     {
         await DeferAsync();
 
         await using var context = dbService.GetDbContext();
 
+        if (context is not PostgresContext)
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+            return;
+        }
+
         var postgresHappyChannelId = channel?.Id ?? 0;
+        var postgresHappyUserId = user?.Id ?? 0;
 
         var results = await context.Database
             .SqlQuery<IdToReactionCount>($"""
@@ -71,6 +81,7 @@ public class StatisticsModule(IDbService dbService) : BotModule
                                               WHERE "HighlightBoardGuildId" = {Context.Guild.Id}
                                                 AND ({board} = '' OR "HighlightBoardName" = {board})
                                                 AND ({postgresHappyChannelId} = 0 OR "OriginalMessageChannelId" = {postgresHappyChannelId})
+                                                AND ({postgresHappyUserId} = 0 OR "AuthorId" = {postgresHappyUserId})
                                               ORDER BY "OriginalMessageId", "ReactionCount" DESC
                                           )
                                                           SELECT "AuthorId" as Id, SUM("ReactionCount") as TotalReactions FROM UniqueMessages
@@ -82,7 +93,7 @@ public class StatisticsModule(IDbService dbService) : BotModule
         var topStr = results
             .Aggregate(
                 new StringBuilder(),
-                (x, y) => x.AppendLine($"<@{y.Id}> - {y.TotalReactions} total {(emoteName ?? "reactions")}")
+                (x, y) => x.AppendLine($"<@{y.Id}> - {y.TotalReactions} total {emoteName}")
             )
             .ToString();
 
@@ -91,14 +102,35 @@ public class StatisticsModule(IDbService dbService) : BotModule
             topStr = "No results.";
 
         var eb = new EmbedBuilder()
-            .WithTitle(Context.Guild.Name)
-            .WithColor(
-                QuotingHelpers.GetUserRoleColorWithFallback(
-                    await Context.Guild.GetCurrentUserAsync(),
-                    Color.Green
-                )
-            )
+            .WithColor(QuotingHelpers.GetUserRoleColorWithFallback(await Context.Guild.GetCurrentUserAsync(),
+                Color.Green))
             .WithDescription(topStr);
+
+        var fields = new List<EmbedFieldBuilder>();
+        if (emoteName != "")
+            fields.Add(new EmbedFieldBuilder().WithName("Emote").WithValue(emoteName).WithIsInline(true));
+        if (channel != null)
+            fields.Add(new EmbedFieldBuilder().WithName("Channel").WithValue($"<#{channel.Id}>").WithIsInline(true));
+        if (board != "")
+        {
+            var boardChannelId = await context.HighlightBoards
+                .Where(x => x.GuildId == Context.Guild.Id && x.Name == board)
+                .Select(x => x.LoggingChannelId).FirstOrDefaultAsync();
+
+            fields.Add(new EmbedFieldBuilder().WithName("Board").WithValue($"`{board}` (<#{boardChannelId}>)")
+                .WithIsInline(true));
+        }
+
+        if (user != null)
+        {
+            eb.WithAuthor($"Highlights by {user.DisplayName}", user.GetAvatarUrl());
+        }
+        else
+        {
+            eb.WithAuthor(Context.Guild.Name, Context.Guild.IconUrl);
+        }
+
+        eb.WithFields(fields);
 
         await FollowupAsync(new MessageContents(eb));
     }
@@ -112,14 +144,21 @@ public class StatisticsModule(IDbService dbService) : BotModule
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string board = "",
         [Summary(description: "Optional user to filter results by.")]
-        IUser? user = null
+        IGuildUser? user = null
     )
     {
         await DeferAsync();
 
-        var postgresHappyUserId = user?.Id ?? 0;
-        
         await using var context = dbService.GetDbContext();
+
+        if (context is not PostgresContext)
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+            return;
+        }
+
+        var postgresHappyUserId = user?.Id ?? 0;
 
         var results = await context.Database
             .SqlQuery<IdToReactionCount>($"""
@@ -150,7 +189,6 @@ public class StatisticsModule(IDbService dbService) : BotModule
             topStr = "No results.";
 
         var eb = new EmbedBuilder()
-            .WithTitle(Context.Guild.Name)
             .WithColor(
                 QuotingHelpers.GetUserRoleColorWithFallback(
                     await Context.Guild.GetCurrentUserAsync(),
@@ -158,6 +196,28 @@ public class StatisticsModule(IDbService dbService) : BotModule
                 )
             )
             .WithDescription(topStr);
+
+        var fields = new List<EmbedFieldBuilder>();
+        if (board != "")
+        {
+            var boardChannelId = await context.HighlightBoards
+                .Where(x => x.GuildId == Context.Guild.Id && x.Name == board)
+                .Select(x => x.LoggingChannelId).FirstOrDefaultAsync();
+
+            fields.Add(new EmbedFieldBuilder().WithName("Board").WithValue($"`{board}` (<#{boardChannelId}>)")
+                .WithIsInline(true));
+        }
+
+        if (user != null)
+        {
+            eb.WithAuthor($"Highlights by {user.DisplayName}", user.GetAvatarUrl());
+        }
+        else
+        {
+            eb.WithAuthor(Context.Guild.Name, Context.Guild.IconUrl);
+        }
+
+        eb.WithFields(fields);
 
         await FollowupAsync(new MessageContents(eb));
     }
@@ -172,15 +232,22 @@ public class StatisticsModule(IDbService dbService) : BotModule
         [Summary(description: "Optional emote to filter results by")]
         string emoteName = "",
         [Summary(description: "Optional user to filter results by")]
-        IUser? author = null
+        IGuildUser? user = null
     )
     {
         await DeferAsync();
 
         await using var context = dbService.GetDbContext();
 
+        if (context is not PostgresContext)
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+            return;
+        }
+
         var postgresHappyChannelId = channel?.Id ?? 0;
-        var postgresHappyAuthorId = author?.Id ?? 0;
+        var postgresHappyAuthorId = user?.Id ?? 0;
 
         var results = await context.Database.SqlQuery<MessageIdToReactionCount>($"""
              WITH UniqueMessages AS (
@@ -222,7 +289,6 @@ public class StatisticsModule(IDbService dbService) : BotModule
             topStr = "No results.";
 
         var eb = new EmbedBuilder()
-            .WithTitle(Context.Guild.Name)
             .WithColor(
                 QuotingHelpers.GetUserRoleColorWithFallback(
                     await Context.Guild.GetCurrentUserAsync(),
@@ -230,6 +296,32 @@ public class StatisticsModule(IDbService dbService) : BotModule
                 )
             )
             .WithDescription(topStr);
+
+        var fields = new List<EmbedFieldBuilder>();
+        if (emoteName != "")
+            fields.Add(new EmbedFieldBuilder().WithName("Emote").WithValue(emoteName).WithIsInline(true));
+        if (channel != null)
+            fields.Add(new EmbedFieldBuilder().WithName("Channel").WithValue($"<#{channel.Id}>").WithIsInline(true));
+        if (board != "")
+        {
+            var boardChannelId = await context.HighlightBoards
+                .Where(x => x.GuildId == Context.Guild.Id && x.Name == board)
+                .Select(x => x.LoggingChannelId).FirstOrDefaultAsync();
+
+            fields.Add(new EmbedFieldBuilder().WithName("Board").WithValue($"`{board}` (<#{boardChannelId}>)")
+                .WithIsInline(true));
+        }
+
+        if (user != null)
+        {
+            eb.WithAuthor($"Highlights by {user.DisplayName}", user.GetAvatarUrl());
+        }
+        else
+        {
+            eb.WithAuthor(Context.Guild.Name, Context.Guild.IconUrl);
+        }
+
+        eb.WithFields(fields);
 
         await FollowupAsync(new MessageContents(eb));
     }
@@ -242,15 +334,24 @@ public class StatisticsModule(IDbService dbService) : BotModule
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string board = "",
         [Summary(description: "Optional user to filter results by")]
-        IUser? author = null
+        IGuildUser? user = null,
+        [Summary(description: "Optional emote to filter results by")]
+        string emoteName = ""
     )
     {
         await DeferAsync();
 
         await using var context = dbService.GetDbContext();
 
+        if (context is not PostgresContext)
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+            return;
+        }
+
         var postgresHappyChannelId = channel?.Id ?? 0;
-        var postgresHappyAuthorId = author?.Id ?? 0;
+        var postgresHappyAuthorId = user?.Id ?? 0;
 
         var results = await context.Database.SqlQuery<EmoteToReactionCount>($"""
                                                                              WITH UniqueReactions AS (
@@ -262,6 +363,7 @@ public class StatisticsModule(IDbService dbService) : BotModule
                                                                                  FROM "CachedMessageReactions" CMR
                                                                                           INNER JOIN "CachedHighlightedMessages" CHM
                                                                                                      ON CHM."Id" = CMR."HighlightedMessageId"
+                                                                                                        AND ({emoteName} = '' OR CMR."EmoteName" = {emoteName})
                                                                                  WHERE "HighlightBoardGuildId" = {Context.Guild.Id}
                                                                                    AND ({board} = '' OR "HighlightBoardName" = {board})
                                                                                    AND ({postgresHappyChannelId} = 0 OR "OriginalMessageChannelId" = {postgresHappyChannelId})
@@ -276,7 +378,7 @@ public class StatisticsModule(IDbService dbService) : BotModule
                                                                                               ELSE '<:' || UR."EmoteName" || ':' || UR."EmoteId" || '>'
                                                                                               END as "DisplayEmote",
                                                                                           UR."Count"
-                                                                                      -- rider complains if i dont do it as an alias
+                                                                                      -- rider complains if I don't do it as an alias
                                                                                       FROM UniqueReactions UR
                                                                                                LEFT JOIN "EmoteAliases" EA
                                                                                                          ON EA."GuildId" = {Context.Guild.Id}
@@ -302,7 +404,6 @@ public class StatisticsModule(IDbService dbService) : BotModule
             topStr = "No results.";
 
         var eb = new EmbedBuilder()
-            .WithTitle(Context.Guild.Name)
             .WithColor(
                 QuotingHelpers.GetUserRoleColorWithFallback(
                     await Context.Guild.GetCurrentUserAsync(),
@@ -310,6 +411,32 @@ public class StatisticsModule(IDbService dbService) : BotModule
                 )
             )
             .WithDescription(topStr);
+
+        var fields = new List<EmbedFieldBuilder>();
+        if (emoteName != "")
+            fields.Add(new EmbedFieldBuilder().WithName("Emote").WithValue(emoteName).WithIsInline(true));
+        if (channel != null)
+            fields.Add(new EmbedFieldBuilder().WithName("Channel").WithValue($"<#{channel.Id}>").WithIsInline(true));
+        if (board != "")
+        {
+            var boardChannelId = await context.HighlightBoards
+                .Where(x => x.GuildId == Context.Guild.Id && x.Name == board)
+                .Select(x => x.LoggingChannelId).FirstOrDefaultAsync();
+
+            fields.Add(new EmbedFieldBuilder().WithName("Board").WithValue($"`{board}` (<#{boardChannelId}>)")
+                .WithIsInline(true));
+        }
+
+        if (user != null)
+        {
+            eb.WithAuthor($"Highlights by {user.DisplayName}", user.GetAvatarUrl());
+        }
+        else
+        {
+            eb.WithAuthor(Context.Guild.Name, Context.Guild.IconUrl);
+        }
+
+        eb.WithFields(fields);
 
         await FollowupAsync(new MessageContents(eb));
     }
