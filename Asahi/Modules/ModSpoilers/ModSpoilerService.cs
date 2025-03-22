@@ -135,7 +135,7 @@ public class ModSpoilerService(
             
             cachedHighlightedMessage.UpdateReactions(emoteUserMap);
 
-            var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, false, true, context, 
+            var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, false, [], true, context, 
                 replyMessage, eb =>
                 {
                     hts.AddReactionsFieldToQuote(eb,

@@ -287,7 +287,8 @@ public class HighlightsTrackingService(
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e, "Message {messageId} failed to process! Please take a look manually.", outdatedMessage.OriginalMessageId);
+                    logger.LogError(e, "Message {messageId} failed to process! Please take a look manually.",
+                        outdatedMessage.OriginalMessageId);
                     continue;
                 }
 
@@ -974,17 +975,13 @@ public class HighlightsTrackingService(
         );
 
         IMessage? replyMessage = null;
-        if (message.Reference != null)
+        if (message.Reference != null &&
+            message.Reference.ReferenceType.GetValueOrDefault() != MessageReferenceType.Forward &&
+            message.Reference.ChannelId == message.Channel.Id && message.Reference.MessageId.IsSpecified)
         {
-            if (message.Reference.ChannelId == message.Channel.Id)
-            {
-                if (message.Reference.MessageId.IsSpecified)
-                {
-                    replyMessage = await message.Channel.GetMessageAsync(
-                        message.Reference.MessageId.Value
-                    );
-                }
-            }
+            replyMessage = await message.Channel.GetMessageAsync(
+                message.Reference.MessageId.Value
+            );
         }
 
         var queuedMessages = QuotingHelpers.QuoteMessage(
@@ -992,6 +989,7 @@ public class HighlightsTrackingService(
             embedColor,
             logger,
             false,
+            [],
             spoilerEntry != null,
             spoilerEntry?.SpoilerContext ?? "",
             replyMessage,

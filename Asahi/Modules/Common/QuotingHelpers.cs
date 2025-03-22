@@ -13,30 +13,35 @@ public static class QuotingHelpers
     public const string ReactionsFieldName = "Reactors";
     public const string ReplyingTo = "Replying to ";
 
+    // TODO: Make this more readable
+    [Pure]
     public static List<MessageContents> QuoteMessage(IMessage message, Color embedColor, ILogger logger,
-        bool showAuthor, bool spoilerAll = false, string? spoilerContext = "", IMessage? replyMessage = null, Action<EmbedBuilder>? modifyQuoteEmbed = null,
-        string forbiddenUrl = "")
+        bool showAuthor, HashSet<string> forbiddenUrls, bool spoilerAll = false, string? spoilerContext = "",
+        IMessage? replyMessage = null, Action<EmbedBuilder>? modifyQuoteEmbed = null)
     {
-        string constantUrl = forbiddenUrl;
-        while (constantUrl == forbiddenUrl)
+        string constantUrl = "";
+        while (constantUrl == "" || forbiddenUrls.Contains(constantUrl)) // TODO: this but without the loop
         {
             constantUrl = CatboxQts.GetRandomQtUrl();
         }
 
+        forbiddenUrls.Add(constantUrl);
+
         //var channelName = message.Channel is SocketThreadChannel threadChannel ? $"#{threadChannel.ParentChannel.Name} • " : "";
 
-        var channelName = $"#{message.Channel.Name}";
+        string? channelName = message.Channel != null ? $"#{message.Channel.Name}" : null;
 
         List<MessageContents>? replyMessages = null;
         if (replyMessage != null)
         {
             showAuthor = true;
-            replyMessages = QuoteMessage(replyMessage, embedColor, logger, showAuthor, spoilerAll, modifyQuoteEmbed:
+            replyMessages = QuoteMessage(replyMessage, embedColor, logger, showAuthor, forbiddenUrls, spoilerAll,
+                modifyQuoteEmbed:
                 eb =>
                 {
                     eb.WithFooter(new EmbedFooterBuilder());
                     eb.Timestamp = null;
-                }, forbiddenUrl: constantUrl);
+                });
         }
 
         if (message.Channel is SocketThreadChannel threadChannel)
@@ -51,15 +56,32 @@ public static class QuotingHelpers
             messageContent = messageContent.SpoilerMessage(spoilerContext);
         }
 
-        var link = message.GetJumpUrl();
+        var link = message.Channel != null ? message.GetJumpUrl() : null;
         var firstEmbed = new EmbedBuilder()
             .WithDescription(messageContent)
-            .WithFooter(channelName)
             .WithTimestamp(message.Timestamp)
             .WithOptionalColor(embedColor)
             .WithUrl(constantUrl);
 
-        if (showAuthor)
+        if (channelName != null)
+            firstEmbed.WithFooter(channelName);
+
+        List<MessageContents> forwardedMessages = [];
+        if (message is IUserMessage userMessage)
+        {
+            foreach (var forwardedMessage in userMessage.ForwardedMessages)
+            {
+                forwardedMessages.AddRange(QuoteMessage(forwardedMessage.Message, embedColor, logger, showAuthor,
+                    forbiddenUrls, spoilerAll, modifyQuoteEmbed:
+                    eb =>
+                    {
+                        eb.WithFooter(new EmbedFooterBuilder());
+                        eb.Timestamp = null;
+                    }));
+            }
+        }
+
+        if (showAuthor && message.Author != null)
         {
             if (message.Author is not IGuildUser user)
             {
@@ -99,12 +121,14 @@ public static class QuotingHelpers
                             firstEmbed.Description += $"\n\n**Spoiler attachments**";
                             addedSpoilerMessage = true;
                         }
+
                         firstEmbed.Description += $"\n{embed.Url}";
                     }
                     else
                     {
                         HandleImageEmbed(embed.Url, embeds, embedColor, ref attachedImage, constantUrl);
                     }
+
                     break;
                 case EmbedType.Video:
                 case EmbedType.Gifv:
@@ -116,6 +140,7 @@ public static class QuotingHelpers
                             firstEmbed.Description += $"\n\n**Spoiler attachments**";
                             addedSpoilerMessage = true;
                         }
+
                         firstEmbed.Description += $"\n{embed.Url}";
                     }
                     else
@@ -162,6 +187,7 @@ public static class QuotingHelpers
                         firstEmbed.Description += $"\n\n**Spoiler attachments**";
                         addedSpoilerMessage = true;
                     }
+
                     firstEmbed.Description += $"\n{attachment.Url}";
                 }
                 else
@@ -171,7 +197,6 @@ public static class QuotingHelpers
             }
             else if (attachment.ContentType.StartsWith("video"))
             {
-
                 if (spoilerAll || attachment.IsSpoiler())
                 {
                     logger.LogTrace("attachment is spoiler video");
@@ -194,7 +219,8 @@ public static class QuotingHelpers
             {
                 var txt = $"[File {i} ({attachment.Filename})]({attachment.Url})";
                 var tooManyAttachmentsText = $"Plus {message.Attachments.Count - i + 1} more.";
-                if (!tooManyAttachments && attachmentsValueContents.Length + txt.Length > 1024 - tooManyAttachmentsText.Length)
+                if (!tooManyAttachments &&
+                    attachmentsValueContents.Length + txt.Length > 1024 - tooManyAttachmentsText.Length)
                 {
                     attachmentsValueContents.AppendLine(tooManyAttachmentsText);
                     tooManyAttachments = true;
@@ -232,14 +258,15 @@ public static class QuotingHelpers
 
         modifyQuoteEmbed?.Invoke(firstEmbed);
 
-        queuedMessages.Insert(0, new MessageContents(link, embeds.Take(10).Select(x => x.Build()).ToArray(), null));
+        queuedMessages.Insert(0, new MessageContents(link ?? "", embeds.Take(10).Select(x => x.Build()).ToArray(), null));
 
         if (replyMessages != null)
         {
             var firstReplyMessage = replyMessages[0];
             var replyMessageAuthor = firstReplyMessage.embeds![0].Author!.Value;
             firstReplyMessage.embeds![0] = firstReplyMessage.embeds![0].ToEmbedBuilder()
-                .WithAuthor($"{ReplyingTo}{replyMessageAuthor.Name}", replyMessageAuthor.IconUrl, replyMessageAuthor.Url).Build();
+                .WithAuthor($"{ReplyingTo}{replyMessageAuthor.Name}", replyMessageAuthor.IconUrl,
+                    replyMessageAuthor.Url).Build();
 
             if (replyMessages.Count == 1 && queuedMessages[0].embeds?.Length < 10)
             {
@@ -260,6 +287,34 @@ public static class QuotingHelpers
                 queuedMessages[0] = firstQueuedMessage;
 
                 queuedMessages.InsertRange(0, replyMessages);
+            }
+        }
+
+        if(forwardedMessages.Count != 0)
+        {
+            var firstForwardedMessage = forwardedMessages[0];
+            firstForwardedMessage.embeds![0] = firstForwardedMessage.embeds![0].ToEmbedBuilder()
+                .WithAuthor("Forwarded message").Build();
+            
+            if (forwardedMessages.Count == 1 && queuedMessages[0].embeds?.Length < 10)
+            {
+                forwardedMessages[0] = firstForwardedMessage;
+
+                var firstMessage = queuedMessages[0];
+                firstMessage.embeds = [.. forwardedMessages[0].embeds!, .. queuedMessages[0].embeds!];
+                queuedMessages[0] = firstMessage;
+            }
+            else
+            {
+                var firstQueuedMessage = queuedMessages[0];
+
+                firstForwardedMessage.body = firstQueuedMessage.body;
+                firstQueuedMessage.body = "";
+
+                forwardedMessages[0] = firstForwardedMessage;
+                queuedMessages[0] = firstQueuedMessage;
+
+                queuedMessages.AddRange(forwardedMessages);
             }
         }
 
@@ -303,7 +358,8 @@ public static class QuotingHelpers
         }
     }
 
-    public static async ValueTask<Color> GetQuoteEmbedColor(EmbedColorSource colorSource, Color fallbackColor, IGuildUser? embedAuthor, IDiscordClient client)
+    public static async ValueTask<Color> GetQuoteEmbedColor(EmbedColorSource colorSource, Color fallbackColor,
+        IGuildUser? embedAuthor, IDiscordClient client)
     {
         Color embedColor = fallbackColor;
 
@@ -320,6 +376,7 @@ public static class QuotingHelpers
                     user = await embedAuthor.Guild.GetCurrentUserAsync();
                     goto case EmbedColorSource.UsersRoleColor;
                 }
+
                 break;
             case EmbedColorSource.AlwaysUseFallbackColor:
             default:

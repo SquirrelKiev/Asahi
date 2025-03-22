@@ -37,7 +37,7 @@ public static partial class ConfigUtilities
             embeds = embeds.Prepend(
                 embedBuilder
                     .WithDescription(message.message)
-                    .WithColor(message.wasSuccess ? roleColor : Color.Red)
+                    .WithOptionalColor(embedBuilder.Color.HasValue ? Color.Default : message.wasSuccess ? roleColor : Color.Red)
                     .Build()
             ).ToArray();
         }

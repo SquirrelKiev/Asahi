@@ -821,33 +821,35 @@ public class HighlightsModule(
                 var currentUser = (SocketGuildUser)Context.User;
 
                 // TODO: update to new quote style
-                Embed[] testEmbeds =
-                [
-                    new EmbedBuilder()
-                        .WithAuthor(currentUser)
-                        .WithDescription("Here's how that color source looks.")
-                        .WithCurrentTimestamp()
-                        .WithOptionalColor(
-                            await QuotingHelpers.GetQuoteEmbedColor(
-                                colorSource,
-                                color,
-                                currentUser,
-                                (DiscordSocketClient)Context.Client
-                            )
-                        )
-                        .Build(),
-                    new EmbedBuilder()
-                        .WithAuthor(currentUser)
-                        .WithDescription("Here's how that fallback color would look.")
-                        .WithCurrentTimestamp()
-                        .WithOptionalColor(options.board.FallbackEmbedColor)
-                        .Build(),
-                ];
+                // Embed[] testEmbeds =
+                // [
+                //     new EmbedBuilder()
+                //         .WithAuthor(currentUser)
+                //         .WithDescription("Here's how that color source looks.")
+                //         .WithCurrentTimestamp()
+                //         .WithOptionalColor(
+                //             await QuotingHelpers.GetQuoteEmbedColor(
+                //                 colorSource,
+                //                 color,
+                //                 currentUser,
+                //                 (DiscordSocketClient)Context.Client
+                //             )
+                //         )
+                //         .Build(),
+                //     new EmbedBuilder()
+                //         .WithAuthor(currentUser)
+                //         .WithDescription("Here's how that fallback color would look.")
+                //         .WithCurrentTimestamp()
+                //         .WithOptionalColor(options.board.FallbackEmbedColor)
+                //         .Build(),
+                // ];
+
+                options.embedBuilder.WithColor(await QuotingHelpers.GetQuoteEmbedColor(colorSource, color, currentUser,
+                    (DiscordSocketClient)Context.Client));
 
                 return new ConfigChangeResult(
                     true,
-                    $"Set the color source as `{colorSource.Humanize()}` Set fallback color as `{color}`.",
-                    extraEmbeds: testEmbeds
+                    $"Set the color source as `{colorSource.Humanize()}` Set fallback color as `{color}`."
                 );
             }
         );

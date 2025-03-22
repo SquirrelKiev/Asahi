@@ -193,7 +193,7 @@ public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : Bo
         var author = await guild.GetUserAsync(message.Author.Id);
 
         var quoteMessages = QuotingHelpers.QuoteMessage(message, QuotingHelpers.GetUserRoleColorWithFallback(author, Color.Green), logger,
-            true);
+            true, []);
 
         foreach (var quoteMessage in quoteMessages)
         {
