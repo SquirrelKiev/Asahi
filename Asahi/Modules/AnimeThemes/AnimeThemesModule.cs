@@ -170,7 +170,7 @@ public class AnimeThemesModule(IAnimeThemesClient atClient, InteractiveService i
         components: new ComponentBuilder().WithButton("Back", BACK_BUTTON, ButtonStyle.Secondary).WithRedButton()));
 
         var selectInteraction = await interactive.NextMessageComponentAsync(
-            x => msg.Id == x.Message.Id &&
+            x => msg.Id == x.Message.Id && x.User.Id == Context.User.Id &&
                  x.Data.CustomId is BACK_BUTTON or ModulePrefixes.RED_BUTTON,
             timeout: ThemeSlashExpiryTime);
 

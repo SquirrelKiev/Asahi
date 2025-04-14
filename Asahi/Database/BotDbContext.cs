@@ -1,4 +1,5 @@
 ﻿using Asahi.Database.Models;
+using Asahi.Database.Models.April;
 using Asahi.Database.Models.Rss;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -32,6 +33,12 @@ public abstract class BotDbContext(ILoggerFactory? loggerFactory) : DbContext
     public DbSet<BirthdayEntry> Birthdays { get; set; }
 
     public DbSet<FeedListener> RssFeedListeners { get; set; }
+    
+    // April
+    public DbSet<ClaimedUniqueReward> ClaimedUniqueRewards { get; set; }
+    public DbSet<UserData> UserData { get; set; }
+    public DbSet<InventoryItem> InventoryItems { get; set; }
+    public DbSet<DelayedAction> DelayedActions { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -89,5 +96,14 @@ public abstract class BotDbContext(ILoggerFactory? loggerFactory) : DbContext
             .HasKey(nameof(BirthdayEntry.UserId),
                 $"{nameof(BirthdayEntry.BirthdayConfig)}{nameof(BirthdayConfig.GuildId)}",
                 $"{nameof(BirthdayEntry.BirthdayConfig)}{nameof(BirthdayConfig.Name)}");
+        
+        // April
+        modelBuilder.Entity<ClaimedUniqueReward>()
+            .HasKey(x => new { x.RewardGuid, x.GuildId });
+        modelBuilder.Entity<UserData>()
+            .HasKey(x => new { x.GuildId, x.UserId });
+        modelBuilder.Entity<InventoryItem>()
+            .HasIndex(x => new {x.ItemGuid, x.GuildId, x.UserId })
+            .IsUnique();
     }
 }

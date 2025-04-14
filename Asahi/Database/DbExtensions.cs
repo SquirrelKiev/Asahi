@@ -1,4 +1,5 @@
 ﻿using Asahi.Database.Models;
+using Asahi.Database.Models.April;
 using Asahi.Database.Models.Rss;
 using Microsoft.EntityFrameworkCore;
 using NodaTime;
@@ -28,6 +29,24 @@ public static class DbExtensions
         context.Add(guildConfig);
 
         return guildConfig;
+    }
+
+    public static async Task<UserData> GetAprilUserData(this BotDbContext context, ulong guildId, ulong userId)
+    {
+        var userData = await context.UserData.Include(x => x.InventoryItems)
+            .FirstOrDefaultAsync(x => x.GuildId == guildId && x.UserId == userId);
+
+        if (userData != null) return userData;
+
+        userData = new UserData()
+        {
+            GuildId = guildId,
+            UserId = userId
+        };
+
+        context.Add(userData);
+
+        return userData;
     }
 
     public static async Task<CustomCommand?> GetCustomCommand(this BotDbContext context, ulong guildId, string name)

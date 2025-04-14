@@ -6,7 +6,10 @@ public interface ITatsuClient
 {
     // TODO: switch to use ApiResponse and come up with a better client that handles ratelimits etc
     [Patch("/guilds/{guildId}/members/{userId}/score")]
-    public Task<GuildMemberScore> ModifyGuildMemberScore([Header("Authorization")] string apiKey, ulong guildId, ulong userId, [Body] ModifyGuildMemberScoreBody amount);
+    public Task<ApiResponse<GuildMemberScore>> ModifyGuildMemberScore([Header("Authorization")] string apiKey, ulong guildId, ulong userId, [Body] ModifyGuildMemberScoreBody amount);
+    
+    [Get("/guilds/{guildId}/rankings/members/{userId}/all")]
+    public Task<ApiResponse<GuildMemberScore>> GetUserRank([Header("Authorization")] string apiKey, ulong guildId, ulong userId);
 
     public enum TatsuActionType
     {

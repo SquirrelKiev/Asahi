@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>A .NET wrapper for the Dear ImGui library.</Description>
+    <AssemblyVersion>1.90.1.1</AssemblyVersion>
+    <Authors>Eric Mellino</Authors>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>portable</DebugType>
+    <AssemblyName>ImGui.NET</AssemblyName>
+    <PackageId>ImGui.NET</PackageId>
+    <PackagePrereleaseIdentifier></PackagePrereleaseIdentifier>
+    <PackageVersion>$(AssemblyVersion)$(PackagePrereleaseIdentifier)</PackageVersion>
+    <PackageTags>ImGui ImGui.NET Immediate Mode GUI</PackageTags>
+    <PackageProjectUrl>https://github.com/mellinoe/imgui.net</PackageProjectUrl>
+    <DocumentationFile Condition="'$(Configuration)' == 'Release'">$(OutputPath)\ImGui.NET.xml</DocumentationFile>
+    <RootNamespace>ImGuiNET</RootNamespace>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.1" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>ImPlot.NET</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>ImNodes.NET</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  <ItemGroup>
+		<Content Include="../deps/win-x64/cimgui.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="../deps/win-x64/freetype.dll" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="build\net40\ImGui.NET.targets">
+      <PackagePath>build/net40/ImGui.NET.targets</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  </ItemGroup>
+</Project>

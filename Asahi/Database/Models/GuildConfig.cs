@@ -25,4 +25,8 @@ public class GuildConfig
     public string SpoilerReactionEmote { get; set; } = "";
 
     public BirthdayConfig? DefaultBirthdayConfig { get; set; }
+    
+    public string? AprilConfig { get; set; } = null;
+
+    public string? TatsuKey { get; set; } = null;
 }

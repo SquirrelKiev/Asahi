@@ -86,7 +86,7 @@ public static class Startup
         }
         finally
         {
-            if(logger != null)
+            if (logger != null)
                 await logger.DisposeAsync();
         }
     }
@@ -125,6 +125,7 @@ public static class Startup
             .AddSingleton<IDbService, DbService>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
             .AddTransient<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
+            .AddSingleton<IColorProviderService, ColorProviderService>()
             .AddSingleton(new InteractiveConfig()
                 { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel })
             .AddSingleton<InteractiveService>()
@@ -156,31 +157,25 @@ public static class Startup
 
         serviceCollection.AddRefitClient<IAnimeThemesClient>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.animethemes.moe/"));
-
-        serviceCollection.AddRefitClient<ITatsuClient>(settings)
-            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.tatsu.gg/v1"));
+        
+        var tatsuBuilder = serviceCollection.AddRefitClient<ITatsuClient>(settings)
+            .ConfigureHttpClient(x => { AddDefaultProperties(x).BaseAddress = new Uri("https://api.tatsu.gg/v1"); });
 
         serviceCollection.AddRefitClient<IRedditApi>(settings)
-            .ConfigureHttpClient(x =>
-            {
-                AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com");
-            }
-        );
-        
+            .ConfigureHttpClient(x => { AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com"); }
+            );
+
         serviceCollection.AddRefitClient<IFxTwitterApi>(settings)
-            .ConfigureHttpClient(x =>
-                {
-                    AddDefaultProperties(x).BaseAddress = new Uri(config.FxTwitterApiUrl);
-                }
+            .ConfigureHttpClient(x => { AddDefaultProperties(x).BaseAddress = new Uri(config.FxTwitterApiUrl); }
             );
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
-                .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
-                    x.ServiceLifetime == ServiceLifetime.Singleton)
-                )
-                .AsSelf()
-                .WithSingletonLifetime()
-            );
+            .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
+                x.ServiceLifetime == ServiceLifetime.Singleton)
+            )
+            .AsSelf()
+            .WithSingletonLifetime()
+        );
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

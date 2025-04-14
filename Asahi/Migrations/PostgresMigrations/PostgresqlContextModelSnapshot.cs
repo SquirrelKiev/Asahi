@@ -18,7 +18,7 @@ namespace Asahi.Migrations.PostgresMigrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "9.0.3")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -84,7 +84,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasKey("Name", "GuildId");
 
-                    b.ToTable("BirthdayConfigs");
+                    b.ToTable("BirthdayConfigs", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayEntry", b =>
@@ -116,7 +116,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("BirthdayConfigName", "BirthdayConfigGuildId");
 
-                    b.ToTable("Birthdays");
+                    b.ToTable("Birthdays", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
@@ -145,7 +145,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasKey("BotId");
 
-                    b.ToTable("BotWideConfig");
+                    b.ToTable("BotWideConfig", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
@@ -196,7 +196,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("CachedHighlightedMessages");
+                    b.ToTable("CachedHighlightedMessages", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedMessageReaction", b =>
@@ -221,7 +221,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("HighlightedMessageId");
 
-                    b.ToTable("CachedMessageReactions");
+                    b.ToTable("CachedMessageReactions", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedUserRole", b =>
@@ -239,7 +239,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("CachedUsersRoles");
+                    b.ToTable("CachedUsersRoles", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CustomCommand", b =>
@@ -269,7 +269,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CustomCommands");
+                    b.ToTable("CustomCommands", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.EmoteAlias", b =>
@@ -288,7 +288,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasKey("GuildId", "EmoteName");
 
-                    b.ToTable("EmoteAliases");
+                    b.ToTable("EmoteAliases", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.GuildConfig", b =>
@@ -333,7 +333,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("DefaultBirthdayConfigName", "DefaultBirthdayConfigGuildId");
 
-                    b.ToTable("GuildConfigs");
+                    b.ToTable("GuildConfigs", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>
@@ -386,7 +386,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasKey("GuildId", "Name");
 
-                    b.ToTable("HighlightBoards");
+                    b.ToTable("HighlightBoards", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightThreshold", b =>
@@ -431,7 +431,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("HighlightThreshold");
+                    b.ToTable("HighlightThreshold", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.LoggingChannelOverride", b =>
@@ -452,7 +452,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("LoggingChannelOverride");
+                    b.ToTable("LoggingChannelOverride", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.Rss.FeedListener", b =>
@@ -484,7 +484,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RssFeedListeners");
+                    b.ToTable("RssFeedListeners", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.SpoilerChannel", b =>
@@ -507,7 +507,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("SpoilerChannel");
+                    b.ToTable("SpoilerChannel", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.Trackable", b =>
@@ -541,7 +541,7 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.HasIndex("AssignableRole", "MonitoredRole")
                         .IsUnique();
 
-                    b.ToTable("Trackables");
+                    b.ToTable("Trackables", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.TrackedUser", b =>
@@ -563,7 +563,7 @@ namespace Asahi.Migrations.PostgresMigrations
                     b.HasIndex("TrackableId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("TrackedUsers");
+                    b.ToTable("TrackedUsers", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.TrustedId", b =>
@@ -587,7 +587,7 @@ namespace Asahi.Migrations.PostgresMigrations
 
                     b.HasIndex("BotWideConfigBotId");
 
-                    b.ToTable("TrustedIds");
+                    b.ToTable("TrustedIds", (string)null);
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayEntry", b =>
