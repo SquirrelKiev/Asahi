@@ -1,6 +1,5 @@
 ﻿namespace Asahi.Modules;
 
-[Inject(ServiceLifetime.Singleton)]
 // TODO: Move things to use this
 public class ColorProviderService(IDiscordClient client) : IColorProviderService
 {

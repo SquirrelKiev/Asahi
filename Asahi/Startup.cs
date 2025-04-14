@@ -125,6 +125,7 @@ public static class Startup
             .AddSingleton<IDbService, DbService>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
             .AddTransient<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
+            .AddSingleton<IColorProviderService, ColorProviderService>()
             .AddSingleton(new InteractiveConfig()
                 { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel })
             .AddSingleton<InteractiveService>()

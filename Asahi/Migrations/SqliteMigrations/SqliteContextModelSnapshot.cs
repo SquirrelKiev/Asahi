@@ -15,7 +15,7 @@ namespace Asahi.Migrations.SqliteMigrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.3");
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayConfig", b =>
                 {
@@ -455,6 +455,14 @@ namespace Asahi.Migrations.SqliteMigrations
                     b.Property<ulong>("ChannelId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("DisabledReason")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("FeedTitle")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
@@ -463,6 +471,9 @@ namespace Asahi.Migrations.SqliteMigrations
                         .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("ForcedDisable")
+                        .HasColumnType("INTEGER");
 
                     b.Property<ulong>("GuildId")
                         .HasColumnType("INTEGER");

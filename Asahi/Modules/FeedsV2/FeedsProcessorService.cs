@@ -7,13 +7,13 @@ namespace Asahi.Modules.FeedsV2;
 [Inject(ServiceLifetime.Singleton)]
 public class FeedsProcessorService(
     IFeedProviderFactory feedProviderFactory,
-    ColorProviderService colorProvider,
+    IColorProviderService colorProvider,
     IFeedMessageDispatcher messageDispatcher,
     ILogger<FeedsProcessorService> logger)
 {
     public async Task PollFeeds(FeedsStateTracker stateTracker, FeedListener[] feeds)
     {
-        foreach (var feed in feeds.GroupBy(x => x.FeedUrl))
+        foreach (var feed in feeds.GroupBy(x => x.FeedUrl).Where(x => x.Any(y => y.Enabled)))
         {
             try
             {
@@ -54,6 +54,9 @@ public class FeedsProcessorService(
             {
                 try
                 {
+                    if(!listener.Enabled)
+                        continue;
+                    
                     // logger.LogTrace("Processing listener {listenerId}.", listener.Id);
 
                     Debug.Assert(listener.FeedUrl == feedSource);

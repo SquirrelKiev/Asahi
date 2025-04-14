@@ -30,5 +30,6 @@ public enum TrustedUserPerms
     StatusPerms = 1 << 2,
     BotGuildManagementPerms = 1 << 3,
     CodeExecutionPerms = 1 << 4,
-    TestCommandNukingPerms = 1 << 5
+    TestCommandNukingPerms = 1 << 5,
+    FeedTogglingPerms = 1 << 6,
 }

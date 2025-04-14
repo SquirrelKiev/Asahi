@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
+using System.Text.RegularExpressions;
 using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
@@ -36,7 +37,8 @@ public class BotManagementModule(
     [TrustedMember(TrustedUserPerms.StatusPerms)]
     [SlashCommand("toggle-activity", "Toggles the bot activity.")]
     public async Task ToggleBotActivitySlash(
-        [Summary(description: "Whether the bot should have a status or not.")] bool isActive
+        [Summary(description: "Whether the bot should have a status or not.")]
+        bool isActive
     )
     {
         await DeferAsync();
@@ -57,12 +59,15 @@ public class BotManagementModule(
     [TrustedMember(TrustedUserPerms.StatusPerms)]
     [SlashCommand("activity", "Sets the bot's current activity.")]
     public async Task SetBotStatusSlash(
-        [Summary(description: "The activity type the bot should have.")] ActivityType activityType,
-        [MaxLength(128)] [Summary(description: "The activity text.")] string activity,
+        [Summary(description: "The activity type the bot should have.")]
+        ActivityType activityType,
+        [MaxLength(128)] [Summary(description: "The activity text.")]
+        string activity,
         [Summary(
-            description: $"Streaming URL. This will only need to be set if the activity type is {nameof(ActivityType.Streaming)}."
+            description:
+            $"Streaming URL. This will only need to be set if the activity type is {nameof(ActivityType.Streaming)}."
         )]
-            string streamingUrl = ""
+        string streamingUrl = ""
     )
     {
         await DeferAsync();
@@ -113,29 +118,35 @@ public class BotManagementModule(
         "Adds a user to the trusted user list. This is a dangerous permission to grant."
     )]
     public async Task AddTrustedIdSlash(
-        [Summary(description: "The user ID of the user.")] string idStr,
+        [Summary(description: "The user ID of the user.")]
+        string idStr,
         [
             MaxLength(TrustedId.CommentMaxLength),
             Summary(description: "A note to put beside the user.")
         ]
-            string comment,
-        [Summary(description: "Should the user have permission to use Wolfram?")] bool wolframPerms,
+        string comment,
+        [Summary(description: "Should the user have permission to use Wolfram?")]
+        bool wolframPerms,
         [Summary(
             description: "Should the user have permission to add or remove other trusted users?"
         )]
-            bool trustedUserPerms,
+        bool trustedUserPerms,
         [Summary(
             description: "Should the user have permission to change the bot's status/profile?"
         )]
-            bool statusPerms,
+        bool statusPerms,
         [Summary(description: "Should the user have permission to view the guilds the bot is in?")]
-            bool guildManagementPerms,
+        bool guildManagementPerms,
         [Summary(description: "Should the user have permission to execute C# code?")]
-            bool codeExecutionPerms,
+        bool codeExecutionPerms,
         [Summary(
             description: "Should the user have permission to nuke the testing bot's commands?"
         )]
-            bool nukeTestBotCommandsPerms
+        bool nukeTestBotCommandsPerms,
+        [Summary(
+            description: "Should the user be able to toggle any guild's feed(s)?"
+        )]
+        bool feedTogglingPerms
     )
     {
         await ConfigUtilities.CommonConfig(
@@ -165,6 +176,7 @@ public class BotManagementModule(
                 UpdatePermissionFlags(guildManagementPerms, TrustedUserPerms.BotGuildManagementPerms);
                 UpdatePermissionFlags(codeExecutionPerms, TrustedUserPerms.CodeExecutionPerms);
                 UpdatePermissionFlags(nukeTestBotCommandsPerms, TrustedUserPerms.TestCommandNukingPerms);
+                UpdatePermissionFlags(feedTogglingPerms, TrustedUserPerms.FeedTogglingPerms);
 
                 // why does it break if I just add to the botWideConfig.TrustedIds list?? but only on the 2nd time??? wtf????
                 // weird ass concurrency error, but it shouldn't be a concurrency issue as nothing will be getting modified
@@ -190,7 +202,7 @@ public class BotManagementModule(
 
                 return new ConfigChangeResult(
                     true,
-                    $"Updated <@{id}>'s permissions. they now have `{permissionFlags.Humanize()}`. (No permission to give them `{failedPermissionFlags.Humanize()}`)."
+                    $"Updated <@{id}>'s permissions. they now have `{permissionFlags.Humanize()}`. {(failedPermissionFlags == TrustedUserPerms.None ? "" : $"(No permission to give them `{failedPermissionFlags.Humanize()}`)")}"
                 );
 
                 void UpdatePermissionFlags(bool condition, TrustedUserPerms permFlag)
@@ -214,7 +226,8 @@ public class BotManagementModule(
     [TrustedMember(TrustedUserPerms.TrustedUserEditPerms)]
     [SlashCommand("rm-trusted-id", "Removes a user from the trusted user list.")]
     public async Task RemoveTrustedIdSlash(
-        [Summary(description: "The user ID of the user.")] string idStr
+        [Summary(description: "The user ID of the user.")]
+        string idStr
     )
     {
         await DeferAsync();
@@ -370,6 +383,198 @@ public class BotManagementModule(
         await FollowupAsync("Deleted.");
     }
 
+    [Group("feeds", "Feed management.")]
+    public class FeedsStateTogglingModule(IDbService dbService, IColorProviderService colorProviderService) : BotModule
+    {
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("enable-with-id", "Force enables the specified feed.")]
+        public async Task EnableFeedWithIdSlash(
+            [Summary(description: "The guild the feed is from.", name: "guild-id")]
+            string guildIdStr,
+            [Summary(description: "The feed to enable.")]
+            uint feedId)
+        {
+            await DeferAsync();
+
+            await using var context = dbService.GetDbContext();
+
+            if (!ulong.TryParse(guildIdStr, out var guildId))
+            {
+                await FollowupAsync("Guild ID is not a number!");
+                return;
+            }
+
+            var feed = await context.GetFeed(feedId, guildId);
+
+            if (feed == null)
+            {
+                await FollowupAsync("Feed not found.");
+                return;
+            }
+
+            feed.Enabled = true;
+            feed.ForcedDisable = false;
+            feed.DisabledReason = "";
+
+            await context.SaveChangesAsync();
+            
+            await LogEnabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl);
+
+            await FollowupAsync(embed: new EmbedBuilder().WithDescription($"Feed `{feed.FeedUrl}` enabled.")
+                .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+        }
+
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("disable-with-id", "Force disables the specified feed.")]
+        public async Task DisableFeedWithIdSlash(
+            [Summary(description: "Whether the feed should be forced off (users can't re-enable it).")]
+            bool forceToggled,
+            [Summary(description: "Reason for being disabled.")]
+            string reason,
+            [Summary(description: "The guild the feed is from.", name: "guild-id")]
+            string guildIdStr,
+            [Summary(description: "The feed to disable.")]
+            uint feedId)
+        {
+            await DeferAsync();
+            
+            if (!ulong.TryParse(guildIdStr, out var guildId))
+            {
+                await FollowupAsync("Guild ID is not a number!");
+                return;
+            }
+
+            await using var context = dbService.GetDbContext();
+
+            var feed = await context.GetFeed(feedId, guildId);
+
+            if (feed == null)
+            {
+                await FollowupAsync("Feed not found.");
+                return;
+            }
+
+            feed.Enabled = false;
+            feed.ForcedDisable = forceToggled;
+            feed.DisabledReason = reason;
+
+            await context.SaveChangesAsync();
+            
+            await LogDisabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl, feed.DisabledReason);
+
+            await FollowupAsync(embed: new EmbedBuilder().WithDescription($"Feed `{feed.FeedUrl}` disabled.")
+                .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+        }
+
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("enable-regex-matches", "Force enables feed URLs that match the regex.")]
+        public async Task EnableFeedWithRegexSlash(
+            [Summary(description: "The regex to match feed URLs.")]
+            string regex)
+        {
+            await DeferAsync();
+
+            await using var context = dbService.GetDbContext();
+
+            var feeds = await context.RssFeedListeners
+                .Where(x => Regex.IsMatch(x.FeedUrl, regex))
+                .ToListAsync();
+
+            foreach (var feed in feeds)
+            {
+                feed.Enabled = true;
+                feed.ForcedDisable = false;
+                feed.DisabledReason = "";
+            }
+
+            await context.SaveChangesAsync();
+
+            foreach (var feed in feeds)
+            {
+                await LogEnabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl);
+            }
+
+            await FollowupAsync(embed: new EmbedBuilder()
+                .WithDescription($"`{feeds.Count}` feeds enabled.")
+                .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+        }
+
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("disable-regex-matches", "Force disables feed URLs that match the regex.")]
+        public async Task DisableFeedWithRegexSlash(
+            [Summary(description: "Whether the feed should be forced off (users can't re-enable it).")]
+            bool forceToggled,
+            [Summary(description: "Reason for being disabled.")]
+            string reason,
+            [Summary(description: "The regex to match feed URLs.")]
+            string regex)
+        {
+            await DeferAsync();
+
+            await using var context = dbService.GetDbContext();
+
+            var feeds = await context.RssFeedListeners
+                .Where(x => Regex.IsMatch(x.FeedUrl, regex))
+                .ToListAsync();
+
+            foreach (var feed in feeds)
+            {
+                feed.Enabled = false;
+                feed.ForcedDisable = forceToggled;
+                feed.DisabledReason = reason;
+            }
+
+            await context.SaveChangesAsync();
+
+            foreach (var feed in feeds)
+            {
+                await LogDisabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl, feed.DisabledReason);
+            }
+
+            await FollowupAsync(embed: new EmbedBuilder()
+                .WithDescription($"`{feeds.Count}` feeds disabled.")
+                .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+        }
+
+        private async Task LogDisabledToFeedChannelAsync(ulong guildId, ulong channelId, string url, string reason)
+        {
+            var guild = await Context.Client.GetGuildAsync(guildId);
+
+            if (guild != null)
+            {
+                var channel = await guild.GetTextChannelAsync(channelId);
+
+                if (channel != null)
+                {
+                    await channel.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithDescription($"Feed `{url}` has been temporarily disabled.")
+                        .WithFields(new EmbedFieldBuilder().WithName("Reason").WithValue(reason))
+                        .WithOptionalColor(await colorProviderService.GetEmbedColor(guildId))
+                        .Build());
+                }
+            }
+        }
+        
+        private async Task LogEnabledToFeedChannelAsync(ulong guildId, ulong channelId, string url)
+        {
+            var guild = await Context.Client.GetGuildAsync(guildId);
+
+            if (guild != null)
+            {
+                var channel = await guild.GetTextChannelAsync(channelId);
+
+                if (channel != null)
+                {
+                    await channel.SendMessageAsync(embed: new EmbedBuilder()
+                        .WithDescription($"Feed `{url}` has been re-enabled.")
+                        .WithOptionalColor(await colorProviderService.GetEmbedColor(guildId))
+                        .Build());
+                }
+            }
+        }
+    }
+
+
     //private readonly string[] classNames =
     //[
     //    "HoshimachiSuisei",
@@ -399,9 +604,9 @@ public class BotManagementModule(
 
         var slashCommandMsg = await FollowupAsync(
             $@"**Reply** to this message with the code either in a text file or wrapped in a \`\`\`cs code block."
-                + "Alternatively, say `cancel`.\n"
-                + "Here's a handy template:"
-                + $@"
+            + "Alternatively, say `cancel`.\n"
+            + "Here's a handy template:"
+            + $@"
 ```cs
 using Discord;
 using Discord.WebSocket;
@@ -501,7 +706,8 @@ public class {className}(IInteractionContext context)
             "SuperDangerousCode",
             [syntaxTree],
             references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable)
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
+                nullableContextOptions: NullableContextOptions.Enable)
         );
 
         using var ms = new MemoryStream();
@@ -565,7 +771,7 @@ public class {className}(IInteractionContext context)
                     {
                         await Context.User.SendMessageAsync(
                             $"Assembly did not unload! "
-                                + $"This isn't great as this means that the assembly will most likely be permanently loaded until next restart of bot."
+                            + $"This isn't great as this means that the assembly will most likely be permanently loaded until next restart of bot."
                         );
                     }
                     catch

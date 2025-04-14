@@ -11,10 +11,17 @@ public class FeedListener : DbModel
     [MaxLength(64)]
     public string? FeedTitle { get; set; }
 
-    public required ulong GuildId { get; set; }
+    public required ulong GuildId { get; init; }
 
     public required ulong ChannelId { get; set; }
 
     [MaxLength(80)]
     public string? WebhookName { get; set; }
+
+    public bool Enabled { get; set; } = true;
+
+    public bool ForcedDisable { get; set; } = false;
+    
+    [MaxLength(512)]
+    public string DisabledReason { get; set; } = "";
 }

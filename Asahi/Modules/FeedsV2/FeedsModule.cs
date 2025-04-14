@@ -132,7 +132,7 @@ public class FeedsModule(
 
     [SlashCommand("set-title", "Sets the title of the feed to something else.")]
     public async Task SetFeedTitleSlash(
-        [Summary(description: "The ID of the feed to edit.")]
+        [Summary(description: "The ID of the feed to edit.")] [Autocomplete<FeedAutocomplete>]
         uint id,
         [Summary(description: "The new title for the feed. Leave unspecified for default feed title."), MaxLength(64)]
         string? feedTitle = null)
@@ -146,7 +146,7 @@ public class FeedsModule(
     }
 
     [SlashCommand("set-webhook-name", "Sets or clears the name of the webhook to look for to send with.")]
-    public async Task SetFeedWebhookNameSlash([Summary(description: "The ID of the feed to edit.")] uint id,
+    public async Task SetFeedWebhookNameSlash([Summary(description: "The ID of the feed to edit.")] [Autocomplete<FeedAutocomplete>] uint id,
         [Summary(description: "The new webhook name for the feed."), MaxLength(64)]
         string? webhookName = null)
     {
@@ -168,7 +168,27 @@ public class FeedsModule(
         });
     }
 
-        // TODO: Update to work with FeedsV2 stuff - namely the new naming stuff. ideally we just have the feed name as null and pull from the cache in FeedsStateTracker. (Also a TODO)
+    [SlashCommand("toggle", "Turns a feed on or off.")]
+    public async Task ToggleFeedSlash([Summary(description: "The ID of the feed.")] [Autocomplete<FeedAutocomplete>] uint id,
+        [Summary(description: "Whether the feed should be enabled or disabled.")]
+        bool state)
+    {
+        await CommonFeedConfig(id, async options =>
+        {
+            if (options.feedListener is { Enabled: false, ForcedDisable: true })
+            {
+                return new ConfigChangeResult(false,
+                    $"This feed has been temporarily disabled for reason **{options.feedListener.DisabledReason}**. You cannot enable it.");
+            }
+
+            options.feedListener.Enabled = state;
+            options.feedListener.DisabledReason = state ? "" : $"Disabled by <@{Context.User.Id}>.";
+
+            return new ConfigChangeResult(true, $"Feed has been {(state ? "enabled" : "disabled")}.");
+        });
+    }
+
+    // TODO: Update to work with FeedsV2 stuff - namely the new naming stuff. ideally we just have the feed name as null and pull from the cache in FeedsStateTracker. (Also a TODO)
     [SlashCommand("list-feeds", "Lists the feeds within the server.")]
     public async Task ListFeedsSlash(
         [Summary(description: "Filters the list to only show feeds for the specified channel.")]
@@ -275,8 +295,9 @@ public class FeedsModule(
             await feedMessageDispatcher.SendMessages(testFeedListener, messages);
         }
 
-        await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(currentUser, new EmbedBuilder().WithTitle(feedProvider.DefaultFeedTitle), new ConfigChangeResult(true,
-            $"Sent entries.")));
+        await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(currentUser,
+            new EmbedBuilder().WithTitle(feedProvider.DefaultFeedTitle), new ConfigChangeResult(true,
+                $"Sent entries.")));
     }
 
 #if DEBUG
