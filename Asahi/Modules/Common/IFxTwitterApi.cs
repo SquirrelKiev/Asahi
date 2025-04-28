@@ -12,9 +12,8 @@ public interface IFxTwitterApi
 public record FxTwitterStatusResponse
 {
     [JsonProperty("code")] public int Code { get; init; }
-    [JsonProperty("message")] public required string Message { get; init; }
 
-    [JsonProperty("tweet")] public FxTwitterTweet? Tweet { get; init; }
+    [JsonProperty("status")] public FxTwitterTweet? Status { get; init; }
 
     public record FxTwitterTweet
     {

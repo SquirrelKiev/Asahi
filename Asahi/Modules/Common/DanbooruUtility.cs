@@ -233,12 +233,12 @@ namespace Asahi.Modules
 
                 var status = await fxTwitterApi.GetStatusInfo(id);
 
-                if (status is { Code: 200, Tweet: not null } && status.Tweet.Media.Photos.Length != 0)
+                if (status is { Code: 200, Status: not null } && status.Status.Media.Photos.Length != 0)
                 {
-                    var firstImg = status.Tweet.Media.Photos[0];
+                    var firstImg = status.Status.Media.Photos[0];
 
-                    var extraUrls = status.Tweet.Media.Photos.Length > 1
-                        ? status.Tweet.Media.Photos.Skip(1).Select(x => x.Url + "?name=orig").ToArray()
+                    var extraUrls = status.Status.Media.Photos.Length > 1
+                        ? status.Status.Media.Photos.Skip(1).Select(x => x.Url + "?name=orig").ToArray()
                         : null;
 
                     return new DanbooruVariantWithFallback(new DanbooruVariant()
