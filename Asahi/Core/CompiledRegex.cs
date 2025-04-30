@@ -31,7 +31,7 @@ public static partial class CompiledRegex
     [GeneratedRegex(@"^https:\/\/i\.pximg\.net\/.+\/(\d+).+\.([a-z]*)")]
     public static partial Regex ValidPixivDirectImageUrlRegex();
 
-    [GeneratedRegex(@"^https:\/\/twitter\.com\/[a-zA-Z0-9_]+\/status\/(\d+)$")]
+    [GeneratedRegex(@"^https:\/\/(?:www\.)?(?:twitter|x)\.com\/[a-zA-Z0-9_]+\/status\/(\d+)$")]
     public static partial Regex TwitterStatusIdRegex();
 
     [GeneratedRegex(@"^https:\/\/[a-zA-Z0-9]+\.fanbox.cc")]
