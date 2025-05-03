@@ -174,7 +174,7 @@ public class DanbooruVariant
     public string FileExt { get; set; } = null!;
 }
 
-public class DanbooruVariantWithFallback(DanbooruVariant variant)
+public class DanbooruVariantWithExtras(DanbooruVariant variant)
 {
     public DanbooruVariant Variant { get; set; } = variant;
     

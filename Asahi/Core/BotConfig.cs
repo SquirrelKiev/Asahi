@@ -19,21 +19,24 @@ public class BotConfig
     public string DatabaseConnectionString { get; set; } = "Data Source=data/BotDb.db";
 
     [YamlMember(Description = "The reaction to put on prefix commands when an unhandled error occurs. Will only appear on prefix commands.")]
-    public string ErrorEmote { get; set; } = "\u2753"; // ❓
+    public string ErrorEmote { get; set; } = "❓";
 
-    public string LoadingEmote { get; set; } = "\ud83e\udd14"; // 🤔
+    public string LoadingEmote { get; set; } = "🤔";
 
-    public string PixivEmote { get; set; } = "\ud83c\udfa8"; // 🎨
+    public string PixivEmote { get; set; } = "🎨";
     
-    public string TwitterEmote { get; set; } = "\ud83d\udc26"; // 🐦
+    public string TwitterEmote { get; set; } = "🐦";
     
-    public string BaraagEmote { get; set; } = "\ud83c\udfa8"; // 🎨
+    public string BaraagEmote { get; set; } = "🎨";
     
-    public string ArcaLiveEmote { get; set; } = "\ud83c\udfa8"; // 🎨
+    public string ArcaLiveEmote { get; set; } = "🎨";
+
+    public string FanboxCcEmote { get; set; } = "📦";
     
-    public string FanboxCcEmote { get; set; } = "\ud83d\udce6"; // 📦
+    public string FantiaEmote { get; set; } = "🎨";
     
-    public string FantiaEmote { get; set; } = "\ud83c\udfa8"; // 🎨
+
+    public string MisskeyEmote { get; set; } = "🎨";
 
     [YamlMember(Description = "A set of UserIDs. Users in this set will be granted permission to use commands to manage the instance itself.\n" +
                               "This is a dangerous permission to grant.")]

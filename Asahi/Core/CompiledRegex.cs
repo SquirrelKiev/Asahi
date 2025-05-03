@@ -39,4 +39,7 @@ public static partial class CompiledRegex
 
     [GeneratedRegex(@"^https:\/\/c\.fantia\.jp/uploads/post/file/(\d+)\/")]
     public static partial Regex FantiaPostIdRegex();
+
+    [GeneratedRegex(@"^https:\/\/misskey\.io\/notes\/([a-z0-9]+)\/?$")]
+    public static partial Regex MisskeyNoteRegex();
 }

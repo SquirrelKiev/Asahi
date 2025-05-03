@@ -162,18 +162,13 @@ public static class Startup
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.tatsu.gg/v1"));
 
         serviceCollection.AddRefitClient<IRedditApi>(settings)
-            .ConfigureHttpClient(x =>
-            {
-                AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com");
-            }
-        );
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com"));
         
         serviceCollection.AddRefitClient<IFxTwitterApi>(settings)
-            .ConfigureHttpClient(x =>
-                {
-                    AddDefaultProperties(x).BaseAddress = new Uri(config.FxTwitterApiUrl);
-                }
-            );
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri(config.FxTwitterApiUrl));
+        
+        serviceCollection.AddRefitClient<IMisskeyApi>(settings)
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://misskey.io"));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
                 .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Web;
 using Asahi.Modules.Models;
-using Humanizer;
 using Newtonsoft.Json;
-using Npgsql.PostgresTypes;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
 {
