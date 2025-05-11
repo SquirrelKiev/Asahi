@@ -263,10 +263,10 @@ public class AnimeThemeResource
             warnings = $"({labels.Humanize()}) ";
         }
 
-        return $"{warnings}{ToStringNoWarnings()}";
+        return $"{warnings}{ToStringNice()}";
     }
 
-    public string ToStringNoWarnings()
+    public string ToStringNice(bool includeSlug = true, bool discordRichText = false)
     {
         var songInfo = "";
 
@@ -275,17 +275,25 @@ public class AnimeThemeResource
             var artistInfo = "";
             if (song.artists != null && song.artists.Length != 0)
             {
-                artistInfo = " by " + song.artists
-                    .Select(y => y.artistsong?.character != null
-                        ? $"{y.artistsong.character} (CV: {y.name})"
-                        : y.name)
-                    .Humanize();
+                artistInfo = discordRichText ? $" by **{song.artists.ToStringNice()}**" : $" by {song.artists.ToStringNice()}";
             }
 
-            songInfo = $" - {song.title}{artistInfo}";
+            songInfo = discordRichText ? $"**{song.title}**{artistInfo}" : $"{song.title}{artistInfo}";
         }
 
-        return $"{slug}{songInfo}";
+        return includeSlug ? $"**{slug}** • {songInfo}" : songInfo;
+    }
+}
+
+public static class SongArtistResourceExtensions
+{
+    public static string ToStringNice(this SongArtistResource[] artists)
+    {
+        return artists
+            .Select(y => y.artistsong?.character != null
+                ? $"{y.artistsong.character} (CV: {y.name})"
+                : y.name)
+            .Humanize();
     }
 }
 
@@ -459,7 +467,7 @@ public class AnimeThemeEntryResource
             warnings = $"({labels.Humanize()}) ";
         }
 
-        return $"{warnings}v{(version.HasValue ? version.Value : "1")} - episodes {episodes}";
+        return $"{warnings}v{(version.HasValue ? version.Value : "1")} • episodes {episodes}";
     }
 }
 

@@ -11,14 +11,15 @@ public class TestModule(
     HttpClient client,
     DanbooruUtility danbooruUtility
     //ILogger<TestModule> logger
-    ) : BotModule
+) : BotModule
 {
     [SlashCommand("cat", "testy test test")]
     public async Task ScratchPadSlash()
     {
         await DeferAsync();
-
-        var res = await client.GetAsync("https://danbooru.donmai.us/posts/random.json?tags=animal_focus+cat+rating%3Ageneral");
+        
+        var res = await client.GetAsync(
+            "https://danbooru.donmai.us/posts/random.json?tags=animal_focus+cat+rating%3Ageneral");
 
         var json = await res.Content.ReadAsStringAsync();
 

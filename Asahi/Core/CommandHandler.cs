@@ -22,7 +22,7 @@ public class CommandHandler(
 )
 {
     private bool runOnce = false;
-    
+
     public async Task OnReady(params Assembly[] assemblies)
     {
         if (runOnce)
@@ -32,7 +32,7 @@ public class CommandHandler(
         {
             await InitializeInteractionService(assemblies);
             await InitializeCommandService(assemblies);
-            
+
             runOnce = true;
         }
         catch (Exception e)
@@ -176,7 +176,7 @@ public class CommandHandler(
 
     #region Interaction Handling
 
-    protected async Task InteractionExecuted(
+    private async Task InteractionExecuted(
         ICommandInfo cmdInfo,
         IInteractionContext ctx,
         Discord.Interactions.IResult res
@@ -194,9 +194,18 @@ public class CommandHandler(
 
         if (ctx.Interaction.HasResponded)
         {
-            await ctx.Interaction.ModifyOriginalResponseAsync(
-                new MessageContents(messageBody, embed: null, null)
-            );
+            var ogRes = await ctx.Interaction.GetOriginalResponseAsync();
+
+            if (ogRes != null && (ogRes.Flags & MessageFlags.ComponentsV2) != 0)
+            {
+                await ctx.Interaction.FollowupAsync(messageBody, ephemeral: true);
+            }
+            else
+            {
+                await ctx.Interaction.ModifyOriginalResponseAsync(
+                    new MessageContents(messageBody, embed: null, null)
+                );
+            }
         }
         else
         {
@@ -204,18 +213,23 @@ public class CommandHandler(
         }
     }
 
-    protected async Task InteractionCreated(SocketInteraction arg)
+    private async Task InteractionCreated(SocketInteraction arg)
     {
         var ctx = new SocketInteractionContext(client, arg);
 
+        var handledByInteractiveService = interactiveService.IsManaged(ctx.Interaction) ||
+                                          interactiveService.TriggersAnyFilter(ctx.Interaction);
+
+        var componentIsNotRedButton = ctx.Interaction is not SocketMessageComponent component ||
+                                   component.Data.CustomId != ModulePrefixes.RED_BUTTON;
+            
+        if (handledByInteractiveService && componentIsNotRedButton)
+        {
+            return;
+        }
+
         if (ctx.Interaction is SocketMessageComponent componentInteraction)
         {
-            if ((   interactiveService.IsManaged(componentInteraction)
-                 || interactiveService.TriggersAnyFilter(componentInteraction))
-                 && componentInteraction.Data.CustomId != ModulePrefixes.RED_BUTTON
-            )
-                return;
-
             var ogRes = componentInteraction.Message;
 
             var ogAuthor = ogRes.Interaction?.User.Id;
@@ -236,7 +250,7 @@ public class CommandHandler(
 
     #endregion
 
-    protected async Task InitializeInteractionService(params Assembly[] assemblies)
+    private async Task InitializeInteractionService(params Assembly[] assemblies)
     {
         interactionService.AddTypeConverter<Color>(new ColorTypeConverter());
         interactionService.AddTypeConverter<IEmote>(new EmoteTypeConverter());
