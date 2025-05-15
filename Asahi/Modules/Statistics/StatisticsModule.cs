@@ -55,12 +55,12 @@ public class StatisticsModule(IDbContextFactory<BotDbContext> dbService) : BotMo
 
         await using var context = await dbService.CreateDbContextAsync();
 
-        // if (context is not PostgresContext)
-        // {
-        //     await FollowupAsync(
-        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-        //     return;
-        // }
+        if (!context.Database.IsNpgsql())
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. \n-# (Unsupported database type, only Postgres is supported at the moment.");
+            return;
+        }
 
         var postgresHappyChannelId = channel?.Id ?? 0;
         var postgresHappyUserId = user?.Id ?? 0;
@@ -151,12 +151,12 @@ public class StatisticsModule(IDbContextFactory<BotDbContext> dbService) : BotMo
 
         await using var context = await dbService.CreateDbContextAsync();
 
-        // if (context is not PostgresContext)
-        // {
-        //     await FollowupAsync(
-        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-        //     return;
-        // }
+        if (!context.Database.IsNpgsql())
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. \n-# (Unsupported database type, only Postgres is supported at the moment.");
+            return;
+        }
 
         var postgresHappyUserId = user?.Id ?? 0;
 
@@ -239,12 +239,12 @@ public class StatisticsModule(IDbContextFactory<BotDbContext> dbService) : BotMo
 
         await using var context = await dbService.CreateDbContextAsync();
 
-        // if (context is not PostgresContext)
-        // {
-        //     await FollowupAsync(
-        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-        //     return;
-        // }
+        if (!context.Database.IsNpgsql())
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. \n-# (Unsupported database type, only Postgres is supported at the moment.");
+            return;
+        }
 
         var postgresHappyChannelId = channel?.Id ?? 0;
         var postgresHappyAuthorId = user?.Id ?? 0;
@@ -343,12 +343,12 @@ public class StatisticsModule(IDbContextFactory<BotDbContext> dbService) : BotMo
 
         await using var context = await dbService.CreateDbContextAsync();
 
-        // if (context is not PostgresContext)
-        // {
-        //     await FollowupAsync(
-        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-        //     return;
-        // }
+        if (!context.Database.IsNpgsql())
+        {
+            await FollowupAsync(
+                $"This is not supported on this instance. \n-# (Unsupported database type, only Postgres is supported at the moment.");
+            return;
+        }
 
         var postgresHappyChannelId = channel?.Id ?? 0;
         var postgresHappyAuthorId = user?.Id ?? 0;
