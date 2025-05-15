@@ -8,6 +8,7 @@ using Discord.Rest;
 using Discord.Webhook;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -24,7 +25,7 @@ namespace Asahi.Modules.Highlights;
 // one day ill be bothered enough to write tests for this but mocking everything needed for this sounds like hell
 [Inject(ServiceLifetime.Singleton)]
 public class HighlightsTrackingService(
-    IDbService dbService,
+    IDbContextFactory<BotDbContext> dbService,
     ILogger<HighlightsTrackingService> logger,
     IDiscordClient client,
     BotConfig botConfig,
@@ -111,7 +112,7 @@ public class HighlightsTrackingService(
 
     private async Task MigrateOldMessages()
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var outdatedMessages = await context
             .CachedHighlightedMessages.Where(x => x.Version == 0)
@@ -449,7 +450,7 @@ public class HighlightsTrackingService(
     {
         logger.LogTrace("Checking message");
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var threadChannel = channel as IThreadChannel;
         var parentChannel = threadChannel is not null

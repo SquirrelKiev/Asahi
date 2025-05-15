@@ -11,7 +11,7 @@ namespace Asahi.Modules.Seigen;
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 [Group("trackables", "Commands relating to managing trackables and their users.")]
-public class TrackablesModule(IDbService dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
+public class TrackablesModule(IDbContextFactory<BotDbContext> dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";
     public const string ASSIGNABLE_GUILD_PARAM_NAME = "assignable-guild";
@@ -54,7 +54,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
             return;
         }
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         context.Add(trackable);
 
@@ -171,7 +171,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
             return;
         }
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var entry = context.Trackables.FirstOrDefault(x => x.Id == id);
 
@@ -229,7 +229,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
                 new MessageContents(
                     new EmbedBuilder().WithDescription("ID is not valid.")));
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
 
@@ -261,7 +261,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var trackables = await context.GetScopedTrackables(Context.Guild.Id).ToArrayAsync();
 
@@ -303,7 +303,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
                 new MessageContents(
                     new EmbedBuilder().WithDescription("ID is not valid.")));
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
 
@@ -361,7 +361,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
                 new MessageContents(
                     new EmbedBuilder().WithDescription("ID is not valid.")));
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
 
@@ -410,7 +410,7 @@ public class TrackablesModule(IDbService dbService, RoleManagementService roleMa
                 new MessageContents(
                     new EmbedBuilder().WithDescription("ID is not valid.")));
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var trackable = await context.Trackables.FirstOrDefaultAsync(x => x.Id == id);
 

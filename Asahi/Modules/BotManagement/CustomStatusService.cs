@@ -1,11 +1,12 @@
 ﻿using Asahi.Database;
 using Discord.WebSocket;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.BotManagement;
 
 [Inject(ServiceLifetime.Singleton)]
-public class CustomStatusService(ILogger<CustomStatusService> logger, IDbService dbService, DiscordSocketClient client)
+public class CustomStatusService(ILogger<CustomStatusService> logger, IDbContextFactory<BotDbContext> dbService, DiscordSocketClient client)
 {
     private int currentActivityId;
 
@@ -50,7 +51,7 @@ public class CustomStatusService(ILogger<CustomStatusService> logger, IDbService
 
     public async Task UpdateStatus()
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var botWideConfig = await context.GetBotWideConfig(client.CurrentUser.Id);
 

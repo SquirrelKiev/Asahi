@@ -9,6 +9,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Asahi.Analyzers", "Asahi.An
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asahi.Tests", "Asahi.Tests\Asahi.Tests.csproj", "{DDCAFEF5-38EF-4160-BCB8-A8158F619601}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asahi.Database.Migrations.Sqlite", "Asahi.Database.Migrations.Sqlite\Asahi.Database.Migrations.Sqlite.csproj", "{89948D3F-C987-45A5-BBE2-F0FB3F364E84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asahi.Database.Migrations.Postgres", "Asahi.Database.Migrations.Postgres\Asahi.Database.Migrations.Postgres.csproj", "{BF3C3F9F-66CC-4E52-BF26-4869862D5558}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asahi.Database", "Asahi.Database\Asahi.Database.csproj", "{BCDA9CDD-02CE-431D-AF41-9FE66D959EC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,11 +33,25 @@ Global
 		{DDCAFEF5-38EF-4160-BCB8-A8158F619601}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DDCAFEF5-38EF-4160-BCB8-A8158F619601}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DDCAFEF5-38EF-4160-BCB8-A8158F619601}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89948D3F-C987-45A5-BBE2-F0FB3F364E84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{89948D3F-C987-45A5-BBE2-F0FB3F364E84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{89948D3F-C987-45A5-BBE2-F0FB3F364E84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89948D3F-C987-45A5-BBE2-F0FB3F364E84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF3C3F9F-66CC-4E52-BF26-4869862D5558}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF3C3F9F-66CC-4E52-BF26-4869862D5558}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF3C3F9F-66CC-4E52-BF26-4869862D5558}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF3C3F9F-66CC-4E52-BF26-4869862D5558}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCDA9CDD-02CE-431D-AF41-9FE66D959EC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCDA9CDD-02CE-431D-AF41-9FE66D959EC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCDA9CDD-02CE-431D-AF41-9FE66D959EC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCDA9CDD-02CE-431D-AF41-9FE66D959EC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {132A6CFF-B63E-4202-A39A-109BC7F2E55F}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
 EndGlobal

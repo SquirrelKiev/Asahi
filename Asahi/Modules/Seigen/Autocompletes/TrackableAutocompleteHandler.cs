@@ -9,9 +9,7 @@ public class TrackableAutocompleteHandler : AutocompleteHandler
     public override async Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context, IAutocompleteInteraction autocompleteInteraction,
         IParameterInfo parameter, IServiceProvider services)
     {
-        var dbService = services.GetRequiredService<IDbService>();
-
-        await using var dbContext = dbService.GetDbContext();
+        await using var dbContext = services.GetRequiredService<BotDbContext>();
 
         var trackables = await dbContext.GetScopedTrackables(context.Guild.Id).ToArrayAsync();
 

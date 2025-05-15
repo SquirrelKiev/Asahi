@@ -18,7 +18,7 @@ public class FeedsModule(
     FeedsProcessorService feedsProcessor,
     IFeedProviderFactory feedProviderFactory,
     IFeedMessageDispatcher feedMessageDispatcher,
-    IDbService dbService,
+    IDbContextFactory<BotDbContext> dbService,
     InteractiveService interactive,
     FeedsStateTracker stateTracker,
     ILogger<FeedsModule> logger) : BotModule
@@ -197,7 +197,7 @@ public class FeedsModule(
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var feedsQuery = context.RssFeedListeners.Where(x => x.GuildId == Context.Guild.Id);
 

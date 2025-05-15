@@ -6,6 +6,7 @@ using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Fergun.Interactive;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Asahi;
@@ -16,7 +17,7 @@ public class CommandHandler(
     DiscordSocketClient client,
     BotConfig botConfig,
     IServiceProvider services,
-    IDbService dbService,
+    IDbContextFactory<BotDbContext> dbService,
     InteractiveService interactiveService,
     ILogger<CommandHandler> logger
 )
@@ -72,7 +73,7 @@ public class CommandHandler(
         }
 
         {
-            await using var dbContext = dbService.GetDbContext();
+            await using var dbContext = await dbService.CreateDbContextAsync();
 
             if (userMessage.Channel is SocketTextChannel textChannel)
             {
@@ -103,7 +104,7 @@ public class CommandHandler(
 
         if (channel is SocketTextChannel textChannel)
         {
-            await using var context = dbService.GetDbContext();
+            await using var context = await dbService.CreateDbContextAsync();
             var config = await context.GetGuildConfig(textChannel.Guild.Id);
 
             prefix = config.Prefix;

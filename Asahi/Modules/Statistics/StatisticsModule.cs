@@ -10,7 +10,7 @@ namespace Asahi.Modules.Statistics;
 [Group("stats", "Commands relating to statistics")]
 [CommandContextType(InteractionContextType.Guild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
-public class StatisticsModule(IDbService dbService) : BotModule
+public class StatisticsModule(IDbContextFactory<BotDbContext> dbService) : BotModule
 {
     // One day you shall work...
     // .GroupBy(x => x.OriginalMessageId)
@@ -53,14 +53,14 @@ public class StatisticsModule(IDbService dbService) : BotModule
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
-        if (context is not PostgresContext)
-        {
-            await FollowupAsync(
-                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-            return;
-        }
+        // if (context is not PostgresContext)
+        // {
+        //     await FollowupAsync(
+        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+        //     return;
+        // }
 
         var postgresHappyChannelId = channel?.Id ?? 0;
         var postgresHappyUserId = user?.Id ?? 0;
@@ -149,14 +149,14 @@ public class StatisticsModule(IDbService dbService) : BotModule
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
-        if (context is not PostgresContext)
-        {
-            await FollowupAsync(
-                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-            return;
-        }
+        // if (context is not PostgresContext)
+        // {
+        //     await FollowupAsync(
+        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+        //     return;
+        // }
 
         var postgresHappyUserId = user?.Id ?? 0;
 
@@ -237,14 +237,14 @@ public class StatisticsModule(IDbService dbService) : BotModule
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
-        if (context is not PostgresContext)
-        {
-            await FollowupAsync(
-                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-            return;
-        }
+        // if (context is not PostgresContext)
+        // {
+        //     await FollowupAsync(
+        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+        //     return;
+        // }
 
         var postgresHappyChannelId = channel?.Id ?? 0;
         var postgresHappyAuthorId = user?.Id ?? 0;
@@ -341,14 +341,14 @@ public class StatisticsModule(IDbService dbService) : BotModule
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
-        if (context is not PostgresContext)
-        {
-            await FollowupAsync(
-                $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
-            return;
-        }
+        // if (context is not PostgresContext)
+        // {
+        //     await FollowupAsync(
+        //         $"This is not supported on this instance. (Database is `{context.GetType().Name}`, should be `{nameof(PostgresContext)}`.)");
+        //     return;
+        // }
 
         var postgresHappyChannelId = channel?.Id ?? 0;
         var postgresHappyAuthorId = user?.Id ?? 0;

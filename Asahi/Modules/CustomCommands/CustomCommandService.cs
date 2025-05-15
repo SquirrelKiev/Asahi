@@ -9,11 +9,11 @@ using Newtonsoft.Json;
 namespace Asahi.Modules.CustomCommands;
 
 [Inject(ServiceLifetime.Singleton)]
-public class CustomCommandService(IDbService dbService)
+public class CustomCommandService(IDbContextFactory<BotDbContext> dbService)
 {
     public async Task<MessageContents> AddCustomCommand(IGuildUser commandOwner, string name, string contents)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         if (await context.GetCustomCommand(commandOwner.GuildId, name) != null)
         {
@@ -39,7 +39,7 @@ public class CustomCommandService(IDbService dbService)
 
     public async Task<MessageContents> RemoveCustomCommand(IGuildUser commandExecutor, string name)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var command = await context.GetCustomCommand(commandExecutor.GuildId, name);
         if (command == null)
@@ -62,7 +62,7 @@ public class CustomCommandService(IDbService dbService)
 
     public async Task<LazyPaginator> ListCommands(IUser executor, IGuild guild)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var commands = await context.CustomCommands.Where(x => x.GuildId == guild.Id).ToArrayAsync();
         const int maxPerPage = 20;
@@ -96,7 +96,7 @@ public class CustomCommandService(IDbService dbService)
 
     public async Task<string> CommandsAsJson(IGuild guild)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var commands = await context.CustomCommands.Where(x => x.GuildId == guild.Id).ToArrayAsync();
 

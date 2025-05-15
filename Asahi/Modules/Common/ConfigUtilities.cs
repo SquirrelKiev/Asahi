@@ -2,17 +2,18 @@
 using System.Text.RegularExpressions;
 using Discord.Interactions;
 using FluentResults;
+using Microsoft.EntityFrameworkCore;
 
 namespace Asahi.Modules;
 
-public static partial class ConfigUtilities
+public static class ConfigUtilities
 {
-    public static async Task<bool> CommonConfig(IInteractionContext botContext, IDbService dbService,
+    public static async Task<bool> CommonConfig(IInteractionContext botContext, IDbContextFactory<BotDbContext> dbService,
         Func<BotDbContext, EmbedBuilder, Task<ConfigChangeResult>> updateAction, bool ephemeral = false)
     {
         await botContext.Interaction.DeferAsync(ephemeral);
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var embedBuilder = new EmbedBuilder();
         var message = await updateAction(context, embedBuilder);

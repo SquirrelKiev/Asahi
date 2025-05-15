@@ -24,7 +24,7 @@ namespace Asahi.Modules.BotManagement;
 [IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 public class BotManagementModule(
-    IDbService dbService,
+    IDbContextFactory<BotDbContext> dbService,
     CustomStatusService css,
     BotConfig config,
     InteractiveService interactive,
@@ -43,7 +43,7 @@ public class BotManagementModule(
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
@@ -72,7 +72,7 @@ public class BotManagementModule(
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
@@ -99,7 +99,7 @@ public class BotManagementModule(
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
@@ -238,7 +238,7 @@ public class BotManagementModule(
             return;
         }
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
@@ -262,7 +262,7 @@ public class BotManagementModule(
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
@@ -277,7 +277,7 @@ public class BotManagementModule(
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var botWideConfig = await context.GetBotWideConfig(Context.Client.CurrentUser.Id);
 
@@ -384,7 +384,7 @@ public class BotManagementModule(
     }
 
     [Group("feeds", "Feed management.")]
-    public class FeedsStateTogglingModule(IDbService dbService, IColorProviderService colorProviderService) : BotModule
+    public class FeedsStateTogglingModule(IDbContextFactory<BotDbContext> dbService, IColorProviderService colorProviderService) : BotModule
     {
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
         [SlashCommand("enable-with-id", "Force enables the specified feed.")]
@@ -396,7 +396,7 @@ public class BotManagementModule(
         {
             await DeferAsync();
 
-            await using var context = dbService.GetDbContext();
+            await using var context = await dbService.CreateDbContextAsync();
 
             if (!ulong.TryParse(guildIdStr, out var guildId))
             {
@@ -444,7 +444,7 @@ public class BotManagementModule(
                 return;
             }
 
-            await using var context = dbService.GetDbContext();
+            await using var context = await dbService.CreateDbContextAsync();
 
             var feed = await context.GetFeed(feedId, guildId);
 
@@ -474,7 +474,7 @@ public class BotManagementModule(
         {
             await DeferAsync();
 
-            await using var context = dbService.GetDbContext();
+            await using var context = await dbService.CreateDbContextAsync();
 
             var feeds = await context.RssFeedListeners
                 .Where(x => Regex.IsMatch(x.FeedUrl, regex))
@@ -511,7 +511,7 @@ public class BotManagementModule(
         {
             await DeferAsync();
 
-            await using var context = dbService.GetDbContext();
+            await using var context = await dbService.CreateDbContextAsync();
 
             var feeds = await context.RssFeedListeners
                 .Where(x => Regex.IsMatch(x.FeedUrl, regex))

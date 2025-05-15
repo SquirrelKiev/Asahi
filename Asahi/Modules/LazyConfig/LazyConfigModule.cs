@@ -1,6 +1,7 @@
 ﻿using Asahi.Database;
 using Asahi.Database.Models;
 using Discord.Interactions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Asahi.Modules.LazyConfig;
 
@@ -8,7 +9,7 @@ namespace Asahi.Modules.LazyConfig;
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 // [Group("config", "Configuration commands.")]
-public class LazyConfigModule(IDbService dbService) : BotModule
+public class LazyConfigModule(IDbContextFactory<BotDbContext> dbService) : BotModule
 {
     [SlashCommand("prefix", "Gets/sets the bot prefix.")]
     public async Task SetPrefix(
@@ -16,7 +17,7 @@ public class LazyConfigModule(IDbService dbService) : BotModule
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var config = await context.GetGuildConfig(Context.Guild.Id);
 

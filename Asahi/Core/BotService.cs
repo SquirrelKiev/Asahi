@@ -10,9 +10,9 @@ using Asahi.Modules.Seigen;
 using Asahi.Modules.Welcome;
 using Discord.Commands;
 using Discord.Interactions;
-using Discord.Rest;
 using Discord.WebSocket;
 using Fergun.Interactive;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +21,7 @@ namespace Asahi;
 public class BotService(
     DiscordSocketClient client,
     BotConfig config,
-    IDbService dbService,
+    IDbContextFactory<BotDbContext> dbService,
     ILogger<BotService> logger,
     CommandHandler commandHandler,
     HighlightsTrackingService highlightsTrackingService,
@@ -49,15 +49,20 @@ public class BotService(
         MessageContents.AddRedButtonDefault = false;
 
         var args = Environment.GetCommandLineArgs();
-        var migrationEnabled = !(args.Contains("nomigrate") || args.Contains("nukedb"));
-        await dbService.Initialize(migrationEnabled);
+        // ReSharper disable once RedundantAssignment
+        bool migrationEnabled = true;
+#if DEBUG
+        migrationEnabled = !(args.Contains("nomigrate") || args.Contains("nukedb"));
+#endif
+        await using var context = await dbService.CreateDbContextAsync(cancellationToken);
+        await context.InitializeAsync(migrationEnabled);
 
 #if DEBUG
         if (Environment.GetCommandLineArgs().Contains("nukedb"))
         {
             logger.LogDebug("Nuking the DB...");
 
-            await dbService.ResetDatabase();
+            await context.ResetDatabaseAsync();
 
             logger.LogDebug("Nuked!");
         }
@@ -132,7 +137,7 @@ public class BotService(
         if (reaction.Channel is not SocketTextChannel channel)
             return;
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
         if (
@@ -165,7 +170,7 @@ public class BotService(
         if (reaction.Channel is not SocketTextChannel channel)
             return;
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
         if (

@@ -12,6 +12,8 @@ using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
 using Fergun.Interactive;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,7 +39,7 @@ public static class Startup
             Console.OutputEncoding = Encoding.UTF8;
             Log.Logger = new LoggerConfiguration().WriteTo
                 .Console(
-                    outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+                    outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}", theme: AnsiConsoleTheme.Sixteen)
                 .CreateLogger();
 
             if (!BotConfigFactory.GetConfig(out var botConfig))
@@ -49,8 +51,6 @@ public static class Startup
             {
                 Environment.Exit(1);
             }
-
-            var builder = new HostBuilder();
 
             var logLevel = botConfig.LogEventLevel;
 
@@ -70,6 +70,9 @@ public static class Startup
             }
 
             logger = logConfig.CreateLogger();
+
+            var builder = new HostBuilder();
+
             builder.ConfigureLogging(logging =>
                     logging
                         .AddSerilog(logger)
@@ -79,14 +82,14 @@ public static class Startup
                 ;
 
             builder.ConfigureServices(x => x.AddBotServices(botConfig));
-            builder.ConfigureHostConfiguration(
-                configBuilder => configBuilder.AddEnvironmentVariables(prefix: "DOTNET_"));
+            builder.ConfigureHostConfiguration(configBuilder =>
+                configBuilder.AddEnvironmentVariables(prefix: "DOTNET_"));
 
             await builder.RunConsoleAsync();
         }
         finally
         {
-            if(logger != null)
+            if (logger != null)
                 await logger.DisposeAsync();
         }
     }
@@ -94,6 +97,40 @@ public static class Startup
     private static IServiceCollection AddBotServices(this IServiceCollection serviceCollection, BotConfig config)
     {
         const LogSeverity logLevel = LogSeverity.Verbose;
+
+        // BotDbContext context = config.Database switch
+        // {
+        //     BotConfig.DatabaseType.Postgresql => new PostgresContext(botConfig.DatabaseConnectionString, loggerFactory),
+        //     BotConfig.DatabaseType.Sqlite => new SqliteContext(botConfig.DatabaseConnectionString, loggerFactory),
+        //     _ => throw new NotSupportedException(botConfig.Database.ToString())
+        // };
+
+        switch (config.Database)
+        {
+            case BotConfig.DatabaseType.Sqlite:
+                serviceCollection.AddDbContextFactory<BotDbContext>((provider, options) =>
+                {
+                    var botConfig = provider.GetRequiredService<BotConfig>();
+
+                    var builder = new SqliteConnectionStringBuilder(botConfig.DatabaseConnectionString);
+                    builder.DataSource = Path.Combine(AppContext.BaseDirectory, builder.DataSource);
+
+                    options.UseSqlite(builder.ToString(),
+                        x => x.MigrationsAssembly(MigrationAssemblies.Sqlite).UseNodaTime().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+                });
+                break;
+            case BotConfig.DatabaseType.Postgresql:
+                serviceCollection.AddDbContextFactory<BotDbContext>((provider, options) =>
+                {
+                    var botConfig = provider.GetRequiredService<BotConfig>();
+
+                    options.UseNpgsql(botConfig.DatabaseConnectionString,
+                        x => x.MigrationsAssembly(MigrationAssemblies.Postgres).UseNodaTime().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+                });
+                break;
+            default:
+                throw new NotSupportedException($"Unsupported database {config.Database}?");
+        }
 
         serviceCollection
             .AddSingleton(config)
@@ -122,7 +159,7 @@ public static class Startup
                 DefaultRunMode = Discord.Commands.RunMode.Async
             }))
             .AddSingleton<CommandHandler>()
-            .AddSingleton<IDbService, DbService>()
+            .AddDbContextFactory<BotDbContext>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
             .AddTransient<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
             .AddSingleton<IColorProviderService, ColorProviderService>()
@@ -163,20 +200,20 @@ public static class Startup
 
         serviceCollection.AddRefitClient<IRedditApi>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com"));
-        
+
         serviceCollection.AddRefitClient<IFxTwitterApi>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri(config.FxTwitterApiUrl));
-        
+
         serviceCollection.AddRefitClient<IMisskeyApi>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://misskey.io"));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
-                .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
-                    x.ServiceLifetime == ServiceLifetime.Singleton)
-                )
-                .AsSelf()
-                .WithSingletonLifetime()
-            );
+            .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
+                x.ServiceLifetime == ServiceLifetime.Singleton)
+            )
+            .AsSelf()
+            .WithSingletonLifetime()
+        );
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

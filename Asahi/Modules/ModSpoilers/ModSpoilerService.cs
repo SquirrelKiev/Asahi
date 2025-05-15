@@ -16,7 +16,7 @@ namespace Asahi.Modules.ModSpoilers;
 public class ModSpoilerService(
     DiscordSocketClient client,
     IHttpClientFactory clientFactory,
-    IDbService dbService,
+    IDbContextFactory<BotDbContext> dbService,
     InteractiveService interactive,
     BotConfig botConfig,
     HighlightsTrackingService hts,
@@ -201,7 +201,7 @@ public class ModSpoilerService(
             if (!reactor.GetPermissions(channel).Has(ChannelPermission.ManageMessages))
                 return;
 
-            await using var context = dbService.GetDbContext();
+            await using var context = await dbService.CreateDbContextAsync();
 
             var guildConfig = await context.GetGuildConfig(channel.GuildId);
 

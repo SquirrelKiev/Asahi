@@ -34,7 +34,7 @@ public enum Months
 [CommandContextType(InteractionContextType.Guild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class UserFacingBirthdayConfigModule(
-    IDbService dbService,
+    IDbContextFactory<BotDbContext> dbService,
     IClock clock,
     InteractiveService interactive) : BotModule
 {
@@ -121,7 +121,7 @@ public class UserFacingBirthdayConfigModule(
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(await Context.Guild.GetCurrentUserAsync(), Color.Green);
 
@@ -277,7 +277,7 @@ public class UserFacingBirthdayConfigModule(
 [CommandContextType(InteractionContextType.Guild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class BirthdayConfigModule(
-        IDbService dbService,
+        IDbContextFactory<BotDbContext> dbService,
         BirthdayTimerService bts,
         IClock clock) : BotModule
 {
@@ -561,7 +561,7 @@ public class BirthdayConfigModule(
     [SlashCommand("change-text", "Change the text used in the /birthday command.")]
     public async Task ChangeStringSlash([Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         BirthdayConfig config;
         try

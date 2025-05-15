@@ -6,22 +6,26 @@ using Microsoft.Extensions.Logging;
 namespace Asahi.Modules.FeedsV2;
 
 [Inject(ServiceLifetime.Singleton)]
-public class FeedsTimerService(ILogger<FeedsTimerService> logger, FeedsProcessorService feedsProcessor, IDbService dbService, FeedsStateTracker feedsStateTracker)
+public class FeedsTimerService(
+    ILogger<FeedsTimerService> logger,
+    FeedsProcessorService feedsProcessor,
+    IDbContextFactory<BotDbContext> dbService,
+    FeedsStateTracker feedsStateTracker)
 {
     private Task? timerTask;
-    
+
     public void StartBackgroundTask(CancellationToken token)
     {
         timerTask ??= Task.Run(() => TimerTask(token), token);
     }
-        
+
     /// <remarks>Should only be one of these running!</remarks>
     private async Task TimerTask(CancellationToken cancellationToken)
     {
         try
         {
             logger.LogTrace("RSS timer task started");
-        
+
             using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
 
             do
@@ -57,7 +61,7 @@ public class FeedsTimerService(ILogger<FeedsTimerService> logger, FeedsProcessor
 
     public async Task<FeedListener[]> GetFeeds()
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         return await context.RssFeedListeners.ToArrayAsync();
     }

@@ -12,9 +12,7 @@ public class AliasedEmoteAutocomplete : AutocompleteHandler
         if (context.Guild == null)
             return AutocompletionResult.FromSuccess();
 
-        var dbService = services.GetRequiredService<IDbService>();
-
-        await using var dbContext = dbService.GetDbContext();
+        await using var dbContext = services.GetRequiredService<BotDbContext>();
 
         var aliases = await dbContext.EmoteAliases.Where(x => x.GuildId == context.Guild.Id).ToArrayAsync();
 

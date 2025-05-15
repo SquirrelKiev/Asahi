@@ -2,13 +2,14 @@
 using Discord.WebSocket;
 using FluentResults;
 using Fluid;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Asahi.Modules.Welcome;
 
 [Inject(ServiceLifetime.Singleton)]
-public class WelcomeService(IDbService dbService, ILogger<WelcomeService> logger)
+public class WelcomeService(IDbContextFactory<BotDbContext> dbService, ILogger<WelcomeService> logger)
 {
     private FluidParser parser = new();
     
@@ -72,7 +73,7 @@ public class WelcomeService(IDbService dbService, ILogger<WelcomeService> logger
 
     public async Task OnUserJoined(SocketGuildUser user)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var config = await context.GetGuildConfig(user.Guild.Id);
         if (!config.ShouldSendWelcomeMessage)

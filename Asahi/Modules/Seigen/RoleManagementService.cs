@@ -9,11 +9,11 @@ using Microsoft.Extensions.Logging;
 namespace Asahi.Modules.Seigen;
 
 [Inject(ServiceLifetime.Singleton)]
-public class RoleManagementService(IDbService dbService, DiscordSocketClient client, ILogger<BotService> logger)
+public class RoleManagementService(IDbContextFactory<BotDbContext> dbService, DiscordSocketClient client, ILogger<BotService> logger)
 {
     public async Task OnUserLeft(SocketGuild guild, SocketUser user)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         if (await context.TrackedUsers.Where(x => x.UserId == user.Id && x.Trackable.MonitoredGuild == guild.Id ||
                                                  x.Trackable.AssignableGuild == guild.Id).AnyAsync())
@@ -22,7 +22,7 @@ public class RoleManagementService(IDbService dbService, DiscordSocketClient cli
 
     public async Task OnUserJoined(SocketGuildUser user)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         await DoubleCheckUserHasAllValidAssignableRoles(context, x => x.UserId == user.Id && x.Trackable.AssignableGuild == user.Guild.Id);
     }
@@ -74,7 +74,7 @@ public class RoleManagementService(IDbService dbService, DiscordSocketClient cli
 
     public async Task OnUserRolesUpdated(Cacheable<SocketGuildUser, ulong> cacheable, SocketGuildUser user)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         // so we don't cache unnecessarily, especially don't want that when we're running CacheAndResolve etc, sounds painful
         bool userHasMonitoredRoles = false;
@@ -127,7 +127,7 @@ public class RoleManagementService(IDbService dbService, DiscordSocketClient cli
 
         sw.Start();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var trackedRoles = (await context.Trackables.ToArrayAsync())
                 .SelectMany(t => new[]
@@ -174,7 +174,7 @@ public class RoleManagementService(IDbService dbService, DiscordSocketClient cli
 
         sw.Start();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var oldCache = (await context.CachedUsersRoles.ToArrayAsync())
             .GroupBy(x => new { x.GuildId, x.RoleId })
@@ -221,7 +221,7 @@ public class RoleManagementService(IDbService dbService, DiscordSocketClient cli
 
     public async Task ResolveConflicts(ulong monitoredRoleId, List<ulong> cachedUserIds, List<ulong> currentUserIds)
     {
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var trackables = await context.Trackables.Where(x => x.MonitoredRole == monitoredRoleId).ToArrayAsync();
 

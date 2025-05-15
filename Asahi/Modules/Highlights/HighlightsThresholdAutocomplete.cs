@@ -13,14 +13,13 @@ public class HighlightsThresholdAutocomplete : AutocompleteHandler
             return AutocompletionResult.FromSuccess();
 
         //var logger = services.GetRequiredService<ILogger<HighlightsThresholdAutocomplete>>();
-        var dbService = services.GetRequiredService<IDbService>();
 
         var boardOption = autocompleteInteraction.Data.Options.FirstOrDefault(x => x.Name == "name");
 
         if (boardOption == null)
             return AutocompletionResult.FromSuccess();
 
-        await using var dbContext = dbService.GetDbContext();
+        await using var dbContext = services.GetRequiredService<BotDbContext>();
 
         var board = await dbContext.HighlightBoards.Include(highlightBoard => highlightBoard.Thresholds)
             .FirstOrDefaultAsync(x => x.GuildId == context.Guild.Id && x.Name == (string)boardOption.Value);

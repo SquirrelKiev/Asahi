@@ -3,6 +3,7 @@ using Asahi.Database.Models;
 using Discord.Interactions;
 using Discord.WebSocket;
 using FluentResults;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 
@@ -12,7 +13,7 @@ namespace Asahi.Modules.Welcome;
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [CommandContextType(InteractionContextType.Guild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
-public class WelcomeConfigModule(IDbService dbService, WelcomeService welcomeService) : BotModule
+public class WelcomeConfigModule(IDbContextFactory<BotDbContext> dbService, WelcomeService welcomeService) : BotModule
 {
     [SlashCommand("set-template", "Sets the welcome message template.")]
     public async Task SetWelcomeJsonSlash(
@@ -40,7 +41,7 @@ public class WelcomeConfigModule(IDbService dbService, WelcomeService welcomeSer
     {
         await DeferAsync();
         
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var config = await context.GetGuildConfig(Context.Guild.Id);
 
@@ -66,7 +67,7 @@ public class WelcomeConfigModule(IDbService dbService, WelcomeService welcomeSer
     {
         await DeferAsync();
         
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var config = await context.GetGuildConfig(Context.Guild.Id);
 

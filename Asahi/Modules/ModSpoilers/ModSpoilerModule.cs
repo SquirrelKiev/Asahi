@@ -1,5 +1,6 @@
 ﻿using Asahi.Database;
 using Discord.Interactions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Asahi.Modules.ModSpoilers;
 
@@ -7,7 +8,7 @@ namespace Asahi.Modules.ModSpoilers;
 [DefaultMemberPermissions(GuildPermission.ManageMessages)]
 [CommandContextType(InteractionContextType.Guild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
-public class ModSpoilerModule(ModSpoilerService mss, IDbService dbService) : BotModule
+public class ModSpoilerModule(ModSpoilerService mss, IDbContextFactory<BotDbContext> dbService) : BotModule
 {
     public class SetContextModal : IModal
     {
@@ -48,7 +49,7 @@ public class ModSpoilerModule(ModSpoilerService mss, IDbService dbService) : Bot
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var config = await context.GetGuildConfig(Context.Guild.Id);
 
@@ -64,7 +65,7 @@ public class ModSpoilerModule(ModSpoilerService mss, IDbService dbService) : Bot
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var config = await context.GetGuildConfig(Context.Guild.Id);
 
@@ -80,7 +81,7 @@ public class ModSpoilerModule(ModSpoilerService mss, IDbService dbService) : Bot
     {
         await DeferAsync();
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
 
         var config = await context.GetGuildConfig(Context.Guild.Id);
 
@@ -117,7 +118,7 @@ public class ModSpoilerModule(ModSpoilerService mss, IDbService dbService) : Bot
             return;
         }
 
-        await using var context = dbService.GetDbContext();
+        await using var context = await dbService.CreateDbContextAsync();
         var guildConfig = await context.GetGuildConfig(Context.Guild.Id);
 
         var response = await mss.SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, context, modal.Context);

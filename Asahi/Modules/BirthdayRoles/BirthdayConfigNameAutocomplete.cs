@@ -13,9 +13,7 @@ public class BirthdayConfigNameAutocomplete : AutocompleteHandler
             return AutocompletionResult.FromSuccess();
 
         var autocompletes = new List<AutocompleteResult>();
-        var dbService = services.GetRequiredService<IDbService>();
-
-        await using var dbContext = dbService.GetDbContext();
+        await using var dbContext = services.GetRequiredService<BotDbContext>();
 
         var boards = dbContext.BirthdayConfigs.Where(x => x.GuildId == context.Guild.Id &&
                                                           x.Name.StartsWith((string)autocompleteInteraction.Data.Current.Value))

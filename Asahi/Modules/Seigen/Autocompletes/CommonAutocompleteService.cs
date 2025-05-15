@@ -48,8 +48,7 @@ public class CommonAutocompleteService(OverrideTrackerService overrideTracker)
         {
             if (!uint.TryParse((string)idObj, out uint id)) return AutocompletionResult.FromSuccess();
 
-            var dbService = services.GetRequiredService<IDbService>();
-            await using var dbContext = dbService.GetDbContext();
+            await using var dbContext = services.GetRequiredService<BotDbContext>();
 
             if (guildId == 0)
             {
