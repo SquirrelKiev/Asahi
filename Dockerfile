@@ -27,4 +27,4 @@ VOLUME [ "/data" ]
 
 ENV BOT_CONFIG_LOCATION="/data/botconfig.yaml"
 
-CMD [ "dotnet", "Asahi.dll" ]
+ENTRYPOINT [ "dotnet", "Asahi.dll" ]
