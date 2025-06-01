@@ -384,7 +384,9 @@ public class BotManagementModule(
     }
 
     [Group("feeds", "Feed management.")]
-    public class FeedsStateTogglingModule(IDbContextFactory<BotDbContext> dbService, IColorProviderService colorProviderService) : BotModule
+    public class FeedsStateTogglingModule(
+        IDbContextFactory<BotDbContext> dbService,
+        IColorProviderService colorProviderService) : BotModule
     {
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
         [SlashCommand("enable-with-id", "Force enables the specified feed.")]
@@ -392,7 +394,9 @@ public class BotManagementModule(
             [Summary(description: "The guild the feed is from.", name: "guild-id")]
             string guildIdStr,
             [Summary(description: "The feed to enable.")]
-            uint feedId)
+            uint feedId,
+            [Summary(description: "Turn on to disable sending notice messages to channels.")]
+            bool silent = false)
         {
             await DeferAsync();
 
@@ -417,8 +421,9 @@ public class BotManagementModule(
             feed.DisabledReason = "";
 
             await context.SaveChangesAsync();
-            
-            await LogEnabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl);
+
+            if (!silent)
+                await LogEnabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl);
 
             await FollowupAsync(embed: new EmbedBuilder().WithDescription($"Feed `{feed.FeedUrl}` enabled.")
                 .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
@@ -434,10 +439,12 @@ public class BotManagementModule(
             [Summary(description: "The guild the feed is from.", name: "guild-id")]
             string guildIdStr,
             [Summary(description: "The feed to disable.")]
-            uint feedId)
+            uint feedId,
+            [Summary(description: "Turn on to disable sending notice messages to channels.")]
+            bool silent = false)
         {
             await DeferAsync();
-            
+
             if (!ulong.TryParse(guildIdStr, out var guildId))
             {
                 await FollowupAsync("Guild ID is not a number!");
@@ -459,8 +466,9 @@ public class BotManagementModule(
             feed.DisabledReason = reason;
 
             await context.SaveChangesAsync();
-            
-            await LogDisabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl, feed.DisabledReason);
+
+            if (!silent)
+                await LogDisabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl, feed.DisabledReason);
 
             await FollowupAsync(embed: new EmbedBuilder().WithDescription($"Feed `{feed.FeedUrl}` disabled.")
                 .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
@@ -470,7 +478,9 @@ public class BotManagementModule(
         [SlashCommand("enable-regex-matches", "Force enables feed URLs that match the regex.")]
         public async Task EnableFeedWithRegexSlash(
             [Summary(description: "The regex to match feed URLs.")]
-            string regex)
+            string regex,
+            [Summary(description: "Turn on to disable sending notice messages to channels.")]
+            bool silent = false)
         {
             await DeferAsync();
 
@@ -489,9 +499,12 @@ public class BotManagementModule(
 
             await context.SaveChangesAsync();
 
-            foreach (var feed in feeds)
+            if (!silent)
             {
-                await LogEnabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl);
+                foreach (var feed in feeds)
+                {
+                    await LogEnabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl);
+                }
             }
 
             await FollowupAsync(embed: new EmbedBuilder()
@@ -507,7 +520,9 @@ public class BotManagementModule(
             [Summary(description: "Reason for being disabled.")]
             string reason,
             [Summary(description: "The regex to match feed URLs.")]
-            string regex)
+            string regex,
+            [Summary(description: "Turn on to disable sending notice messages to channels.")]
+            bool silent = false)
         {
             await DeferAsync();
 
@@ -526,9 +541,13 @@ public class BotManagementModule(
 
             await context.SaveChangesAsync();
 
-            foreach (var feed in feeds)
+            if (!silent)
             {
-                await LogDisabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl, feed.DisabledReason);
+                foreach (var feed in feeds)
+                {
+                    await LogDisabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.FeedUrl,
+                        feed.DisabledReason);
+                }
             }
 
             await FollowupAsync(embed: new EmbedBuilder()
@@ -554,7 +573,7 @@ public class BotManagementModule(
                 }
             }
         }
-        
+
         private async Task LogEnabledToFeedChannelAsync(ulong guildId, ulong channelId, string url)
         {
             var guild = await Context.Client.GetGuildAsync(guildId);
