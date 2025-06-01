@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System.Buffers.Text;
+using System.Diagnostics;
+using System.Text;
 using Discord.Interactions;
 using Fergun.Interactive;
 using Microsoft.Extensions.Logging;
@@ -19,6 +21,7 @@ public class AnimeThemesModule(
     private const string NEXT_PAGE_BUTTON = "atv2-np:";
     private const string CHOICE_BUTTON = "atv2-choice:";
 
+    // TODO: Migrate to the new fergun component paginator
     [SlashCommand("theme", "Searches for anime theme songs via animethemes.moe.")]
     public async Task ThemeSlash([Summary(description: "The anime to look for the theme songs of.")] string query)
     {
@@ -196,10 +199,19 @@ public class AnimeThemesModule(
                     var titleText = ThemeToString(theme);
                     var titleComponent = new TextDisplayBuilder(titleText);
 
+                    var videos = theme.animeThemeEntries.First().videos;
+                    
+                    Debug.Assert(videos != null);
+                    
+                    var thumbnailVideo = SelectBestVideoSource(videos);
+                    var thumbnailVideoLink = thumbnailVideo.link;
+                    
+                    Debug.Assert(thumbnailVideoLink != null);
+
                     var titleSectionComponent = new SectionBuilder().WithTextDisplay(titleComponent)
                         .WithAccessory(
                             new ThumbnailBuilder(
-                                new UnfurledMediaItemProperties("https://files.catbox.moe/jtn67u.png")));
+                                new UnfurledMediaItemProperties(GetAnimeVideoThumbnailUrl(thumbnailVideoLink))));
 
                     pageComponents.Add(titleSectionComponent);
 
@@ -370,6 +382,13 @@ public class AnimeThemesModule(
         obj.Content = "";
         obj.Embeds = new Optional<Embed[]>([]);
         obj.Components = components.Build();
+    }
+
+    private string GetAnimeVideoThumbnailUrl(string url)
+    {
+        var base64EncodedUrl = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(url));
+        
+        return $"{config.AsahiWebServicesBaseUrl}/api/thumb/{base64EncodedUrl}.png";
     }
 
     private static string GetAnimeThumbnail(AnimeResource anime)

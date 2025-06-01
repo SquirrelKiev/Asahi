@@ -74,6 +74,9 @@ public class BotConfig
     [YamlMember(Description = "The fxtwitter API url to use as a base.")]
     public string FxTwitterApiUrl { get; set; } = "https://api.fxtwitter.com";
 
+    [YamlMember(Description = "The Asahi web services url to use as a base. Expects an instance of Asahi.WebServices.")]
+    public string AsahiWebServicesBaseUrl { get; set; } = "https://asahi-services.onk.moe";
+
     /// <summary>
     /// For any string here, the following will be replaced:
     /// - {{guilds}} will be substituted with how many guilds (servers) the bot is in.

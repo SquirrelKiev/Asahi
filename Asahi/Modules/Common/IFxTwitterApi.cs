@@ -17,7 +17,7 @@ public record FxTwitterStatusResponse
 
     public record FxTwitterTweet
     {
-        [JsonProperty("media")] public FxTwitterMediaOptions Media { get; init; }
+        [JsonProperty("media")] public required FxTwitterMediaOptions Media { get; init; }
 
         public record FxTwitterMediaOptions
         {
@@ -27,8 +27,8 @@ public record FxTwitterStatusResponse
 
             public record FxTwitterMediaEntry
             {
-                [JsonProperty("type")] public string Type { get; init; }
-                [JsonProperty("url")] public string Url { get; init; }
+                [JsonProperty("type")] public required string Type { get; init; }
+                [JsonProperty("url")] public required string Url { get; init; }
                 [JsonProperty("width")] public int Width { get; init; }
 
                 [JsonProperty("height")] public int Height { get; init; }

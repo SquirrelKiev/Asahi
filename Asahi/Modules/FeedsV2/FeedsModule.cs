@@ -173,18 +173,18 @@ public class FeedsModule(
         [Summary(description: "Whether the feed should be enabled or disabled.")]
         bool state)
     {
-        await CommonFeedConfig(id, async options =>
+        await CommonFeedConfig(id, options =>
         {
             if (options.feedListener is { Enabled: false, ForcedDisable: true })
             {
-                return new ConfigChangeResult(false,
-                    $"This feed has been temporarily disabled for reason **{options.feedListener.DisabledReason}**. You cannot enable it.");
+                return Task.FromResult(new ConfigChangeResult(false,
+                    $"This feed has been temporarily disabled for reason **{options.feedListener.DisabledReason}**. You cannot enable it."));
             }
 
             options.feedListener.Enabled = state;
             options.feedListener.DisabledReason = state ? "" : $"Disabled by <@{Context.User.Id}>.";
 
-            return new ConfigChangeResult(true, $"Feed has been {(state ? "enabled" : "disabled")}.");
+            return Task.FromResult(new ConfigChangeResult(true, $"Feed has been {(state ? "enabled" : "disabled")}."));
         });
     }
 
