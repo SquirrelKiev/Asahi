@@ -20,7 +20,9 @@ namespace Asahi.Modules.Highlights;
 public class HighlightsModule(
     IDbContextFactory<BotDbContext> dbService,
     HighlightsTrackingService hts,
+#if DEBUG
     ILogger<HighlightsModule> logger,
+#endif
     InteractiveService interactive
 ) : HighlightsSubmodule(dbService)
 {
@@ -30,11 +32,10 @@ public class HighlightsModule(
 
     [SlashCommand("create", "Creates a new highlight board.")]
     public Task CreateSlash(
-        [Summary(description: NameDescription)]
-        [MaxLength(HighlightBoard.MaxNameLength)]
-            string name,
+        [Summary(description: NameDescription)] [MaxLength(HighlightBoard.MaxNameLength)]
+        string name,
         [Summary(description: "The channel to log highlights to. Can be changed later.")]
-            ITextChannel channel
+        ITextChannel channel
     )
     {
         return CommonConfig(
@@ -69,7 +70,7 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name
+        string name
     )
     {
         return CommonConfig(
@@ -95,20 +96,22 @@ public class HighlightsModule(
     #region Override Threshold
 
     [Group("threshold", "Commands relating to threshold overrides.")]
-    public class HighlightsThresholdSubmodule(IDbContextFactory<BotDbContext> dbService) : HighlightsSubmodule(dbService)
+    public class HighlightsThresholdSubmodule(IDbContextFactory<BotDbContext> dbService)
+        : HighlightsSubmodule(dbService)
     {
         [SlashCommand("add", "Adds a new threshold override for the specified channel.")]
         public Task ThresholdAddOverrideSlash(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
-            [Summary(description: "The channel to add the threshold for.")] IChannel channel,
+            string name,
+            [Summary(description: "The channel to add the threshold for.")]
+            IChannel channel,
             [Summary(
                 description: "The existing threshold override to clone from. Defaults to Guild."
             )]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
-                string cloneOverride = ""
+            string cloneOverride = ""
         )
         {
             return CommonBoardConfig(
@@ -146,7 +149,7 @@ public class HighlightsModule(
                             new ConfigChangeResult(
                                 false,
                                 $"Could not find clone threshold for `{toCloneFrom}`. If you put the threshold in using autocomplete, "
-                                    + "there's probably something very wrong. Ping Kiev."
+                                + "there's probably something very wrong. Ping Kiev."
                             )
                         );
                     }
@@ -174,11 +177,11 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId
+            string overrideId
         )
         {
             return CommonThresholdConfig(
@@ -212,16 +215,16 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
+            string overrideId,
             [Summary(
                 description: "The base threshold all other threshold calculations will work off of."
             )]
             [MinValue(1)]
-                int baseThreshold
+            int baseThreshold
         )
         {
             return CommonThresholdConfig(
@@ -242,14 +245,13 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
-            [Summary(description: "The maximum the threshold will cap at.")]
-            [MinValue(1)]
-                int maxThreshold
+            string overrideId,
+            [Summary(description: "The maximum the threshold will cap at.")] [MinValue(1)]
+            int maxThreshold
         )
         {
             return CommonThresholdConfig(
@@ -273,16 +275,16 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
+            string overrideId,
             [Summary(
                 description: "If the threshold goes higher than this, it's rounded up instead of down."
             )]
             [MinValue(0), MaxValue(1)]
-                float roundingThreshold
+            float roundingThreshold
         )
         {
             return CommonThresholdConfig(
@@ -309,14 +311,13 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
-            [Summary(description: "The maximum age of the message, in seconds.")]
-            [MinValue(0)]
-                int maxMessageAge
+            string overrideId,
+            [Summary(description: "The maximum age of the message, in seconds.")] [MinValue(0)]
+            int maxMessageAge
         )
         {
             return CommonThresholdConfig(
@@ -343,14 +344,13 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
-            [Summary(description: "The maximum age of the message, in seconds.")]
-            [MinValue(0)]
-                float uniqueUserMultiplier
+            string overrideId,
+            [Summary(description: "The maximum age of the message, in seconds.")] [MinValue(0)]
+            float uniqueUserMultiplier
         )
         {
             return CommonThresholdConfig(
@@ -377,14 +377,13 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
-            [Summary(description: "The delay (in seconds) to wait before decaying the user.")]
-            [MinValue(0)]
-                int decayDelaySeconds
+            string overrideId,
+            [Summary(description: "The delay (in seconds) to wait before decaying the user.")] [MinValue(0)]
+            int decayDelaySeconds
         )
         {
             return CommonThresholdConfig(
@@ -408,14 +407,13 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
-            [Summary(description: "The index of the message to look at.")]
-            [MinValue(1)]
-                int lookbackIndex
+            string overrideId,
+            [Summary(description: "The index of the message to look at.")] [MinValue(1)]
+            int lookbackIndex
         )
         {
             return CommonThresholdConfig(
@@ -439,14 +437,13 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
-            [Summary(description: "The maximum age of the message, in seconds.")]
-            [MinValue(0)]
-                int maxAgeSeconds
+            string overrideId,
+            [Summary(description: "The maximum age of the message, in seconds.")] [MinValue(0)]
+            int maxAgeSeconds
         )
         {
             return CommonThresholdConfig(
@@ -473,16 +470,16 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The threshold to edit.")]
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
-                string overrideId,
+            string overrideId,
             [Summary(
                 description: "If the channel is deemed high activity, threshold will be multiplied by this."
             )]
             [MinValue(0)]
-                float highActivityMultiplier
+            float highActivityMultiplier
         )
         {
             return CommonThresholdConfig(
@@ -514,7 +511,7 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "Any highlights originating from this channel are spoiler-tagged.")]
         [ChannelTypes(
             ChannelType.Text,
@@ -524,12 +521,12 @@ public class HighlightsModule(
             ChannelType.Voice,
             ChannelType.Stage
         )]
-            IGuildChannel spoilerTaggedChannel,
+        IGuildChannel spoilerTaggedChannel,
         [MaxLength(SpoilerChannel.MaxContextLength)]
         [Summary(
             description: "Why the message is spoiler tagged. e.g. \"spoilers for the manga.\""
         )]
-            string spoilerContext
+        string spoilerContext
     )
     {
         return CommonBoardConfig(
@@ -570,7 +567,7 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "The channel to remove.")]
         [ChannelTypes(
             ChannelType.Text,
@@ -580,7 +577,7 @@ public class HighlightsModule(
             ChannelType.Voice,
             ChannelType.Stage
         )]
-            IGuildChannel spoilerTaggedChannel
+        IGuildChannel spoilerTaggedChannel
     )
     {
         return CommonBoardConfig(
@@ -622,7 +619,7 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "The channel to override the logging channel for.")]
         [ChannelTypes(
             ChannelType.Text,
@@ -632,8 +629,9 @@ public class HighlightsModule(
             ChannelType.Voice,
             ChannelType.Stage
         )]
-            IGuildChannel overriddenChannel,
-        [Summary(description: "The logging channel to use instead.")] ITextChannel logChannel
+        IGuildChannel overriddenChannel,
+        [Summary(description: "The logging channel to use instead.")]
+        ITextChannel logChannel
     )
     {
         return CommonBoardConfig(
@@ -674,7 +672,7 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "The overridden channel to reset to default.")]
         [ChannelTypes(
             ChannelType.Text,
@@ -684,7 +682,7 @@ public class HighlightsModule(
             ChannelType.Voice,
             ChannelType.Stage
         )]
-            IGuildChannel overriddenChannel
+        IGuildChannel overriddenChannel
     )
     {
         return CommonBoardConfig(
@@ -723,11 +721,11 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(
             description: "Any users with this role specified will not make it into highlights."
         )]
-            IRole? muteRole = null
+        IRole? muteRole = null
     )
     {
         return CommonBoardConfig(
@@ -752,8 +750,9 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
-        [Summary(description: "The channel to send highlighted messages to.")] ITextChannel channel
+        string name,
+        [Summary(description: "The channel to send highlighted messages to.")]
+        ITextChannel channel
     )
     {
         return CommonBoardConfig(
@@ -776,10 +775,9 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
-        [Summary(description: "The maximum age of a message, in seconds. 0 = any age.")]
-        [MinValue(0)]
-            int maxAge
+        string name,
+        [Summary(description: "The maximum age of a message, in seconds. 0 = any age.")] [MinValue(0)]
+        int maxAge
     )
     {
         return CommonBoardConfig(
@@ -802,13 +800,13 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "Where to source the embed color from.")]
-            EmbedColorSource colorSource,
+        EmbedColorSource colorSource,
         [Summary(
             description: "The fallback embed color. Noting that #000000 (Black) will be interpreted as no embed color."
         )]
-            Color color
+        Color color
     )
     {
         return CommonBoardConfig(
@@ -871,7 +869,7 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [ChannelTypes(
                 ChannelType.Text,
                 ChannelType.Forum,
@@ -881,7 +879,7 @@ public class HighlightsModule(
                 ChannelType.Stage
             )]
             [Summary(description: "The channel to filter.")]
-                IGuildChannel channel
+            IGuildChannel channel
         )
         {
             return CommonBoardConfig(
@@ -914,7 +912,7 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [ChannelTypes(
                 ChannelType.Text,
                 ChannelType.Forum,
@@ -924,7 +922,7 @@ public class HighlightsModule(
                 ChannelType.Stage
             )]
             [Summary(description: "The channel to unfilter.")]
-                IGuildChannel channel
+            IGuildChannel channel
         )
         {
             return CommonBoardConfig(
@@ -960,9 +958,9 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The IDs of the channels to add. Comma separated.")]
-                string channels
+            string channels
         )
         {
             return CommonBoardConfig(
@@ -988,6 +986,7 @@ public class HighlightsModule(
                             failedChannelsBecauseNull.Add(channelId);
                             continue;
                         }
+
                         if (options.board.FilteredChannels.Contains(channel.Id))
                         {
                             failedChannelsBecauseAlreadyExists.Add(channelId);
@@ -1057,9 +1056,9 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The IDs of the channels to remove. Comma separated.")]
-                string channels
+            string channels
         )
         {
             return CommonBoardConfig(
@@ -1085,6 +1084,7 @@ public class HighlightsModule(
                             failedChannelsBecauseNull.Add(channelId);
                             continue;
                         }
+
                         if (!options.board.FilteredChannels.Contains(channel.Id))
                         {
                             failedChannelsBecauseDoesntExist.Add(channelId);
@@ -1151,8 +1151,9 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
-            [Summary(description: "The filter type.")] AllowBlockList filterType
+            string name,
+            [Summary(description: "The filter type.")]
+            AllowBlockList filterType
         )
         {
             return CommonBoardConfig(
@@ -1184,11 +1185,11 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(
             description: "True = self reactions will not count towards the total reactions, False = they will."
         )]
-            bool shouldFilter
+        bool shouldFilter
     )
     {
         return CommonBoardConfig(
@@ -1213,7 +1214,8 @@ public class HighlightsModule(
     #region Auto Reacts
 
     [Group("auto-react", "Commands relating to auto reacts.")]
-    public class HighlightsAutoReactSubmodule(IDbContextFactory<BotDbContext> dbService) : HighlightsSubmodule(dbService)
+    public class HighlightsAutoReactSubmodule(IDbContextFactory<BotDbContext> dbService)
+        : HighlightsSubmodule(dbService)
     {
         [SlashCommand(
             "max-attempts",
@@ -1223,13 +1225,13 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(
                 description: "How many times the bot will try to react to the highlight before using fallback."
             )]
             [MinValue(0)]
             [MaxValue(20)]
-                int maxAttempts
+            int maxAttempts
         )
         {
             return CommonBoardConfig(
@@ -1242,11 +1244,11 @@ public class HighlightsModule(
                         maxAttempts == 0
                             ? "Auto reactions are now **disabled**."
                             : $"Will now attempt to react a maximum of {maxAttempts} times to the highlighted message. "
-                                + (
-                                    options.board.AutoReactFallbackEmoji == ""
-                                        ? "If exceeding that, no reaction shall be added (no fallback emoji set.)"
-                                        : "If exceeding that, fallback will be reacted with instead."
-                                );
+                              + (
+                                  options.board.AutoReactFallbackEmoji == ""
+                                      ? "If exceeding that, no reaction shall be added (no fallback emoji set.)"
+                                      : "If exceeding that, fallback will be reacted with instead."
+                              );
                     return Task.FromResult(new ConfigChangeResult(true, message));
                 }
             );
@@ -1260,13 +1262,14 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(
-                description: "The maximum number of emojis the bot will react to the message sent in the highlights channel with."
+                description:
+                "The maximum number of emojis the bot will react to the message sent in the highlights channel with."
             )]
             [MinValue(0)]
             [MaxValue(20)]
-                int maxReactions
+            int maxReactions
         )
         {
             return CommonBoardConfig(
@@ -1294,12 +1297,12 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(
                 description: "The fallback emote to use. Put \"none\" if you don't want any reaction on fallback."
             )]
             [MaxLength(100)]
-                string emote
+            string emote
         )
         {
             return CommonBoardConfig(
@@ -1308,7 +1311,9 @@ public class HighlightsModule(
                 {
                     // TODO: Check if this works with the EmoteTypeConverter
                     IEmote? parsedEmote = null;
-                    if (emote == "none") { }
+                    if (emote == "none")
+                    {
+                    }
                     else if (EmoteTypeConverter.TryParse(emote, out var outEmoji))
                     {
                         parsedEmote = outEmoji;
@@ -1339,9 +1344,9 @@ public class HighlightsModule(
             [Summary(description: NameDescription)]
             [MaxLength(HighlightBoard.MaxNameLength)]
             [Autocomplete(typeof(HighlightsNameAutocomplete))]
-                string name,
+            string name,
             [Summary(description: "The emote choice preference.")]
-                AutoReactEmoteChoicePreference reactEmotePreference
+            AutoReactEmoteChoicePreference reactEmotePreference
         )
         {
             return CommonBoardConfig(
@@ -1364,14 +1369,13 @@ public class HighlightsModule(
             "Any reaction emote with the name specified will be replaced with the alias. Good for private emotes."
         )]
         public Task AddEmoteAliasSlash(
-            [Summary(description: "The emote name to replace. Case insensitive.")]
-            [MaxLength(32)]
-                string emoteName,
-            [Summary(description: "The emote to replace with.")] [MaxLength(100)] IEmote emote
+            [Summary(description: "The emote name to replace. Case insensitive.")] [MaxLength(32)]
+            string emoteName,
+            [Summary(description: "The emote to replace with.")] [MaxLength(100)]
+            IEmote emote
         )
         {
-            return CommonConfig(
-                async (context, _) =>
+            return CommonConfig(async (context, _) =>
                 {
                     emoteName = emoteName.ToLowerInvariant();
 
@@ -1407,11 +1411,10 @@ public class HighlightsModule(
             [Summary(description: "The emote name to replace. Case insensitive.")]
             [MaxLength(32)]
             [Autocomplete(typeof(AliasedEmoteAutocomplete))]
-                string emoteName
+            string emoteName
         )
         {
-            return CommonConfig(
-                async (context, _) =>
+            return CommonConfig(async (context, _) =>
                 {
                     emoteName = emoteName.ToLowerInvariant();
 
@@ -1445,14 +1448,15 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
-        [Summary(description: "Includes thresholds in the output.")] bool includeThresholds = false,
+        string name,
+        [Summary(description: "Includes thresholds in the output.")]
+        bool includeThresholds = false,
         [Summary(description: "Includes filtered channels in the output.")]
-            bool includeFilteredChannels = false,
+        bool includeFilteredChannels = false,
         [Summary(description: "Includes logging channel overrides in the output.")]
-            bool includeLoggingOverrides = false,
+        bool includeLoggingOverrides = false,
         [Summary(description: "Includes spoiler channels in the output.")]
-            bool includeSpoilerChannels = false
+        bool includeSpoilerChannels = false
     )
     {
         await DeferAsync();
@@ -1480,10 +1484,12 @@ public class HighlightsModule(
         {
             highlightBoards = highlightBoards.Include(x => x.Thresholds);
         }
+
         if (includeLoggingOverrides)
         {
             highlightBoards = highlightBoards.Include(x => x.LoggingChannelOverrides);
         }
+
         if (includeSpoilerChannels)
         {
             highlightBoards = highlightBoards.Include(x => x.SpoilerChannels);
@@ -1531,11 +1537,11 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "The threshold to edit.")]
         [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
         [MaxLength(20)]
-            string overrideId
+        string overrideId
     )
     {
         await DeferAsync();
@@ -1624,7 +1630,7 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "The channel to check the threshold of.")]
         [ChannelTypes(
             ChannelType.Text,
@@ -1634,11 +1640,11 @@ public class HighlightsModule(
             ChannelType.Voice,
             ChannelType.Stage
         )]
-            IGuildChannel channel,
+        IGuildChannel channel,
         [Summary(
             description: "The date to check (dd/MM/yyyy). can also be a message ID or a link to a message."
         )]
-            string? date = null
+        string? date = null
     )
     {
         return CommonBoardConfig(
@@ -1666,7 +1672,7 @@ public class HighlightsModule(
                     return new ConfigChangeResult(
                         false,
                         "Couldn't find a threshold for that channel! "
-                            + "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev."
+                        + "This is very bad, we should at least be able to find the Guild's threshold. Ping Kiev."
                     );
 
                 var lookupDate = DateTimeOffset.UtcNow;
@@ -1830,7 +1836,6 @@ public class HighlightsModule(
     #region Debug Commands
 
 #if DEBUG
-
     private static bool loggingShouldStop = false;
 
     [SlashCommand(

@@ -41,7 +41,8 @@ public class UserFacingBirthdayConfigModule(
     // User facing birthday-setting command
     [SlashCommand("set", "Sets your birthday.")]
     public async Task UserFacingSetBirthdaySlash(
-        [Summary(description: "The day of the month your birthday is on.")] int day,
+        [Summary(description: "The day of the month your birthday is on.")]
+        int day,
         [Summary(description: "The month your birthday is in.")]
         Months month,
         [Summary(description: "Your timezone.")] [Autocomplete(typeof(TimeZoneAutocomplete))]
@@ -115,15 +116,18 @@ public class UserFacingBirthdayConfigModule(
 
     [SlashCommand("list", "Lists all the users with a birthday set.")]
     public async Task GetBirthdaysSlash(
-    [Summary(description: "How to sort the list.")] BirthdayConfigModule.SortingOptions sortingOption = BirthdayConfigModule.SortingOptions.AscendingUpcoming,
-    [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
-    string? name = null)
+        [Summary(description: "How to sort the list.")]
+        BirthdayConfigModule.SortingOptions sortingOption = BirthdayConfigModule.SortingOptions.AscendingUpcoming,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await DeferAsync();
 
         await using var context = await dbService.CreateDbContextAsync();
 
-        var roleColor = QuotingHelpers.GetUserRoleColorWithFallback(await Context.Guild.GetCurrentUserAsync(), Color.Green);
+        var roleColor =
+            QuotingHelpers.GetUserRoleColorWithFallback(await Context.Guild.GetCurrentUserAsync(), Color.Green);
 
         BirthdayConfig bday;
         try
@@ -154,37 +158,42 @@ public class UserFacingBirthdayConfigModule(
         {
             BirthdayConfigModule.SortingOptions.DateAdded => bdays.OrderBy(x => x.TimeCreatedUtc),
             BirthdayConfigModule.SortingOptions.Ascending => bdays.OrderBy(x => x.BirthDayDate),
-            BirthdayConfigModule.SortingOptions.AscendingUpcoming => bdays.OrderBy(x => GetDaysUntilBirthday(x.BirthDayDate, now)),
+            BirthdayConfigModule.SortingOptions.AscendingUpcoming => bdays.OrderBy(x =>
+                GetDaysUntilBirthday(x.BirthDayDate, now)),
             _ => bdays
         };
 
         var pages = sortedBdays
             .Select(x =>
             {
-                return $"* <@{x.UserId}> - {x.BirthDayDate.ToStringOrdinalized()}{(x.BirthDayDate.InYear(now.Year) == now ? " (🎂)" : "")}";
+                return
+                    $"* <@{x.UserId}> - {x.BirthDayDate.ToStringOrdinalized()}{(x.BirthDayDate.InYear(now.Year) == now ? " (🎂)" : "")}";
             })
-            .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor).WithTitle($"Sort: `{sortingOption.Humanize()}`")
+            .Chunk(10).Select(x => new PageBuilder().WithColor(roleColor)
+                .WithTitle($"Sort: `{sortingOption.Humanize()}`")
                 .WithDescription(string.Join('\n', x)));
 
         var paginator = new StaticPaginatorBuilder()
             .WithOptions(
-                [
-                    new PaginatorButton("<", PaginatorAction.Backward, ButtonStyle.Secondary),
-                    new PaginatorButton("Jump", PaginatorAction.Jump, ButtonStyle.Secondary),
-                    new PaginatorButton(">", PaginatorAction.Forward, ButtonStyle.Secondary),
-                    new PaginatorButton(ModulePrefixes.RED_BUTTON, null, "X", ButtonStyle.Danger),
-                ])
+            [
+                new PaginatorButton("<", PaginatorAction.Backward, ButtonStyle.Secondary),
+                new PaginatorButton("Jump", PaginatorAction.Jump, ButtonStyle.Secondary),
+                new PaginatorButton(">", PaginatorAction.Forward, ButtonStyle.Secondary),
+                new PaginatorButton(ModulePrefixes.RED_BUTTON, null, "X", ButtonStyle.Danger),
+            ])
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
             .WithUsers(Context.User)
             .WithPages(pages);
 
-        await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(2), InteractionResponseType.DeferredChannelMessageWithSource);
+        await interactive.SendPaginatorAsync(paginator.Build(), Context.Interaction, TimeSpan.FromMinutes(2),
+            InteractionResponseType.DeferredChannelMessageWithSource);
     }
 
     [SlashCommand("view", "Gets someone else's birthday.")]
     public async Task GetBirthdaySlash(
-        [Summary(description: "The user to get the birthday of.")] IGuildUser user,
+        [Summary(description: "The user to get the birthday of.")]
+        IGuildUser user,
         [Summary(description: BirthdayConfigModule.NameDescription),
          Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
         string? name = null)
@@ -277,15 +286,18 @@ public class UserFacingBirthdayConfigModule(
 [CommandContextType(InteractionContextType.Guild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class BirthdayConfigModule(
-        IDbContextFactory<BotDbContext> dbService,
+    IDbContextFactory<BotDbContext> dbService,
+#if DEBUG
         BirthdayTimerService bts,
-        IClock clock) : BotModule
+#endif
+    IClock clock) : BotModule
 {
     public const string NameDescription = "The name/ID of the config.";
 
     [SlashCommand("create", "Creates a birthday config.")]
     public async Task CreateBirthdayConfigSlash([Summary(description: NameDescription)] string name,
-        [Summary(description: "The role to assign if its a user's birthday.")] IRole role)
+        [Summary(description: "The role to assign if its a user's birthday.")]
+        IRole role)
     {
         await CommonConfig(async (context, eb) =>
         {
@@ -317,7 +329,8 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("remove", "Removes the birthday config.")]
-    public async Task RemoveConfigSlash([Summary(description: NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string name)
+    public async Task RemoveConfigSlash(
+        [Summary(description: NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string name)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async context =>
         {
@@ -334,23 +347,30 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("set-role", "Set the role to assign users when its their birthday.")]
-    public async Task SetRoleSlash([Summary(description: "The role to assign if its a user's birthday.")] IRole role, [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task SetRoleSlash([Summary(description: "The role to assign if its a user's birthday.")] IRole role,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async context =>
         {
             if ((await Context.Guild.GetUsersAsync()).Any(x => x.RoleIds.Contains(role.Id)))
                 return new ConfigChangeResult(false, "This role must be empty before you can add it. " +
-                                                    "Noting again that this role is the role to assign when its the user's birthday.");
+                                                     "Noting again that this role is the role to assign when its the user's birthday.");
 
             context.Config.BirthdayRole = role.Id;
 
-            return new ConfigChangeResult(true, $"Set the birthday role to <@&{role.Id}>. Noting that users wont be removed from the old role," +
-                                                $"so make sure to clean that up.");
+            return new ConfigChangeResult(true,
+                $"Set the birthday role to <@&{role.Id}>. Noting that users wont be removed from the old role," +
+                $"so make sure to clean that up.");
         });
     }
 
     [SlashCommand("get", "Gets the config.")]
-    public async Task GetConfigSlash([Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task GetConfigSlash(
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, x =>
             Task.FromResult(new ConfigChangeResult(true,
@@ -358,11 +378,17 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("set-user", "Sets a user's birthday.")]
-    public async Task SetUserBirthdaySlash([Summary(description: "The user to change the birthday of.")] IGuildUser user,
-        [Summary(description: "The day of the month their birthday is on.")] int day,
-        [Summary(description: "The month their birthday is in.")] Months month,
-        [Summary(description: "Their timezone.")][Autocomplete(typeof(TimeZoneAutocomplete))] string timeZone,
-        [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task SetUserBirthdaySlash(
+        [Summary(description: "The user to change the birthday of.")] IGuildUser user,
+        [Summary(description: "The day of the month their birthday is on.")]
+        int day,
+        [Summary(description: "The month their birthday is in.")]
+        Months month,
+        [Summary(description: "Their timezone.")] [Autocomplete(typeof(TimeZoneAutocomplete))]
+        string timeZone,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -392,8 +418,11 @@ public class BirthdayConfigModule(
 
 
     [SlashCommand("rm-user", "Removes a user's birthday entry.")]
-    public async Task RemoveBirthdayUserSlash([Summary(description: "The user to remove the entry of.")] IGuildUser user,
-        [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task RemoveBirthdayUserSlash(
+        [Summary(description: "The user to remove the entry of.")] IGuildUser user,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, async x =>
         {
@@ -426,11 +455,15 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("set-default", "Sets the default config for the Guild.")]
-    public async Task SetDefaultConfigSlash([Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task SetDefaultConfigSlash(
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonConfig(async (context, eb) =>
         {
-            var guildConfig = await context.GetGuildConfig(Context.Guild.Id, x => x.Include(y => y.DefaultBirthdayConfig));
+            var guildConfig =
+                await context.GetGuildConfig(Context.Guild.Id, x => x.Include(y => y.DefaultBirthdayConfig));
 
             if (name == null)
             {
@@ -454,10 +487,14 @@ public class BirthdayConfigModule(
         });
     }
 
-    [SlashCommand("add-filtered-role", "Dictates whether a user can add/change their birthday. Does not affect existing entries.")]
+    [SlashCommand("add-filtered-role",
+        "Dictates whether a user can add/change their birthday. Does not affect existing entries.")]
     public async Task AddRoleToListSlash([Summary(description: "The role to add.")] IRole role,
-        [Summary(description: "The list to add the role to.")] AllowBlockList list,
-        [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+        [Summary(description: "The list to add the role to.")]
+        AllowBlockList list,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, x =>
         {
@@ -479,8 +516,11 @@ public class BirthdayConfigModule(
 
     [SlashCommand("rm-filtered-role", "Removes a role from the allowlist or blocklist.")]
     public async Task RemoveRoleFromListSlash([Summary(description: "The role to remove.")] IRole role,
-        [Summary(description: "The list to remove the role from.")] AllowBlockList list,
-        [Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+        [Summary(description: "The list to remove the role from.")]
+        AllowBlockList list,
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, x =>
         {
@@ -500,7 +540,8 @@ public class BirthdayConfigModule(
         });
     }
 
-    [SlashCommand("set-edit-window", "How long before a user can't edit their birthday in seconds. Set to 0 for infinite.")]
+    [SlashCommand("set-edit-window",
+        "How long before a user can't edit their birthday in seconds. Set to 0 for infinite.")]
     public async Task SetEditWindowSlash(
         [Summary(description: "How long before a user can't edit their birthday in seconds. Set to 0 for infinite.")]
         [MinValue(0)]
@@ -514,12 +555,14 @@ public class BirthdayConfigModule(
             if (editWindow < 0)
             {
                 return Task.FromResult(
-                    new ConfigChangeResult(false, "cant be below zero but how on earth did you even get it lower than zero tf"));
+                    new ConfigChangeResult(false,
+                        "cant be below zero but how on earth did you even get it lower than zero tf"));
             }
 
             context.Config.EditWindowSeconds = editWindow;
 
-            return Task.FromResult(new ConfigChangeResult(true, $"Set edit window for users to {editWindow}s{(editWindow == 0 ? " (infinite)" : "")}."));
+            return Task.FromResult(new ConfigChangeResult(true,
+                $"Set edit window for users to {editWindow}s{(editWindow == 0 ? " (infinite)" : "")}."));
         });
     }
 
@@ -527,8 +570,10 @@ public class BirthdayConfigModule(
     {
         // Sort by date added, ascending.
         DateAdded,
+
         // Sort by birthday date.
         Ascending,
+
         // Sort by birthday date relative to now, aka the closest birthday to the furthest.
         AscendingUpcoming
     }
@@ -559,7 +604,10 @@ public class BirthdayConfigModule(
     }
 
     [SlashCommand("change-text", "Change the text used in the /birthday command.")]
-    public async Task ChangeStringSlash([Summary(description: BirthdayConfigModule.NameDescription), Autocomplete(typeof(BirthdayConfigNameAutocomplete))] string? name = null)
+    public async Task ChangeStringSlash(
+        [Summary(description: BirthdayConfigModule.NameDescription),
+         Autocomplete(typeof(BirthdayConfigNameAutocomplete))]
+        string? name = null)
     {
         await using var context = await dbService.CreateDbContextAsync();
 
@@ -570,7 +618,8 @@ public class BirthdayConfigModule(
         }
         catch (ConfigException ex)
         {
-            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
+                new EmbedBuilder(),
                 new ConfigChangeResult(false, ex.Message)));
             return;
         }
@@ -641,7 +690,8 @@ public class BirthdayConfigModule(
 
     public record ConfigContext(BotDbContext Context, BirthdayConfig Config, EmbedBuilder EmbedBuilder);
 
-    public static async Task<BirthdayConfig> ResolveConfig(BotDbContext context, string? name, ulong guildId, Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
+    public static async Task<BirthdayConfig> ResolveConfig(BotDbContext context, string? name, ulong guildId,
+        Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
     {
         BirthdayConfig? config = null;
 
@@ -679,7 +729,8 @@ public class BirthdayConfigModule(
         return config;
     }
 
-    private Task<bool> CommonBirthdayConfig(string? name, ulong guildId, Func<ConfigContext, Task<ConfigChangeResult>> updateAction,
+    private Task<bool> CommonBirthdayConfig(string? name, ulong guildId,
+        Func<ConfigContext, Task<ConfigChangeResult>> updateAction,
         Func<IQueryable<BirthdayConfig>, IQueryable<BirthdayConfig>>? modifyQuery = null)
     {
         return CommonConfig(async (context, eb) =>

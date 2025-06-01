@@ -14,7 +14,9 @@ namespace Asahi.Modules.FeedsV2;
 [CommandContextType(InteractionContextType.Guild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 public class FeedsModule(
+#if DEBUG
     FeedsTimerService feedsTimerService,
+#endif
     FeedsProcessorService feedsProcessor,
     IFeedProviderFactory feedProviderFactory,
     IFeedMessageDispatcher feedMessageDispatcher,
@@ -32,10 +34,9 @@ public class FeedsModule(
     {
         await CommonConfig(async (context, eb) =>
         {
-            if (await context.RssFeedListeners.AnyAsync(
-                    x => x.GuildId == Context.Guild.Id &&
-                         x.ChannelId == channel.Id &&
-                         x.FeedUrl == feedSource))
+            if (await context.RssFeedListeners.AnyAsync(x => x.GuildId == Context.Guild.Id &&
+                                                             x.ChannelId == channel.Id &&
+                                                             x.FeedUrl == feedSource))
             {
                 return new ConfigChangeResult(false, "You already have this feed added for this channel!");
             }
@@ -146,7 +147,8 @@ public class FeedsModule(
     }
 
     [SlashCommand("set-webhook-name", "Sets or clears the name of the webhook to look for to send with.")]
-    public async Task SetFeedWebhookNameSlash([Summary(description: "The ID of the feed to edit.")] [Autocomplete<FeedAutocomplete>] uint id,
+    public async Task SetFeedWebhookNameSlash(
+        [Summary(description: "The ID of the feed to edit.")] [Autocomplete<FeedAutocomplete>] uint id,
         [Summary(description: "The new webhook name for the feed."), MaxLength(64)]
         string? webhookName = null)
     {
@@ -169,7 +171,8 @@ public class FeedsModule(
     }
 
     [SlashCommand("toggle", "Turns a feed on or off.")]
-    public async Task ToggleFeedSlash([Summary(description: "The ID of the feed.")] [Autocomplete<FeedAutocomplete>] uint id,
+    public async Task ToggleFeedSlash(
+        [Summary(description: "The ID of the feed.")] [Autocomplete<FeedAutocomplete>] uint id,
         [Summary(description: "Whether the feed should be enabled or disabled.")]
         bool state)
     {

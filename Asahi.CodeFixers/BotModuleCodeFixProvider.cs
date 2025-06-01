@@ -32,7 +32,6 @@ public class BotModuleCodeFixProvider : CodeFixProvider
         
         if (classDeclarationSyntax is null) return;
 
-        // Register three different code fixes
         context.RegisterCodeFix(
             CodeAction.Create(
                 title: "Add Guild installation context",
