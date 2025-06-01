@@ -20,7 +20,8 @@ namespace Asahi.Modules
         private static readonly HashSet<string> KnownVideoExtensions =
         [
             "zip",
-            "mp4"
+            "mp4",
+            "webm"
         ];
 
         [Pure]
@@ -172,7 +173,7 @@ namespace Asahi.Modules
         }
 
         [Pure]
-        private static DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants, int? pixivId = null)
+        private static DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants)
         {
             if (variants == null)
                 return null;
@@ -197,7 +198,7 @@ namespace Asahi.Modules
                 return originalVariant;
             }
 
-            // original doesn't exist/work oh god lets just hope the rest of the options are ok
+            // original doesn't exist/work, let's just hope the rest of the options are ok
             var worseResFallback = validVariants.MaxBy(v => v.Width * v.Height);
 
             return worseResFallback;
@@ -214,9 +215,10 @@ namespace Asahi.Modules
             return GetFallbackVariant(post.Source);
         }
         
-        [Pure]
+        [Pure, PublicAPI]
         public async ValueTask<DanbooruVariantWithExtras?> GetFallbackVariant(string sourceUrl)
         {
+            // TODO: Migrate this to use https://danbooru.donmai.us/source
             var fallbackPixivMatch = CompiledRegex.ValidPixivDirectImageUrlRegex().Match(sourceUrl);
             if (fallbackPixivMatch.Success)
             {
@@ -339,7 +341,7 @@ namespace Asahi.Modules
             }
 
 
-            // even the fallbacks has failed us
+            // even the fallbacks have failed us
             return null;
         }
     }
