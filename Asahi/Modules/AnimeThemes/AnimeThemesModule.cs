@@ -15,7 +15,7 @@ public class AnimeThemesModule(
     BotConfig config,
     ILogger<AnimeThemesModule> logger) : BotModule
 {
-    private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(10);
     private const string BACK_BUTTON = "atv2-bb:";
     private const string PREVIOUS_PAGE_BUTTON = "atv2-pp:";
     private const string NEXT_PAGE_BUTTON = "atv2-np:";
