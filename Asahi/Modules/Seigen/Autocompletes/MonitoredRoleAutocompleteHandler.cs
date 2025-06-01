@@ -2,6 +2,7 @@
 
 namespace Asahi.Modules.Seigen;
 
+[Obsolete("Not maintained.")]
 public class MonitoredRoleAutocompleteHandler : AutocompleteHandler
 {
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(

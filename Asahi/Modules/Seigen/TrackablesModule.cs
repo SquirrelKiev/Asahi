@@ -11,6 +11,8 @@ namespace Asahi.Modules.Seigen;
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 [IntegrationType(ApplicationIntegrationType.GuildInstall)]
 [Group("trackables", "Commands relating to managing trackables and their users.")]
+[Obsolete("Not maintained.")]
+[DontAutoRegister]
 public class TrackablesModule(IDbContextFactory<BotDbContext> dbService, RoleManagementService roleManagement, TrackablesUtility trackablesUtility) : BotModule
 {
     public const string MONITORED_GUILD_PARAM_NAME = "monitored-guild";

@@ -3,6 +3,7 @@ using Discord.WebSocket;
 
 namespace Asahi.Modules.Seigen;
 
+[Obsolete("Not maintained.")]
 public class GuildAutocompleteHandler : AutocompleteHandler
 {
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context, IAutocompleteInteraction autocompleteInteraction,

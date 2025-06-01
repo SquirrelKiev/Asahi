@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Asahi.Modules.Seigen;
 
 [Inject(ServiceLifetime.Singleton)]
+[Obsolete("Not maintained.")]
 public class CommonAutocompleteService(OverrideTrackerService overrideTracker)
 {
     public async Task<IEnumerable<AutocompleteResult>> GetAutoCompleteOptions(IInteractionContext context, ulong guildId, ulong userId)

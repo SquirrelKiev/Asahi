@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Asahi.Modules.Seigen;
 
+[Obsolete("Not maintained.")]
 public class TrackableAutocompleteHandler : AutocompleteHandler
 {
     public override async Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context, IAutocompleteInteraction autocompleteInteraction,

@@ -32,7 +32,7 @@ public class BotService(
     InteractionService interactionService,
     InteractiveService interactiveService,
     CommandService commandService,
-    RoleManagementService roleManagementService,
+    // RoleManagementService roleManagementService,
     BirthdayTimerService birthdayTimerService
 ) : BackgroundService
 {
@@ -73,8 +73,8 @@ public class BotService(
         client.Ready += Client_Ready;
 
         // could make these dynamic (reflection or smth) but the need hasn't appeared yet so
-        client.GuildMemberUpdated += Client_GuildMemberUpdated;
-        client.UserLeft += Client_UserLeft;
+        // client.GuildMemberUpdated += Client_GuildMemberUpdated;
+        // client.UserLeft += Client_UserLeft;
         client.UserJoined += Client_UserJoined;
         client.ReactionAdded += Client_ReactionAdded;
         client.ReactionRemoved += Client_ReactionRemoved;
@@ -101,29 +101,29 @@ public class BotService(
         await base.StopAsync(cancellationToken);
     }
 
-    private Task Client_UserLeft(SocketGuild guild, SocketUser user) =>
-        roleManagementService.OnUserLeft(guild, user);
+    // private Task Client_UserLeft(SocketGuild guild, SocketUser user) =>
+    //     roleManagementService.OnUserLeft(guild, user);
 
     private async Task Client_UserJoined(SocketGuildUser user)
     {
         await welcomeService.OnUserJoined(user);
 
-        await roleManagementService.OnUserJoined(user);
+        // await roleManagementService.OnUserJoined(user);
     }
 
-    private async Task Client_GuildMemberUpdated(
-        Cacheable<SocketGuildUser, ulong> cacheable,
-        SocketGuildUser user
-    )
-    {
-        if (!cacheable.HasValue)
-            return;
-
-        if (!user.Roles.SequenceEqual(cacheable.Value.Roles))
-        {
-            await roleManagementService.OnUserRolesUpdated(cacheable, user);
-        }
-    }
+    // private async Task Client_GuildMemberUpdated(
+    //     Cacheable<SocketGuildUser, ulong> cacheable,
+    //     SocketGuildUser user
+    // )
+    // {
+    //     if (!cacheable.HasValue)
+    //         return;
+    //
+    //     if (!user.Roles.SequenceEqual(cacheable.Value.Roles))
+    //     {
+    //         await roleManagementService.OnUserRolesUpdated(cacheable, user);
+    //     }
+    // }
 
     private async Task Client_ReactionAdded(
         Cacheable<IUserMessage, ulong> cachedMessage,
@@ -267,6 +267,6 @@ public class BotService(
 
         feedsTimerService.StartBackgroundTask(cts.Token);
 
-        await roleManagementService.CacheAndResolve();
+        // await roleManagementService.CacheAndResolve();
     }
 }
