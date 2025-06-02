@@ -35,6 +35,14 @@ public class AnimeThemesModule(
 
         var searchRes = await atClient.SearchAsync(query, new IAnimeThemesClient.SearchQueryParams());
 
+        if (searchRes.search.anime.Length == 0)
+        {
+            // not sure a good design for a ComponentsV2 version of this so
+            await ModifyOriginalResponseAsync(x => x.Content = "No results found!");
+
+            return;
+        }
+
         animeSelection:
         int pageIndex = 0;
         AnimeResource? selectedAnime = null;
@@ -200,12 +208,12 @@ public class AnimeThemesModule(
                     var titleComponent = new TextDisplayBuilder(titleText);
 
                     var videos = theme.animeThemeEntries.First().videos;
-                    
+
                     Debug.Assert(videos != null);
-                    
+
                     var thumbnailVideo = SelectBestVideoSource(videos);
                     var thumbnailVideoLink = thumbnailVideo.link;
-                    
+
                     Debug.Assert(thumbnailVideoLink != null);
 
                     var titleSectionComponent = new SectionBuilder().WithTextDisplay(titleComponent)
@@ -387,7 +395,7 @@ public class AnimeThemesModule(
     private string GetAnimeVideoThumbnailUrl(string url)
     {
         var base64EncodedUrl = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(url));
-        
+
         return $"{config.AsahiWebServicesBaseUrl}/api/thumb/{base64EncodedUrl}.png";
     }
 

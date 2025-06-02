@@ -49,6 +49,19 @@ public class BotService(
         MessageContents.AddRedButtonDefault = false;
 
         var args = Environment.GetCommandLineArgs();
+
+#if !DEBUG
+        if (args.Contains("nomigrate"))
+        {
+            throw new InvalidOperationException("Disabling migration logic is disabled on release builds.");
+        }
+
+        if (args.Contains("nukedb"))
+        {
+            throw new InvalidOperationException("Nuking the DB is not allowed on release builds.");
+        }
+#endif
+
         // ReSharper disable once RedundantAssignment
         bool migrationEnabled = true;
 #if DEBUG
@@ -58,7 +71,7 @@ public class BotService(
         await context.InitializeAsync(migrationEnabled);
 
 #if DEBUG
-        if (Environment.GetCommandLineArgs().Contains("nukedb"))
+        if (args.Contains("nukedb"))
         {
             logger.LogDebug("Nuking the DB...");
 
@@ -72,7 +85,7 @@ public class BotService(
 
         client.Ready += Client_Ready;
 
-        // could make these dynamic (reflection or smth) but the need hasn't appeared yet so
+        // could make these dynamic (reflection or smth) but the need hasn't appeared yet
         // client.GuildMemberUpdated += Client_GuildMemberUpdated;
         // client.UserLeft += Client_UserLeft;
         client.UserJoined += Client_UserJoined;
