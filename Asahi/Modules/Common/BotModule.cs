@@ -1,8 +1,10 @@
 ﻿using Discord.Interactions;
 using Discord.WebSocket;
+using JetBrains.Annotations;
 
 namespace Asahi.Modules;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
 public abstract class BotModule : InteractionModuleBase<IInteractionContext>
 {
     protected virtual Task<IUserMessage> FollowupAsync(MessageContents contents, bool ephemeral = false)

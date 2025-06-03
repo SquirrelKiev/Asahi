@@ -1,4 +1,6 @@
-﻿namespace Asahi.Modules;
+﻿using Fergun.Interactive.Pagination;
+
+namespace Asahi.Modules;
 
 public static class ComponentExtensions
 {
@@ -23,5 +25,11 @@ public static class ComponentExtensions
                 }
             }
         }
+    }
+
+    public static ActionRowBuilder AddPageIndicatorButton(this ActionRowBuilder builder, IComponentPaginator p,
+        ButtonStyle style = ButtonStyle.Secondary, IEmote? emote = null)
+    {
+        return builder.WithButton($"{p.CurrentPageIndex + 1} / {p.PageCount}", "page-indicator", style, emote, disabled: true);
     }
 }
