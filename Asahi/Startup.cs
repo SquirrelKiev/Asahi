@@ -200,12 +200,9 @@ public static class Startup
 
         serviceCollection.AddRefitClient<IRedditApi>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com"));
-
-        serviceCollection.AddRefitClient<IFxTwitterApi>(settings)
-            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri(config.FxTwitterApiUrl));
-
-        serviceCollection.AddRefitClient<IMisskeyApi>(settings)
-            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://misskey.io"));
+        
+        serviceCollection.AddRefitClient<IDanbooruApi>(settings)
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://danbooru.donmai.us"));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

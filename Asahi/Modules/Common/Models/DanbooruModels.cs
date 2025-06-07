@@ -110,7 +110,6 @@ public class DanbooruPost
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
-
 public class DanbooruMediaAsset
 {
     [JsonProperty("id")]
@@ -176,7 +175,69 @@ public class DanbooruVariant
 
 public class DanbooruVariantWithExtras(DanbooruVariant variant)
 {
-    public DanbooruVariant Variant { get; set; } = variant;
+    public DanbooruVariant Variant { get; } = variant;
     
-    public string[]? ExtraUrls { get; set; } = null;
+    public string[]? ExtraUrls { get; init; } = null;
+}
+
+public class DanbooruSource
+{
+    [JsonProperty("page_url")]
+    public string? PageUrl { get; set; }
+
+    [JsonProperty("image_urls")]
+    public List<string> ImageUrls { get; set; } = [];
+
+    [JsonProperty("artist")]
+    public DanbooruSourceArtist Artist { get; set; } = new();
+
+    [JsonProperty("tags")]
+    public List<List<string>> Tags { get; set; } = [];
+
+    [JsonProperty("artist_commentary")]
+    public DanbooruSourceArtistCommentary ArtistCommentary { get; set; } = new();
+
+    public bool IsMostLikelyUseless(string inputUrl)
+    {
+        return PageUrl == null || ImageUrls.Count <= 1 || ImageUrls[0] == inputUrl;
+    }
+}
+
+public class DanbooruSourceArtist
+{
+    [JsonProperty("display_name")]
+    public string? DisplayName { get; set; }
+
+    [JsonProperty("username")]
+    public string? Username { get; set; }
+
+    [JsonProperty("profile_urls")]
+    public List<Uri> ProfileUrls { get; set; } = [];
+
+    [JsonProperty("artists")]
+    public List<DanbooruSourceArtistReference> Artists { get; set; } = [];
+}
+
+public class DanbooruSourceArtistReference
+{
+    [JsonProperty("id")]
+    public int Id { get; set; }
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
+}
+
+public class DanbooruSourceArtistCommentary
+{
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
+    [JsonProperty("description")]
+    public string? Description { get; set; }
+
+    [JsonProperty("dtext_title")]
+    public string? DtextTitle { get; set; }
+
+    [JsonProperty("dtext_description")]
+    public string? DtextDescription { get; set; }
 }

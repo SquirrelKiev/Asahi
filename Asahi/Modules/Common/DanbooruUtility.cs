@@ -1,11 +1,12 @@
 ﻿using Asahi.Modules.Models;
 using Humanizer;
 using JetBrains.Annotations;
+using Newtonsoft.Json;
 
 namespace Asahi.Modules
 {
     [Inject(ServiceLifetime.Singleton)]
-    public class DanbooruUtility(BotConfig config, IFxTwitterApi fxTwitterApi, IMisskeyApi misskeyApi)
+    public class DanbooruUtility(BotConfig config, IDanbooruApi danbooruApi)
     {
         private static readonly HashSet<string> KnownImageExtensions =
         [
@@ -93,69 +94,76 @@ namespace Asahi.Modules
 
             var components = new ComponentBuilder();
 
-            if (!string.IsNullOrWhiteSpace(post.Source) &&
-                (post.Source.StartsWith("http://") || post.Source.StartsWith("https://")))
+
+            if (!string.IsNullOrWhiteSpace(post.Source))
             {
-                IEmote? buttonEmote = null;
-                string platformName = "Source";
-                string sourceUrl = post.Source;
-
-                if (post.PixivId != null)
+                if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) && sourceUri.Scheme is "http" or "https")
                 {
-                    QuotingHelpers.TryParseEmote(config.PixivEmote, out var pixivEmote);
+                    IEmote? buttonEmote = null;
+                    string platformName = sourceUri.Host;
+                    string sourceUrl = post.Source;
 
-                    sourceUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
-                    buttonEmote = pixivEmote;
-                    platformName = "Pixiv";
+                    if (post.PixivId != null)
+                    {
+                        if (QuotingHelpers.TryParseEmote(config.PixivEmote, out var pixivEmote))
+                            buttonEmote = pixivEmote;
+
+                        sourceUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
+                        platformName = "Pixiv";
+                    }
+                    else if (CompiledRegex.TwitterStatusIdRegex().IsMatch(post.Source))
+                    {
+                        if (QuotingHelpers.TryParseEmote(config.TwitterEmote, out var emote))
+                            buttonEmote = emote;
+
+                        platformName = "Twitter";
+                    }
+                    else if (CompiledRegex.IsAFanboxLinkRegex().IsMatch(post.Source))
+                    {
+                        if (QuotingHelpers.TryParseEmote(config.FanboxCcEmote, out var emote))
+                            buttonEmote = emote;
+
+                        platformName = "fanbox.cc";
+                    }
+                    else if (CompiledRegex.FantiaPostIdRegex().IsMatch(post.Source))
+                    {
+                        var id = CompiledRegex.FantiaPostIdRegex().Match(post.Source).Groups[1].Value;
+
+                        if (QuotingHelpers.TryParseEmote(config.FantiaEmote, out var emote))
+                            buttonEmote = emote;
+
+                        sourceUrl = $"https://fantia.jp/posts/{id}";
+                        platformName = "Fantia";
+                    }
+                    else if (sourceUri.Host is "baraag.net")
+                    {
+                        if (QuotingHelpers.TryParseEmote(config.BaraagEmote, out var emote))
+                            buttonEmote = emote;
+
+                        platformName = "Baraag";
+                    }
+                    else if (sourceUri.Host is "arca.live")
+                    {
+                        if (QuotingHelpers.TryParseEmote(config.ArcaLiveEmote, out var emote))
+                            buttonEmote = emote;
+
+                        platformName = "arca.live";
+                    }
+                    else if (CompiledRegex.MisskeyNoteRegex().IsMatch(post.Source))
+                    {
+                        if (QuotingHelpers.TryParseEmote(config.MisskeyEmote, out var emote))
+                            buttonEmote = emote;
+
+                        platformName = "Misskey.io";
+                    }
+
+                    if (platformName.Length >= 80)
+                        platformName = "Source";
+
+                    if (sourceUrl.Length < 512)
+                        components.WithButton(platformName, url: sourceUrl, emote: buttonEmote,
+                            style: ButtonStyle.Link);
                 }
-                else if (CompiledRegex.TwitterStatusIdRegex().IsMatch(post.Source))
-                {
-                    QuotingHelpers.TryParseEmote(config.TwitterEmote, out var emote);
-
-                    buttonEmote = emote;
-                    platformName = "Twitter";
-                }
-                else if (CompiledRegex.IsAFanboxLinkRegex().IsMatch(post.Source))
-                {
-                    QuotingHelpers.TryParseEmote(config.FanboxCcEmote, out var emote);
-
-                    buttonEmote = emote;
-                    platformName = "fanbox.cc";
-                }
-                else if (CompiledRegex.FantiaPostIdRegex().IsMatch(post.Source))
-                {
-                    var id = CompiledRegex.FantiaPostIdRegex().Match(post.Source).Groups[1].Value;
-
-                    QuotingHelpers.TryParseEmote(config.FantiaEmote, out var emote);
-
-                    sourceUrl = $"https://fantia.jp/posts/{id}";
-                    buttonEmote = emote;
-                    platformName = "Fantia";
-                }
-                else if (post.Source.StartsWith("https://baraag.net"))
-                {
-                    QuotingHelpers.TryParseEmote(config.BaraagEmote, out var emote);
-
-                    buttonEmote = emote;
-                    platformName = "Baraag";
-                }
-                else if (post.Source.StartsWith("https://arca.live"))
-                {
-                    QuotingHelpers.TryParseEmote(config.ArcaLiveEmote, out var emote);
-
-                    buttonEmote = emote;
-                    platformName = "arca.live";
-                }
-                else if (CompiledRegex.MisskeyNoteRegex().IsMatch(post.Source))
-                {
-                    QuotingHelpers.TryParseEmote(config.MisskeyEmote, out var emote);
-
-                    buttonEmote = emote;
-                    platformName = "Misskey.io";
-                }
-
-                if(sourceUrl.Length < 512)
-                    components.WithButton(platformName, url: sourceUrl, emote: buttonEmote, style: ButtonStyle.Link);
             }
 
             if (extrasForMultiImage == null)
@@ -198,7 +206,7 @@ namespace Asahi.Modules
                 return originalVariant;
             }
 
-            // original doesn't exist/work, let's just hope the rest of the options are ok
+            // original doesn't exist/work, let's hope the rest of the options are ok
             var worseResFallback = validVariants.MaxBy(v => v.Width * v.Height);
 
             return worseResFallback;
@@ -214,7 +222,7 @@ namespace Asahi.Modules
 
             return GetFallbackVariant(post.Source);
         }
-        
+
         [Pure, PublicAPI]
         public async ValueTask<DanbooruVariantWithExtras?> GetFallbackVariant(string sourceUrl)
         {
@@ -244,47 +252,6 @@ namespace Asahi.Modules
                 }
             }
 
-            var fallbackTwitterMatch = CompiledRegex.TwitterStatusIdRegex().Match(sourceUrl);
-            if (fallbackTwitterMatch.Success)
-            {
-                var id = ulong.Parse(fallbackTwitterMatch.Groups[1].Value);
-
-                var status = await fxTwitterApi.GetStatusInfo(id);
-
-                if (status is { Code: 200, Status: not null } && status.Status.Media.Photos.Length != 0)
-                {
-                    var filteredPhotos = status.Status.Media.Photos
-                        .Where(photo =>
-                        {
-                            var ext = photo.Url.Split('.')[^1].Split('?')[0].ToLowerInvariant();
-                            return KnownImageExtensions.Contains(ext);
-                        })
-                        .ToArray();
-
-                    if (filteredPhotos.Length == 0)
-                        return null;
-
-                    var firstImg = filteredPhotos[0];
-
-                    var extraUrls = filteredPhotos.Length > 1
-                        ? filteredPhotos.Skip(1).Select(x => x.Url + "?name=orig").ToArray()
-                        : null;
-
-                    return new DanbooruVariantWithExtras(new DanbooruVariant()
-                    {
-                        FileExt = firstImg.Url.Split('.').Last().Split('?')[0],
-                        Height = firstImg.Height,
-                        Width = firstImg.Width,
-                        Type = "fallback (twitter)",
-                        Url = firstImg.Url + "?name=orig"
-                    })
-                    {
-                        ExtraUrls = extraUrls
-                    };
-                }
-            }
-
-
             if (CompiledRegex.FantiaPostIdRegex().IsMatch(sourceUrl))
             {
                 var extension = sourceUrl.Split('.')[^1];
@@ -297,52 +264,28 @@ namespace Asahi.Modules
                         { FileExt = extension, Height = 0, Width = 0, Type = "fallback (fantia)", Url = fallbackUrl });
                 }
             }
+
+            var danbooruFallback = await danbooruApi.GetSource(sourceUrl);
+
+            if (danbooruFallback.Error != null)
+                throw danbooruFallback.Error;
             
-            var fallbackMisskeyMatch = CompiledRegex.MisskeyNoteRegex().Match(sourceUrl);
-            if (fallbackMisskeyMatch.Success)
+            if(!danbooruFallback.IsSuccessful || danbooruFallback.Content.IsMostLikelyUseless(sourceUrl))
+                return null;
+
+            var variant = new DanbooruVariantWithExtras(new DanbooruVariant()
             {
-                var postId = fallbackMisskeyMatch.Groups[1].Value;
+                FileExt = "???",
+                Height = 0,
+                Width = 0,
+                Type = "fallback (danbooru source)",
+                Url = danbooruFallback.Content.ImageUrls.First()
+            })
+            {
+                ExtraUrls = danbooruFallback.Content.ImageUrls.Skip(1).ToArray()
+            };
 
-                var req = await misskeyApi.GetNote(postId);
-
-                if (req is { IsSuccessStatusCode: true, Content: not null } && req.Content.Files.Length != 0)
-                {
-                    var filteredFiles = req.Content.Files
-                        .Where(file =>
-                        {
-                            var ext = file.Url.Split('.')[^1].Split('?')[0];
-                            return KnownImageExtensions.Contains(ext);
-                        })
-                        .ToArray();
-
-                    if (filteredFiles.Length == 0)
-                        return null;
-
-                    var firstImg = filteredFiles[0];
-
-                    var extraUrls = filteredFiles.Length > 1
-                        ? filteredFiles.Skip(1).Select(x => x.Url).ToArray()
-                        : null;
-
-                    var fileExt = Path.GetExtension(new Uri(firstImg.Url).AbsolutePath).TrimStart('.');
-
-                    return new DanbooruVariantWithExtras(new DanbooruVariant()
-                    {
-                        FileExt = fileExt,
-                        Height = firstImg.Properties.Height,
-                        Width = firstImg.Properties.Width,
-                        Type = "fallback (misskey)",
-                        Url = firstImg.Url
-                    })
-                    {
-                        ExtraUrls = extraUrls
-                    };
-                }
-            }
-
-
-            // even the fallbacks have failed us
-            return null;
+            return variant;
         }
     }
 }

@@ -18,6 +18,7 @@ namespace Asahi.Modules.FeedsV2
             if (CompiledRegex.RedditFeedRegex().IsMatch(feedSource))
                 return new RedditFeedProvider(redditApi);
 
+            // TODO: SSRF bad!
             if (feedSource.StartsWith("http://") || feedSource.StartsWith("https://"))
                 return new RssFeedProvider(httpClientFactory.CreateClient("rss"));
                 
