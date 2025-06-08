@@ -114,7 +114,7 @@ public static class AnimeThemesPaginatorGenerator
 
             container.WithSection(titleSectionComponent);
 
-            foreach (var entryChunk in theme.animeThemeEntries.Chunk(ActionRowBuilder.MaxChildCount))
+            foreach (var entryChunk in theme.animeThemeEntries.Chunk(4)) // 4 buttons is where discord seems to wrap buttons
             {
                 var actionRow = new ActionRowBuilder();
 
