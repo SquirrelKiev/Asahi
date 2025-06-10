@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Asahi.BotEmoteManagement;
 using Asahi.Database;
 using Asahi.Modules;
 using Asahi.Modules.BirthdayRoles;
@@ -33,7 +34,9 @@ public class BotService(
     InteractiveService interactiveService,
     CommandService commandService,
     // RoleManagementService roleManagementService,
-    BirthdayTimerService birthdayTimerService
+    BirthdayTimerService birthdayTimerService,
+    BotEmoteService botEmoteService,
+    IHostApplicationLifetime appLifetime
 ) : BackgroundService
 {
     public const string WebhookDefaultName =
@@ -42,10 +45,13 @@ public class BotService(
 #endif
         "Asahi Webhook";
 
-    public CancellationTokenSource cts = new();
+    // ReSharper disable once InconsistentNaming
+    private CancellationToken CancellationToken;
 
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        CancellationToken = cancellationToken;
+
         MessageContents.AddRedButtonDefault = false;
 
         var args = Environment.GetCommandLineArgs();
@@ -99,6 +105,8 @@ public class BotService(
 
         await client.LoginAsync(TokenType.Bot, config.BotToken);
         await client.StartAsync();
+
+        await Task.Delay(-1, cancellationToken);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -106,12 +114,12 @@ public class BotService(
         if (ExecuteTask == null)
             return;
 
-        await cts.CancelAsync();
-
-        await client.LogoutAsync();
-        await client.StopAsync();
-
         await base.StopAsync(cancellationToken);
+
+        // if (client.LoginState is LoginState.LoggedIn or LoginState.LoggingIn)
+        await client.LogoutAsync();
+        // if (client.ConnectionState is ConnectionState.Connected or ConnectionState.Connecting)
+        await client.StopAsync();
     }
 
     // private Task Client_UserLeft(SocketGuild guild, SocketUser user) =>
@@ -150,7 +158,7 @@ public class BotService(
         if (reaction.Channel is not SocketTextChannel channel)
             return;
 
-        await using var context = await dbService.CreateDbContextAsync();
+        await using var context = await dbService.CreateDbContextAsync(CancellationToken);
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
         if (
@@ -168,7 +176,7 @@ public class BotService(
             );
         }
 
-        _ = Task.Run(() => modSpoilerService.ReactionCheck(reaction));
+        _ = Task.Run(() => modSpoilerService.ReactionCheck(reaction), CancellationToken);
     }
 
     private async Task Client_ReactionRemoved(
@@ -183,7 +191,7 @@ public class BotService(
         if (reaction.Channel is not SocketTextChannel channel)
             return;
 
-        await using var context = await dbService.CreateDbContextAsync();
+        await using var context = await dbService.CreateDbContextAsync(CancellationToken);
         var guildConfig = await context.GetGuildConfig(channel.Guild.Id);
 
         if (
@@ -270,16 +278,56 @@ public class BotService(
             client.CurrentUser?.Id
         );
 
+        await SyncEmotesAsync(CancellationToken);
+
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
-        highlightsTrackingService.StartBackgroundTask(cts.Token);
+        highlightsTrackingService.StartBackgroundTask(CancellationToken);
 
-        customStatusService.StartBackgroundTask(cts.Token);
+        customStatusService.StartBackgroundTask(CancellationToken);
 
-        birthdayTimerService.StartBackgroundTask(cts.Token);
+        birthdayTimerService.StartBackgroundTask(CancellationToken);
 
-        feedsTimerService.StartBackgroundTask(cts.Token);
+        feedsTimerService.StartBackgroundTask(CancellationToken);
 
         // await roleManagementService.CacheAndResolve();
+    }
+
+    private async Task SyncEmotesAsync(CancellationToken cancellationToken = default)
+    {
+        Directory.CreateDirectory(BotConfigFactory.BotInternalEmotesDirectory);
+
+        await using var context = await dbService.CreateDbContextAsync(cancellationToken);
+        var emoteTracking = await context.InternalCustomEmoteTracking.ToListAsync(cancellationToken: cancellationToken);
+        var originalEmoteTracking = new List<InternalCustomEmoteTracking>(emoteTracking);
+
+        try
+        {
+            await botEmoteService.Initialize(new BotEmotesSpecification(), emoteTracking);
+            
+            var removed = originalEmoteTracking.Except(emoteTracking);
+            var added = emoteTracking.Except(originalEmoteTracking);
+
+            foreach (var e in removed)
+            {
+                context.InternalCustomEmoteTracking.Remove(e);
+            }
+            
+            foreach (var e in added)
+            {
+                context.InternalCustomEmoteTracking.Add(e);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogCritical(e, "Failed to initialize bot emotes!");
+
+            appLifetime.StopApplication();
+            throw;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation("Synced emotes.");
     }
 }

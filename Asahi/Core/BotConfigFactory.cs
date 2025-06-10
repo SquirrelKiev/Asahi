@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Asahi.Modules;
 using Serilog;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
@@ -9,6 +10,8 @@ namespace Asahi;
 public static class BotConfigFactory
 {
     public static readonly string DefaultDataDirectory = Path.Combine(Path.Combine(AppContext.BaseDirectory, "data"));
+    public static readonly string BotInternalEmotesDirectory = Environment.GetEnvironmentVariable("INTERNAL_EMOTES_LOCATION") ?? 
+                                                               Path.Combine(Path.Combine(DefaultDataDirectory, "InternalEmotes"));
     private static readonly string ConfigPath = Environment.GetEnvironmentVariable("BOT_CONFIG_LOCATION") ??
                                                 Path.Combine(DefaultDataDirectory, "bot_config.yaml");
 
@@ -49,10 +52,7 @@ public static class BotConfigFactory
             return false;
         }
 
-        //#if DEBUG
-        //botConfig.GenerateMetadata();
         File.WriteAllText(ConfigPath, serializer.Serialize(botConfig));
-        //#endif
 
         return true;
 

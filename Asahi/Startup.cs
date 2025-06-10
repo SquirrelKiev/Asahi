@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text;
+using Asahi.BotEmoteManagement;
 using Asahi.Database;
 using Asahi.Modules;
 using Asahi.Modules.About;
@@ -39,7 +40,8 @@ public static class Startup
             Console.OutputEncoding = Encoding.UTF8;
             Log.Logger = new LoggerConfiguration().WriteTo
                 .Console(
-                    outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}", theme: AnsiConsoleTheme.Sixteen)
+                    outputTemplate: "[FALLBACK] [{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                    theme: AnsiConsoleTheme.Sixteen)
                 .CreateLogger();
 
             if (!BotConfigFactory.GetConfig(out var botConfig))
@@ -116,7 +118,8 @@ public static class Startup
                     builder.DataSource = Path.Combine(AppContext.BaseDirectory, builder.DataSource);
 
                     options.UseSqlite(builder.ToString(),
-                        x => x.MigrationsAssembly(MigrationAssemblies.Sqlite).UseNodaTime().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+                        x => x.MigrationsAssembly(MigrationAssemblies.Sqlite).UseNodaTime()
+                            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
                 });
                 break;
             case BotConfig.DatabaseType.Postgresql:
@@ -125,7 +128,8 @@ public static class Startup
                     var botConfig = provider.GetRequiredService<BotConfig>();
 
                     options.UseNpgsql(botConfig.DatabaseConnectionString,
-                        x => x.MigrationsAssembly(MigrationAssemblies.Postgres).UseNodaTime().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+                        x => x.MigrationsAssembly(MigrationAssemblies.Postgres).UseNodaTime()
+                            .UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
                 });
                 break;
             default:
@@ -159,6 +163,9 @@ public static class Startup
                 DefaultRunMode = Discord.Commands.RunMode.Async
             }))
             .AddSingleton<CommandHandler>()
+            .AddTransient(_ => new BotEmoteManagerConfig
+                { InternalEmoteImagesFolder = BotConfigFactory.BotInternalEmotesDirectory })
+            .AddSingleton<BotEmoteService>()
             .AddDbContextFactory<BotDbContext>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
             .AddTransient<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
@@ -168,7 +175,6 @@ public static class Startup
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()
             .AddSingleton<IClock>(SystemClock.Instance)
-            // about command
             .AddSingleton<AboutService>()
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
             .ConfigureHttpClient(x => AddDefaultProperties(x));
@@ -200,7 +206,7 @@ public static class Startup
 
         serviceCollection.AddRefitClient<IRedditApi>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com"));
-        
+
         serviceCollection.AddRefitClient<IDanbooruApi>(settings)
             .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://danbooru.donmai.us"));
 

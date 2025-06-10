@@ -131,7 +131,8 @@ public static class AnimeThemesPaginatorGenerator
                 container.WithActionRow(actionRow);
             }
 
-            if (i != chunk.Length - 1)
+            var isLastElement = i == chunk.Length - 1;
+            if (!isLastElement)
                 container.WithSeparator(new SeparatorBuilder().WithIsDivider(true)
                     .WithSpacing(SeparatorSpacingSize.Large));
         }
