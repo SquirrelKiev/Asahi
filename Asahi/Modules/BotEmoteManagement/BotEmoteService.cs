@@ -3,6 +3,6 @@
 namespace Asahi.Modules;
 
 public class BotEmoteService(IDiscordClient discordClient, IInternalEmoteSource internalEmoteSource) :
-    BotEmoteManagerService<BotEmotesSpecification, BotEmotes>(discordClient, internalEmoteSource)
+    ReflectionBasedBotEmoteManagerService<BotEmotesSpecification, BotEmotes>(discordClient, internalEmoteSource)
 {
 }
