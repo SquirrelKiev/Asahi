@@ -8,6 +8,5 @@ public class InternalCustomEmoteTracking
     public required string EmoteKey { get; set; }
     public required ulong EmoteId { get; set; }
     public required bool IsAnimated { get; set; }
-    // not sure what the "preferred" hashing algorithm is for files
-    public required byte[] Sha256Hash { get; set; }
+    public required byte[] EmoteDataIdentifier { get; set; }
 }

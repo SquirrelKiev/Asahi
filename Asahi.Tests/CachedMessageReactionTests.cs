@@ -4,11 +4,11 @@ using FluentAssertions;
 
 namespace Asahi.Tests;
 
+// I need to redo these tests at some point
 public class CachedHighlightedMessageTests
 {
-    private const uint DefaultHighlightedMessageId = 123;
-
-    private CachedMessageReaction CreateReaction(CachedHighlightedMessage chm, string emoteName, int count = 1) =>
+    private static CachedMessageReaction
+        CreateReaction(CachedHighlightedMessage chm, string emoteName, int count = 1) =>
         new()
         {
             EmoteName = emoteName,
@@ -18,7 +18,8 @@ public class CachedHighlightedMessageTests
             HighlightedMessage = chm,
         };
 
-    private CachedMessageReaction CreateReaction(CachedHighlightedMessage chm, string emoteName, ulong emoteId, bool isAnimated, int count = 1) =>
+    private static CachedMessageReaction CreateReaction(CachedHighlightedMessage chm, string emoteName, ulong emoteId,
+        bool isAnimated, int count = 1) =>
         new()
         {
             EmoteName = emoteName,
@@ -28,27 +29,19 @@ public class CachedHighlightedMessageTests
             HighlightedMessage = chm,
         };
 
-    private CachedHighlightedMessage CreateHighlightMessage() =>
-            new CachedHighlightedMessage
-            {
-                OriginalMessageChannelId = 123ul,
-                OriginalMessageId = 123ul,
-                // just the time I'm writing this test :chatting:
-                HighlightedMessageSendDate = new DateTime(2024, 11, 11, 8, 45, 00, DateTimeKind.Utc),
-                AuthorId = 123ul,
-                AssistAuthorId = null,
-                TotalUniqueReactions = 1,
-                HighlightMessageIds = [123ul],
-                CachedMessageReactions = []
-            };
-
-
-    private readonly HighlightBoard board = new()
-    {
-        Name = "board",
-        GuildId = 123ul,
-        LoggingChannelId = 456ul
-    };
+    private static CachedHighlightedMessage CreateHighlightMessage() =>
+        new CachedHighlightedMessage
+        {
+            OriginalMessageChannelId = 123ul,
+            OriginalMessageId = 123ul,
+            // just the time I'm writing this test :chatting:
+            HighlightedMessageSendDate = new DateTime(2024, 11, 11, 8, 45, 00, DateTimeKind.Utc),
+            AuthorId = 123ul,
+            AssistAuthorId = null,
+            TotalUniqueReactions = 1,
+            HighlightMessageIds = [123ul],
+            CachedMessageReactions = []
+        };
 
     [Fact]
     public void UpdateReactions_EmptyInputs_ShouldNotModifyList()
@@ -76,16 +69,16 @@ public class CachedHighlightedMessageTests
 
         var emoteUserMap = new Dictionary<IEmote, HashSet<ulong>>()
         {
-            {new Emoji("😭"), [123ul, 456ul] },
-            {new Emoji("🗣️"), [123ul, 456ul, 789ul] }
+            { new Emoji("😭"), [123ul, 456ul] },
+            { new Emoji("🗣️"), [123ul, 456ul, 789ul] }
         };
         var existingReactions = new List<CachedMessageReaction>();
-        
+
         chm.CachedMessageReactions = existingReactions;
 
         // act
         chm.UpdateReactions(emoteUserMap);
-        
+
         // assert
         existingReactions.Should()
             .Contain(x => x.EmoteName == "😭")
@@ -95,7 +88,7 @@ public class CachedHighlightedMessageTests
             .Which.Count.Should().Be(3);
 
         existingReactions.Should().AllSatisfy(x => x.HighlightedMessage.Should().BeSameAs(chm));
-        
+
         existingReactions.Should()
             .HaveCount(2);
     }
@@ -105,14 +98,14 @@ public class CachedHighlightedMessageTests
     {
         // arrange
         var chm = CreateHighlightMessage();
-        
+
         var emoteUserMap = new Dictionary<IEmote, HashSet<ulong>>();
         var existingReactions = new List<CachedMessageReaction>
         {
             CreateReaction(chm, "😭"),
             CreateReaction(chm, "🗣️")
         };
-        
+
         chm.CachedMessageReactions = existingReactions;
 
         // act
@@ -127,7 +120,7 @@ public class CachedHighlightedMessageTests
     {
         // arrange
         var chm = CreateHighlightMessage();
-        
+
         var emojiWillChangeCount = new Emoji("🦐");
         var emojiNewlyAdded = new Emoji("🗣️");
         var customEmoteCountStaysSame = new Emote(123UL, "custom1", false);
@@ -161,9 +154,9 @@ public class CachedHighlightedMessageTests
             { customEmoteNewlyAdded, new HashSet<ulong> { 1, 2 } }, // new with count 2
             { customEmoteAnimatedNewlyAdded, new HashSet<ulong> { 1, 2 } } // new with count 3
         };
-        
+
         chm.CachedMessageReactions = newReactions;
-        
+
         // act
         chm.UpdateReactions(emoteUserMap);
 
@@ -210,7 +203,7 @@ public class CachedHighlightedMessageTests
             .And.NotBeSameAs(oldReactions.Single(x => x == originalRemovedEmote));
 
         newReactions.Should().AllSatisfy(x => x.HighlightedMessage.Should().BeSameAs(chm));
-        
+
         newReactions.Should().NotContain(r => r.EmoteName == customEmoteWillBeRemoved.Name);
     }
 }

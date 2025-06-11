@@ -163,8 +163,8 @@ public static class Startup
                 DefaultRunMode = Discord.Commands.RunMode.Async
             }))
             .AddSingleton<CommandHandler>()
-            .AddTransient(_ => new BotEmoteManagerConfig
-                { InternalEmoteImagesFolder = BotConfigFactory.BotInternalEmotesDirectory })
+            .AddSingleton<IInternalEmoteSource, FileSystemInternalEmoteSource>(_ =>
+                new FileSystemInternalEmoteSource(BotConfigFactory.BotInternalEmotesDirectory))
             .AddSingleton<BotEmoteService>()
             .AddDbContextFactory<BotDbContext>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()

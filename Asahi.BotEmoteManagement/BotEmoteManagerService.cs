@@ -16,17 +16,16 @@ namespace Asahi.BotEmoteManagement;
 /// Expects an object with the exact same properties as <typeparamref name="TEmoteSpecification"/>,
 /// just with <see cref="IEmote"/>s instead of <see cref="IEmoteSpecification"/>s.
 /// </typeparam>
-
-public abstract class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
+public class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
     IDiscordClient discordClient,
-    BotEmoteManagerConfig config)
+    IInternalEmoteSource internalEmoteSource)
     where TEmoteModel : class, new()
 {
     /// <summary>
     /// Gets the model containing the resolved emotes.
     /// </summary>
-    /// <remarks>Will be invalid if <see cref="Initialize"/> is not called.</remarks>
-    public TEmoteModel Emotes { get; private set; } = new();
+    /// <remarks>Will be invalid if <see cref="InitializeAsync"/> is not called.</remarks>
+    public TEmoteModel Emotes { get; } = new();
 
     // TODO: Replace with source gen
     /// <summary>
@@ -35,7 +34,11 @@ public abstract class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
     /// <param name="emotesSpecification">The populated specification defining the emotes.</param>
     /// <param name="internalEmoteTracking">A persisted list for tracking the state of internal custom emotes.</param>
     /// <exception cref="FileNotFoundException">Thrown if an image file for an internal emote is not found.</exception>
-    public async Task Initialize(TEmoteSpecification emotesSpecification,
+    /// <exception cref="ArgumentNullException">Thrown if any spec properties on <see cref="TEmoteSpecification"/> are null.</exception>
+    /// <exception cref="NotSupportedException">Thrown if any spec properties on <see cref="TEmoteSpecification"/>
+    /// are not one of <see cref="UnicodeEmoteSpecification"/>, <see cref="ExternalCustomEmoteSpecification"/>,
+    /// or <see cref="InternalCustomEmoteTracking"/>.</exception>
+    public async Task InitializeAsync(TEmoteSpecification emotesSpecification,
         IList<InternalCustomEmoteTracking> internalEmoteTracking)
     {
         var internalEmoteSpecs = new List<InternalCustomEmoteToPropertyMapping>();
@@ -60,19 +63,21 @@ public abstract class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
                         x.EmoteSpecification == internalEmoteSpec);
                     if (existingEntryWithKey != null)
                     {
-                        existingEntryWithKey.PropertyInfos.Add(specPropertyInfo);
+                        existingEntryWithKey.ModelProperties.Add(typeof(TEmoteModel).GetProperty(specPropertyInfo.Name)!);
                     }
                     else
                     {
                         internalEmoteSpecs.Add(
-                            new InternalCustomEmoteToPropertyMapping([specPropertyInfo], internalEmoteSpec));
+                            new InternalCustomEmoteToPropertyMapping([typeof(TEmoteModel).GetProperty(specPropertyInfo.Name)!], internalEmoteSpec));
                     }
 
                     resolvedEmote = null;
                     break;
+                case null:
+                    throw new ArgumentNullException(specPropertyInfo.Name,
+                        "Emote specification cannot have null values.");
                 default:
-                    resolvedEmote = null;
-                    break;
+                    throw new NotSupportedException($"Emote type {spec.GetType()} is not supported(?)");
             }
 
             if (resolvedEmote != null)
@@ -81,14 +86,14 @@ public abstract class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
             }
         }
 
-        var files = Directory.GetFiles(config.InternalEmoteImagesFolder);
-        foreach (var emoteSpec in internalEmoteSpecs.Where(emoteSpec =>
-                     files.All(x => Path.GetFileNameWithoutExtension(x) != emoteSpec.EmoteSpecification.EmoteKey)))
+        var availableEmoteKeys = internalEmoteSource.GetAvailableEmoteKeys().ToList();
+        foreach (var emoteSpec in internalEmoteSpecs.Where(emoteSpec => 
+                     !availableEmoteKeys.Contains(emoteSpec.EmoteSpecification.EmoteKey)))
         {
-            throw new FileNotFoundException("A corresponding image file for an internal emote was not found.",
+            throw new FileNotFoundException("Image data for the emote key specified was not found.",
                 emoteSpec.EmoteSpecification.EmoteKey);
         }
-        
+
         var existingEmotes = await discordClient.GetApplicationEmotesAsync();
 
         // in case things get out of sync for whatever reason, remove any emotes that don't exist on discord from the database
@@ -96,7 +101,7 @@ public abstract class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
         {
             internalEmoteTracking.Remove(emote);
         }
-        
+
         var emotesToAdd = internalEmoteSpecs.Where(x =>
                 internalEmoteTracking.All(y => y.EmoteKey != x.EmoteSpecification.EmoteKey))
             .ToList();
@@ -110,86 +115,74 @@ public abstract class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
 
             internalEmoteTracking.Remove(emoteToRemove);
         }
-        
-        if(emotesToAdd.Count != 0)
+
+        if (emotesToAdd.Count != 0)
         {
             foreach (var emoteToAdd in emotesToAdd)
             {
-                await using var fileStream =
-                    new FileStream(
-                        files.First(x => Path.GetFileNameWithoutExtension(x) == emoteToAdd.EmoteSpecification.EmoteKey),
-                        FileMode.Open);
+                await using var stream = internalEmoteSource.GetEmoteDataStream(emoteToAdd.EmoteSpecification.EmoteKey);
 
-                var existingEmote = existingEmotes.FirstOrDefault(x => x.Name == emoteToAdd.EmoteSpecification.EmoteKey);
+                var existingEmote =
+                    existingEmotes.FirstOrDefault(x => x.Name == emoteToAdd.EmoteSpecification.EmoteKey);
                 if (existingEmote != null)
                 {
                     await discordClient.DeleteApplicationEmoteAsync(existingEmote.Id);
-                    
+
                     // debug
                     // internalEmoteTracking.Add(new InternalCustomEmoteTracking
                     // {
                     //     EmoteKey = emoteToAdd.EmoteSpecification.EmoteKey,
                     //     EmoteId = existingEmote.Id,
                     //     IsAnimated = existingEmote.Animated,
-                    //     Sha256Hash = await SHA256.HashDataAsync(fileStream)
+                    //     EmoteDataIdentifier = await internalEmoteSource.GetEmoteDataIdentifierAsync(emoteToAdd.EmoteSpecification.EmoteKey)
                     // });
                     //
                     // continue;
                 }
-                
-                var emote = await discordClient.CreateApplicationEmoteAsync(emoteToAdd.EmoteSpecification.EmoteKey,
-                    new Image(fileStream));
 
-                fileStream.Position = 0;
+                var emote = await discordClient.CreateApplicationEmoteAsync(emoteToAdd.EmoteSpecification.EmoteKey,
+                    new Image(stream));
+
+                stream.Position = 0;
 
                 internalEmoteTracking.Add(new InternalCustomEmoteTracking
                 {
                     EmoteKey = emoteToAdd.EmoteSpecification.EmoteKey,
                     EmoteId = emote.Id,
                     IsAnimated = emote.Animated,
-                    Sha256Hash = await SHA256.HashDataAsync(fileStream)
+                    EmoteDataIdentifier = await internalEmoteSource.GetEmoteDataIdentifierAsync(emoteToAdd.EmoteSpecification.EmoteKey)
                 });
             }
         }
 
         // doing this after all the emotesToRemove logic, so I don't have to worry about missing files or anything
-        var emotesWithIncorrectHashes =
+        var emotesWithIncorrectIdentifiers =
             internalEmoteTracking.ToAsyncEnumerable().WhereAwait(async x =>
             {
                 if (emotesToAdd.Any(y => y.EmoteSpecification.EmoteKey == x.EmoteKey))
                     return false;
 
-                await using var fileStream =
-                    new FileStream(
-                        files.First(y => Path.GetFileNameWithoutExtension(y) == x.EmoteKey),
-                        FileMode.Open);
-
-                var newHash = await SHA256.HashDataAsync(fileStream);
-                return newHash.SequenceEqual(x.Sha256Hash) == false;
+                var newIdentifier = await internalEmoteSource.GetEmoteDataIdentifierAsync(x.EmoteKey);
+                return newIdentifier.SequenceEqual(x.EmoteDataIdentifier) == false;
             });
 
-        foreach (var emoteWithIncorrectHash in await emotesWithIncorrectHashes.ToArrayAsync())
+        foreach (var emoteWithIncorrectHash in await emotesWithIncorrectIdentifiers.ToArrayAsync())
         {
             await discordClient.DeleteApplicationEmoteAsync(emoteWithIncorrectHash.EmoteId);
 
             internalEmoteTracking.Remove(emoteWithIncorrectHash);
 
-            await using var fileStream =
-                new FileStream(
-                    files.First(x => Path.GetFileNameWithoutExtension(x) == emoteWithIncorrectHash.EmoteKey),
-                    FileMode.Open);
+            await using var stream = internalEmoteSource.GetEmoteDataStream(emoteWithIncorrectHash.EmoteKey);
 
             var emote = await discordClient.CreateApplicationEmoteAsync(emoteWithIncorrectHash.EmoteKey,
-                new Image(fileStream));
-
-            fileStream.Position = 0;
+                new Image(stream));
 
             internalEmoteTracking.Add(new InternalCustomEmoteTracking
             {
                 EmoteKey = emoteWithIncorrectHash.EmoteKey,
                 EmoteId = emote.Id,
                 IsAnimated = emote.Animated,
-                Sha256Hash = await SHA256.HashDataAsync(fileStream)
+                EmoteDataIdentifier = await internalEmoteSource.GetEmoteDataIdentifierAsync(emoteWithIncorrectHash.EmoteKey)
             });
         }
 
@@ -202,28 +195,16 @@ public abstract class BotEmoteManagerService<TEmoteSpecification, TEmoteModel>(
                 if (internalEmote.EmoteKey != spec.EmoteSpecification.EmoteKey)
                     continue;
 
-                foreach (var property in spec.PropertyInfos)
+                foreach (var property in spec.ModelProperties)
                 {
-                    property.SetValue(Emotes, new Emote(internalEmote.EmoteId, internalEmote.EmoteKey, internalEmote.IsAnimated));
+                    property.SetValue(Emotes,
+                        new Emote(internalEmote.EmoteId, internalEmote.EmoteKey, internalEmote.IsAnimated));
                 }
             }
         }
     }
 
     private record InternalCustomEmoteToPropertyMapping(
-        List<PropertyInfo> PropertyInfos,
+        List<PropertyInfo> ModelProperties,
         InternalCustomEmoteSpecification EmoteSpecification);
-}
-
-/// <summary>
-/// Configuration for the <see cref="BotEmoteManagerService{TEmoteSpecification, TEmoteModel}"/>.
-/// </summary>
-public record BotEmoteManagerConfig
-{
-    /// <summary>
-    /// The folder path for internal emote images.
-    /// Defaults to "InternalEmotes" relative to the application base directory.
-    /// </summary>
-    public string InternalEmoteImagesFolder { get; init; } =
-        Path.GetRelativePath(AppContext.BaseDirectory, "InternalEmotes");
 }
