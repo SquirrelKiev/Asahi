@@ -307,7 +307,7 @@ public class BotService(
             
             var removed = originalEmoteTracking.Except(emoteTracking);
             var added = emoteTracking.Except(originalEmoteTracking);
-
+        
             foreach (var e in removed)
             {
                 context.InternalCustomEmoteTracking.Remove(e);
@@ -321,7 +321,7 @@ public class BotService(
         catch (Exception e)
         {
             logger.LogCritical(e, "Failed to initialize bot emotes!");
-
+        
             appLifetime.StopApplication();
             throw;
         }

@@ -72,6 +72,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Asahi.Analyzers\Asahi.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\Asahi.BotEmoteManagement.SourceGenerators\Asahi.BotEmoteManagement.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\Asahi.CodeFixers\Asahi.CodeFixers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
         <ProjectReference Include="..\Asahi.BotEmoteManagement\Asahi.BotEmoteManagement.csproj" />
         <ProjectReference Include="..\Asahi.Database.Migrations.Postgres\Asahi.Database.Migrations.Postgres.csproj"/>

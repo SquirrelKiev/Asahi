@@ -36,7 +36,8 @@ public sealed class BotEmoteManagerServiceTests
         var discordClient = Substitute.For<IDiscordClient>();
         var internalEmoteSource = Substitute.For<IInternalEmoteSource>();
         
-        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(discordClient, internalEmoteSource);
+        var resolverService = new DiscordEmoteResolverService(discordClient, internalEmoteSource);
+        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(resolverService);
         var spec = new SingleEmoteSpec()
         {
             Emote = new UnicodeEmoteSpecification("🤔"),
@@ -58,7 +59,8 @@ public sealed class BotEmoteManagerServiceTests
         var discordClient = Substitute.For<IDiscordClient>();
         var internalEmoteSource = Substitute.For<IInternalEmoteSource>();
         
-        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(discordClient, internalEmoteSource);
+        var resolverService = new DiscordEmoteResolverService(discordClient, internalEmoteSource);
+        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(resolverService);
         const string emoteName = "okay";
         const ulong emoteId = 123ul;
         var spec = new SingleEmoteSpec
@@ -86,8 +88,9 @@ public sealed class BotEmoteManagerServiceTests
         var internalEmoteSource = Substitute.For<IInternalEmoteSource>();
         
         internalEmoteSource.GetAvailableEmoteKeys().Returns([]);
-        
-        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(discordClient, internalEmoteSource);
+
+        var resolverService = new DiscordEmoteResolverService(discordClient, internalEmoteSource);
+        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(resolverService);
         var spec = new SingleEmoteSpec
         {
             Emote = new InternalCustomEmoteSpecification("okay"),
@@ -120,7 +123,8 @@ public sealed class BotEmoteManagerServiceTests
         var createdEmote = new Emote(emoteId, emoteKey, false);
         discordClient.CreateApplicationEmoteAsync(emoteKey, Arg.Any<Image>()).Returns(Task.FromResult(createdEmote));
         
-        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(discordClient, internalEmoteSource);
+        var resolverService = new DiscordEmoteResolverService(discordClient, internalEmoteSource);
+        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(resolverService);
 
         var spec = new SingleEmoteSpec
         {
@@ -167,7 +171,8 @@ public sealed class BotEmoteManagerServiceTests
             discordClient.GetApplicationEmotesAsync().Returns(Task.FromResult<IReadOnlyCollection<Emote>>([]));
         });
         
-        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(discordClient, internalEmoteSource);
+        var resolverService = new DiscordEmoteResolverService(discordClient, internalEmoteSource);
+        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(resolverService);
 
         var spec = new SingleEmoteSpec
         {
@@ -218,7 +223,8 @@ public sealed class BotEmoteManagerServiceTests
         discordClient.DeleteApplicationEmoteAsync(oldEmoteId).Returns(Task.CompletedTask);
         discordClient.CreateApplicationEmoteAsync(emoteKey, Arg.Any<Image>()).Returns(Task.FromResult(newEmote));
         
-        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(discordClient, internalEmoteSource);
+        var resolverService = new DiscordEmoteResolverService(discordClient, internalEmoteSource);
+        var service = new ReflectionBasedBotEmoteManagerService<SingleEmoteSpec, SingleEmoteModel>(resolverService);
 
         var spec = new SingleEmoteSpec
         {
@@ -271,7 +277,8 @@ public sealed class BotEmoteManagerServiceTests
         discordClient.GetApplicationEmotesAsync().Returns(Task.FromResult<IReadOnlyCollection<Emote>>([]));
         discordClient.CreateApplicationEmoteAsync(emoteKey, Arg.Any<Image>()).Returns(Task.FromResult(emote));
         
-        var service = new ReflectionBasedBotEmoteManagerService<MultipleEmotesSpec, MultipleEmotesModel>(discordClient, internalEmoteSource);
+        var resolverService = new DiscordEmoteResolverService(discordClient, internalEmoteSource);
+        var service = new ReflectionBasedBotEmoteManagerService<MultipleEmotesSpec, MultipleEmotesModel>(resolverService);
         
         var tracking = new List<InternalCustomEmoteTracking>();
         

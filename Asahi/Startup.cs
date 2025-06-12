@@ -165,6 +165,7 @@ public static class Startup
             .AddSingleton<CommandHandler>()
             .AddSingleton<IInternalEmoteSource, FileSystemInternalEmoteSource>(_ =>
                 new FileSystemInternalEmoteSource(BotConfigFactory.BotInternalEmotesDirectory))
+            .AddSingleton<IEmoteResolver, DiscordEmoteResolverService>()
             .AddSingleton<BotEmoteService>()
             .AddDbContextFactory<BotDbContext>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
