@@ -10,7 +10,12 @@ public interface IEmoteSpecification;
 /// The <see cref="ReflectionBasedBotEmoteManagerService{TEmoteSpecification,TEmoteModel}"/> will resolve this
 /// into a <see cref="Discord.Emoji"/> object.
 /// </remarks>
-public record UnicodeEmoteSpecification(string UnicodeEmote) : IEmoteSpecification;
+public record UnicodeEmoteSpecification(string UnicodeEmote) : IEmoteSpecification
+{
+    public UnicodeEmoteSpecification() : this(string.Empty)
+    {
+    }
+}
 
 /// <summary>
 /// Represents a custom emote that is hosted outside the application's emotes (e.g. on a Discord server).
@@ -22,7 +27,12 @@ public record UnicodeEmoteSpecification(string UnicodeEmote) : IEmoteSpecificati
 /// The <see cref="ReflectionBasedBotEmoteManagerService{TEmoteSpecification,TEmoteModel}"/> will resolve this
 /// into a <see cref="Discord.Emote"/> object using the provided details.
 /// </remarks>
-public record ExternalCustomEmoteSpecification(string EmoteName, ulong EmoteId, bool IsAnimated) : IEmoteSpecification;
+public record ExternalCustomEmoteSpecification(string EmoteName, ulong EmoteId, bool IsAnimated) : IEmoteSpecification
+{
+    public ExternalCustomEmoteSpecification() : this(string.Empty, 0ul, false)
+    {
+    }
+}
 
 /// <summary>
 /// Represents a custom emote that is managed internally by the bot.
@@ -41,4 +51,9 @@ public record ExternalCustomEmoteSpecification(string EmoteName, ulong EmoteId, 
 /// from the application's registered emotes on Discord. It then resolves this to a
 /// <see cref="Discord.Emote"/> object.
 /// </remarks>
-public record InternalCustomEmoteSpecification(string EmoteKey) : IEmoteSpecification;
+public record InternalCustomEmoteSpecification(string EmoteKey) : IEmoteSpecification
+{
+    public InternalCustomEmoteSpecification() : this(string.Empty)
+    {
+    }
+}

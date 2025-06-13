@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Asahi.Modules;
+using Asahi.BotEmoteManagement;
 using Serilog;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
@@ -20,10 +20,17 @@ public static class BotConfigFactory
         var serializer = new SerializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .WithDefaultScalarStyle(ScalarStyle.DoubleQuoted)
+            .WithTagMapping("!unicode", typeof(UnicodeEmoteSpecification))
+            .WithTagMapping("!external", typeof(ExternalCustomEmoteSpecification))
+            .WithTagMapping("!internal", typeof(InternalCustomEmoteSpecification))
+            .EnsureRoundtrip()
             .Build();
 
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
+            .WithTagMapping("!unicode", typeof(UnicodeEmoteSpecification))
+            .WithTagMapping("!external", typeof(ExternalCustomEmoteSpecification))
+            .WithTagMapping("!internal", typeof(InternalCustomEmoteSpecification))
             .IgnoreUnmatchedProperties()
             .Build();
 

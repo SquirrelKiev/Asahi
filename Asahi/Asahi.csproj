@@ -81,25 +81,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="data\InternalEmotes\PixivLogo.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="data\InternalEmotes\BaraagLogo.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="data\InternalEmotes\FanboxLogo.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="data\InternalEmotes\FantiaLogo.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="data\InternalEmotes\MisskeyLogo.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="data\InternalEmotes\TwitterLogo.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="data\InternalEmotes\ablobgift.gif">
+      <None Update="data\InternalEmotes\*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>

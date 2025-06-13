@@ -12,6 +12,7 @@ public class AnimeThemesModule(
     IAnimeThemesClient atClient,
     InteractiveService interactive,
     BotConfig config,
+    BotEmoteService emotes,
     ILogger<AnimeThemesModule> logger) : BotModule
 {
     private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(5);
@@ -19,7 +20,7 @@ public class AnimeThemesModule(
     [SlashCommand("theme", "Searches for anime theme songs via animethemes.moe.")]
     public async Task ThemeSlash([Summary(description: "The anime to look for the theme songs of.")] string query)
     {
-        await RespondAsync($"{config.LoadingEmote} Please wait...",
+        await RespondAsync($"{emotes.Loading} Please wait...",
             allowedMentions: AllowedMentions.None);
 
         var searchRes = await atClient.SearchAsync(query, new IAnimeThemesClient.SearchQueryParams());

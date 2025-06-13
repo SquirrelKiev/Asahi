@@ -40,6 +40,8 @@ public class EmoteManagerGenerator : IIncrementalGenerator
     
     private static string GenerateCode(EmoteManagerInfo emoteManagerInfo)
     {
+        const string emotesModelPropertyName = "EmotesModel";
+        
         using var textWriter = new StringWriter();
         using var sourceBuilder = new IndentedTextWriter(textWriter);
 
@@ -51,8 +53,17 @@ public class EmoteManagerGenerator : IIncrementalGenerator
         sourceBuilder.WriteLine($"public partial class {emoteManagerInfo.EmoteManagerClassName}({EmoteResolverQualifiedName} emoteResolver)");
         sourceBuilder.WriteLine("{");
         sourceBuilder.Indent++;
+        sourceBuilder.WriteLine("#region Emotes model aliases");
+        sourceBuilder.WriteLine();
+        foreach (var member in emoteManagerInfo.EmoteSpecMembers)
+        {
+            sourceBuilder.WriteLine($"public {EmoteInterfaceQualifiedName} {member} => {emotesModelPropertyName}.{member};");
+        }
+        sourceBuilder.WriteLine();
+        sourceBuilder.WriteLine("#endregion");
+        sourceBuilder.WriteLine();
         sourceBuilder.WriteLine($"private {emoteManagerInfo.EmoteModelClassNameToGenerate} emotes;");
-        sourceBuilder.WriteLine($"public {emoteManagerInfo.EmoteModelClassNameToGenerate} Emotes => emotes ??");
+        sourceBuilder.WriteLine($"public {emoteManagerInfo.EmoteModelClassNameToGenerate} {emotesModelPropertyName} => emotes ??");
         sourceBuilder.Indent++;
         sourceBuilder.WriteLine("throw new System.InvalidOperationException(\"InitializeAsync has not been called yet.\");");
         sourceBuilder.Indent--;

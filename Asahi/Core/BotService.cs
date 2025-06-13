@@ -303,7 +303,7 @@ public class BotService(
 
         try
         {
-            await botEmoteService.InitializeAsync(new BotEmotesSpecification(), emoteTracking);
+            await botEmoteService.InitializeAsync(config.Emotes, emoteTracking);
             
             var removed = originalEmoteTracking.Except(emoteTracking);
             var added = emoteTracking.Except(originalEmoteTracking);
