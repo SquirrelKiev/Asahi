@@ -3,7 +3,8 @@ using Discord;
 
 namespace Asahi.BotEmoteManagement;
 
-public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternalEmoteSource internalEmoteSource) : IEmoteResolver
+public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternalEmoteSource internalEmoteSource)
+    : IEmoteResolver
 {
     public async Task<Dictionary<string, IEmote>> ResolveAsync(
         IReadOnlyList<IEmoteResolver.EmoteSpecMapping> mappings,
@@ -16,7 +17,7 @@ public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternal
             .Distinct()
             .ToList();
 
-        var availableEmoteKeys = internalEmoteSource.GetAvailableEmoteKeys().ToList();
+        var availableEmoteKeys = internalEmoteSource.GetAvailableEmoteKeys().ToHashSet();
 
         var emoteSpecsWithoutMatchingImageData = internalSpecs.Where(emoteSpec =>
             !availableEmoteKeys.Contains(emoteSpec.EmoteKey));
@@ -37,9 +38,9 @@ public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternal
         await UpdateChangedEmotesAsync(internalEmoteTracking, emotesToAdd);
 
         var resolvedEmotes = new Dictionary<string, IEmote>(mappings.Count);
-        
+
         // TODO: Add explicit handling for unknown emotes (emotes that exist on Discord but are not internally tracked)
-        
+
         ResolveEmotes(mappings, internalEmoteTracking, ref resolvedEmotes);
 
         Debug.Assert(mappings.Count == resolvedEmotes.Count);
@@ -71,12 +72,6 @@ public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternal
         }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="internalEmoteTracking"></param>
-    /// <param name="internalEmoteMappings"></param>
-    /// <param name="existingEmotes"></param>
     /// <returns>The emotes that were added.</returns>
     private async Task<List<InternalCustomEmoteSpecification>> AddMissingEmotesAsync(
         IList<InternalCustomEmoteTracking> internalEmoteTracking,
@@ -113,8 +108,6 @@ public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternal
 
             var emote = await discordClient.CreateApplicationEmoteAsync(emoteToAdd.EmoteKey,
                 new Image(stream));
-
-            stream.Position = 0;
 
             internalEmoteTracking.Add(new InternalCustomEmoteTracking
             {
@@ -183,8 +176,8 @@ public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternal
                 case InternalCustomEmoteSpecification i:
                     var existingEntry =
                         internalEmoteTracking.First(x => x.EmoteKey == i.EmoteKey);
-                    
-                    resolvedEmotes[mapping.PropertyName] = 
+
+                    resolvedEmotes[mapping.PropertyName] =
                         new Emote(existingEntry.EmoteId, existingEntry.EmoteKey, existingEntry.IsAnimated);
                     break;
             }
