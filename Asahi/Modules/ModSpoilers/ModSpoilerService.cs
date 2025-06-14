@@ -18,7 +18,7 @@ public class ModSpoilerService(
     IHttpClientFactory clientFactory,
     IDbContextFactory<BotDbContext> dbService,
     InteractiveService interactive,
-    BotConfig botConfig,
+    BotEmoteService emotes,
     HighlightsTrackingService hts,
     DiscordRestConfig webhookRestConfig,
     ILogger<ModSpoilerModule> logger)
@@ -30,7 +30,8 @@ public class ModSpoilerService(
         public required string response = response;
     }
 
-    public async Task<SpoilerAttemptResult> SpoilerMessage(IMessage message, bool deleteOg, BotDbContext dbContext, string? context = "")
+    public async Task<SpoilerAttemptResult> SpoilerMessage(IMessage message, bool deleteOg, BotDbContext dbContext,
+        string? context = "")
     {
         if (message.Channel is not IIntegrationChannel channel)
         {
@@ -59,7 +60,8 @@ public class ModSpoilerService(
         if (!(await channel.Guild.GetUserAsync(client.CurrentUser.Id)).GetPermissions(channel)
             .Has(requiredPerms))
         {
-            return new SpoilerAttemptResult(false, $"Bot does not have {requiredPerms.Humanize(LetterCasing.Title)} permission in <#{channel.Id}>.");
+            return new SpoilerAttemptResult(false,
+                $"Bot does not have {requiredPerms.Humanize(LetterCasing.Title)} permission in <#{channel.Id}>.");
         }
 
         var webhook = await channel.GetOrCreateWebhookAsync(BotService.WebhookDefaultName);
@@ -80,7 +82,8 @@ public class ModSpoilerService(
             foreach (var attachment in message.Attachments)
             {
                 var req = await http.GetAsync(attachment.Url);
-                attachmentStreams.Add(new FileAttachment(await req.Content.ReadAsStreamAsync(), attachment.Filename, attachment.Description, true));
+                attachmentStreams.Add(new FileAttachment(await req.Content.ReadAsStreamAsync(), attachment.Filename,
+                    attachment.Description, true));
                 disposables.Add(req);
             }
 
@@ -107,7 +110,8 @@ public class ModSpoilerService(
                 return new SpoilerAttemptResult(false, "Channel is not a text channel.");
             }
 
-            var ogChannel = await loggingChannel.Guild.GetTextChannelAsync(cachedHighlightedMessage.OriginalMessageChannelId);
+            var ogChannel =
+                await loggingChannel.Guild.GetTextChannelAsync(cachedHighlightedMessage.OriginalMessageChannelId);
 
             var ogMessage = await ogChannel.GetMessageAsync(cachedHighlightedMessage.OriginalMessageId);
 
@@ -132,10 +136,11 @@ public class ModSpoilerService(
             var firstMessageObj = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
             var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap) =
                 await hts.GetReactions([ogMessage, firstMessageObj], [ogMessage], []);
-            
+
             cachedHighlightedMessage.UpdateReactions(emoteUserMap);
 
-            var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, false, [], true, context, 
+            var messageContents = QuotingHelpers.QuoteMessage(ogMessage, quoteEmbedColor, logger, false, [], true,
+                context,
                 replyMessage, eb =>
                 {
                     hts.AddReactionsFieldToQuote(eb,
@@ -177,8 +182,10 @@ public class ModSpoilerService(
 
                 if (cachedHighlightedMessage.HighlightBoard.AutoReactMaxAttempts != 0)
                 {
-                    var firstMessage = await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
-                    await hts.AutoReact(cachedHighlightedMessage.HighlightBoard, aliases, ogMessage.Reactions, firstMessage);
+                    var firstMessage =
+                        await loggingChannel.GetMessageAsync(cachedHighlightedMessage.HighlightMessageIds[0]);
+                    await hts.AutoReact(cachedHighlightedMessage.HighlightBoard, aliases, ogMessage.Reactions,
+                        firstMessage);
                 }
             }
 
@@ -222,11 +229,14 @@ public class ModSpoilerService(
                 .Has(requiredPerms))
             {
                 _ = interactive.DelayedSendMessageAndDeleteAsync(channel, deleteDelay: TimeSpan.FromSeconds(15),
-                    text: $"Bot does not have {requiredPerms.Humanize(LetterCasing.Title)} permission in <#{channel.Id}>.");
+                    text:
+                    $"Bot does not have {requiredPerms.Humanize(LetterCasing.Title)} permission in <#{channel.Id}>.");
                 return;
             }
 
-            var message = reaction.Message.IsSpecified ? reaction.Message.Value : await reaction.Channel.GetMessageAsync(reaction.MessageId);
+            var message = reaction.Message.IsSpecified
+                ? reaction.Message.Value
+                : await reaction.Channel.GetMessageAsync(reaction.MessageId);
 
             var modContextQuestionMsg =
                 await channel.SendMessageAsync(
@@ -265,17 +275,15 @@ public class ModSpoilerService(
             }
 
             var spoilerContext = contextMsg.Value.Content == "0" ? "" : contextMsg.Value.Content;
-
-            if (QuotingHelpers.TryParseEmote(botConfig.LoadingEmote, out var waitEmote))
-            {
-                await contextMsg.Value.AddReactionAsync(waitEmote);
-            }
             
-            var spoilerAttempt = await SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, context, spoilerContext);
+            await contextMsg.Value.AddReactionAsync(emotes.Loading);
 
-            if (waitEmote != null)
+            var spoilerAttempt = await SpoilerMessage(message, guildConfig.SpoilerBotAutoDeleteOriginal, context,
+                spoilerContext);
+
+            if (emotes.Loading != null)
             {
-                await contextMsg.Value.RemoveReactionAsync(waitEmote, client.CurrentUser.Id);
+                await contextMsg.Value.RemoveReactionAsync(emotes.Loading, client.CurrentUser.Id);
             }
 
             if (!spoilerAttempt.wasSuccess)

@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Sdk Name="DotNet.ReproducibleBuilds.Isolated" Version="1.2.25" />
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <Copyright>enonibobble</Copyright>
+        <Authors>enonibobble</Authors>
+        <Company>enonibobble</Company>
+
+        <RepositoryUrl>https://github.com/SquirrelKiev/Asahi.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+
+        <SourceControlInformationFeatureSupported>true</SourceControlInformationFeatureSupported>
+
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Discord.Net.Rest" Version="3.17.4" />
+    </ItemGroup>
+
+</Project>

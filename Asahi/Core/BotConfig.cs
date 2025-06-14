@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using Asahi.Modules;
+using Serilog;
 using Serilog.Events;
 using YamlDotNet.Serialization;
 
@@ -18,25 +19,7 @@ public class BotConfig
                               "Example Sqlite string: Data Source=data/BotDb.db")]
     public string DatabaseConnectionString { get; set; } = "Data Source=data/BotDb.db";
 
-    [YamlMember(Description = "The reaction to put on prefix commands when an unhandled error occurs. Will only appear on prefix commands.")]
-    public string ErrorEmote { get; set; } = "❓";
-
-    public string LoadingEmote { get; set; } = "🤔";
-
-    public string PixivEmote { get; set; } = "🎨";
-    
-    public string TwitterEmote { get; set; } = "🐦";
-    
-    public string BaraagEmote { get; set; } = "🎨";
-    
-    public string ArcaLiveEmote { get; set; } = "🎨";
-
-    public string FanboxCcEmote { get; set; } = "📦";
-    
-    public string FantiaEmote { get; set; } = "🎨";
-    
-
-    public string MisskeyEmote { get; set; } = "🎨";
+    public BotEmotesSpecification Emotes { get; set; } = new();
 
     [YamlMember(Description = "A set of UserIDs. Users in this set will be granted permission to use commands to manage the instance itself.\n" +
                               "This is a dangerous permission to grant.")]

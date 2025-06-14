@@ -1,7 +1,7 @@
-﻿using Asahi.Database.Models;
+﻿using Asahi.BotEmoteManagement;
+using Asahi.Database.Models;
 using Asahi.Database.Models.Rss;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Asahi.Database;
 
@@ -32,6 +32,8 @@ public class BotDbContext(DbContextOptions<BotDbContext> contextOptions) : DbCon
     public DbSet<BirthdayEntry> Birthdays { get; set; }
 
     public DbSet<FeedListener> RssFeedListeners { get; set; }
+    
+    public DbSet<InternalCustomEmoteTracking> InternalCustomEmoteTracking { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

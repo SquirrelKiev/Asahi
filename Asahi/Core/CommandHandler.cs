@@ -15,10 +15,10 @@ public class CommandHandler(
     InteractionService interactionService,
     CommandService commandService,
     DiscordSocketClient client,
-    BotConfig botConfig,
     IServiceProvider services,
     IDbContextFactory<BotDbContext> dbService,
     InteractiveService interactiveService,
+    BotEmoteService emotes,
     ILogger<CommandHandler> logger
 )
 {
@@ -44,7 +44,7 @@ public class CommandHandler(
 
     #region Prefix Command Handling
 
-    protected async Task MessageReceived(SocketMessage msg)
+    private async Task MessageReceived(SocketMessage msg)
     {
         if (msg.Author.IsBot)
             return;
@@ -62,7 +62,7 @@ public class CommandHandler(
         }
     }
 
-    protected async Task RunCommand(SocketUserMessage userMessage)
+    private async Task RunCommand(SocketUserMessage userMessage)
     {
         var prefix = await GetPrefix(userMessage.Channel);
 
@@ -98,7 +98,7 @@ public class CommandHandler(
     }
 
     // TODO: Cache!!!
-    protected async Task<string> GetPrefix(ISocketMessageChannel? channel)
+    private async Task<string> GetPrefix(ISocketMessageChannel? channel)
     {
         var prefix = GuildConfig.DefaultPrefix;
 
@@ -113,7 +113,7 @@ public class CommandHandler(
         return prefix;
     }
 
-    protected async Task CommandExecuted(
+    private async Task CommandExecuted(
         Optional<CommandInfo> cmdInfoOpt,
         ICommandContext ctx,
         Discord.Commands.IResult res
@@ -152,18 +152,7 @@ public class CommandHandler(
                 }
                 else
                 {
-                    IEmote emote;
-
-                    if (Emote.TryParse(botConfig.ErrorEmote, out var result))
-                    {
-                        emote = result;
-                    }
-                    else
-                    {
-                        emote = Emoji.Parse(botConfig.ErrorEmote);
-                    }
-
-                    await ctx.Message.AddReactionAsync(emote);
+                    await ctx.Message.AddReactionAsync(emotes.Error);
                 }
             }
             catch (Exception e)
@@ -272,7 +261,7 @@ public class CommandHandler(
         interactionService.InteractionExecuted += InteractionExecuted;
     }
 
-    protected async Task InitializeCommandService(params Assembly[] assemblies)
+    private async Task InitializeCommandService(params Assembly[] assemblies)
     {
         foreach (var assembly in assemblies)
         {

@@ -1,12 +1,11 @@
 ﻿using Asahi.Modules.Models;
 using Humanizer;
 using JetBrains.Annotations;
-using Newtonsoft.Json;
 
 namespace Asahi.Modules
 {
     [Inject(ServiceLifetime.Singleton)]
-    public class DanbooruUtility(BotConfig config, IDanbooruApi danbooruApi)
+    public class DanbooruUtility(BotConfig config, BotEmoteService emotes, IDanbooruApi danbooruApi)
     {
         private static readonly HashSet<string> KnownImageExtensions =
         [
@@ -97,7 +96,8 @@ namespace Asahi.Modules
 
             if (!string.IsNullOrWhiteSpace(post.Source))
             {
-                if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) && sourceUri.Scheme is "http" or "https")
+                if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
+                    sourceUri.Scheme is "http" or "https")
                 {
                     IEmote? buttonEmote = null;
                     string platformName = sourceUri.Host;
@@ -105,23 +105,20 @@ namespace Asahi.Modules
 
                     if (post.PixivId != null)
                     {
-                        if (QuotingHelpers.TryParseEmote(config.PixivEmote, out var pixivEmote))
-                            buttonEmote = pixivEmote;
+                        buttonEmote = emotes.Pixiv;
 
                         sourceUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
                         platformName = "Pixiv";
                     }
                     else if (CompiledRegex.TwitterStatusIdRegex().IsMatch(post.Source))
                     {
-                        if (QuotingHelpers.TryParseEmote(config.TwitterEmote, out var emote))
-                            buttonEmote = emote;
+                        buttonEmote = emotes.Twitter;
 
                         platformName = "Twitter";
                     }
                     else if (CompiledRegex.IsAFanboxLinkRegex().IsMatch(post.Source))
                     {
-                        if (QuotingHelpers.TryParseEmote(config.FanboxCcEmote, out var emote))
-                            buttonEmote = emote;
+                        buttonEmote = emotes.FanboxCc;
 
                         platformName = "fanbox.cc";
                     }
@@ -129,30 +126,26 @@ namespace Asahi.Modules
                     {
                         var id = CompiledRegex.FantiaPostIdRegex().Match(post.Source).Groups[1].Value;
 
-                        if (QuotingHelpers.TryParseEmote(config.FantiaEmote, out var emote))
-                            buttonEmote = emote;
+                        buttonEmote = emotes.Fantia;
 
                         sourceUrl = $"https://fantia.jp/posts/{id}";
                         platformName = "Fantia";
                     }
                     else if (sourceUri.Host is "baraag.net")
                     {
-                        if (QuotingHelpers.TryParseEmote(config.BaraagEmote, out var emote))
-                            buttonEmote = emote;
+                        buttonEmote = emotes.Baraag;
 
                         platformName = "Baraag";
                     }
                     else if (sourceUri.Host is "arca.live")
                     {
-                        if (QuotingHelpers.TryParseEmote(config.ArcaLiveEmote, out var emote))
-                            buttonEmote = emote;
+                        buttonEmote = emotes.ArcaLive;
 
                         platformName = "arca.live";
                     }
                     else if (CompiledRegex.MisskeyNoteRegex().IsMatch(post.Source))
                     {
-                        if (QuotingHelpers.TryParseEmote(config.MisskeyEmote, out var emote))
-                            buttonEmote = emote;
+                        buttonEmote = emotes.Misskey;
 
                         platformName = "Misskey.io";
                     }
@@ -269,8 +262,8 @@ namespace Asahi.Modules
 
             if (danbooruFallback.Error != null)
                 throw danbooruFallback.Error;
-            
-            if(!danbooruFallback.IsSuccessful || danbooruFallback.Content.IsMostLikelyUseless(sourceUrl))
+
+            if (!danbooruFallback.IsSuccessful || danbooruFallback.Content.IsMostLikelyUseless(sourceUrl))
                 return null;
 
             var variant = new DanbooruVariantWithExtras(new DanbooruVariant()

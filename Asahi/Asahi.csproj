@@ -42,7 +42,6 @@
         <PackageReference Include="Fluid.Core" Version="2.24.0"/>
         <PackageReference Include="Humanizer.Core" Version="2.14.1"/>
         <PackageReference Include="JetBrains.Annotations" Version="2024.3.0"/>
-        <PackageReference Include="JsonApiSerializer" Version="2.0.1"/>
         <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0"/>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0"/>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.14.0"/>
@@ -73,10 +72,18 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Asahi.Analyzers\Asahi.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\Asahi.BotEmoteManagement.SourceGenerators\Asahi.BotEmoteManagement.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
         <ProjectReference Include="..\Asahi.CodeFixers\Asahi.CodeFixers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+        <ProjectReference Include="..\Asahi.BotEmoteManagement\Asahi.BotEmoteManagement.csproj" />
         <ProjectReference Include="..\Asahi.Database.Migrations.Postgres\Asahi.Database.Migrations.Postgres.csproj"/>
         <ProjectReference Include="..\Asahi.Database.Migrations.Sqlite\Asahi.Database.Migrations.Sqlite.csproj"/>
         <ProjectReference Include="..\Asahi.Database\Asahi.Database.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="data\InternalEmotes\*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

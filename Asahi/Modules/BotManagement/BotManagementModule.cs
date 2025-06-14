@@ -26,6 +26,7 @@ namespace Asahi.Modules.BotManagement;
 public class BotManagementModule(
     IDbContextFactory<BotDbContext> dbService,
     CustomStatusService css,
+    BotEmoteService emotes,
     BotConfig config,
     InteractiveService interactive,
     DiscordSocketClient client,
@@ -85,7 +86,7 @@ public class BotManagementModule(
         await context.SaveChangesAsync();
 
         await FollowupAsync(
-            $"{config.LoadingEmote} Setting status on bot... (May take a minute depending on current rate-limits)"
+            $"{emotes.Loading} Setting status on bot... (May take a minute depending on current rate-limits)"
         );
 
         await css.UpdateStatus();
@@ -269,6 +270,13 @@ public class BotManagementModule(
         await FollowupAsync(
             $"```json\n{JsonConvert.SerializeObject(botWideConfig.TrustedIds, Formatting.Indented)}\n```"
         );
+    }
+    
+    [TrustedMember(TrustedUserPerms.None)]
+    [SlashCommand("list-emotes", "Lists the internal emotes the bot uses.")]
+    public async Task ListEmotes()
+    {
+        await RespondAsync(emotes.EmotesModel.ToString());
     }
 
     [TrustedMember(TrustedUserPerms.BotGuildManagementPerms)]
@@ -708,7 +716,7 @@ public class {className}(IInteractionContext context)
         }
 
         await ModifyOriginalResponseAsync(
-            new MessageContents($"{config.LoadingEmote} Compiling...")
+            new MessageContents($"{emotes.Loading} Compiling...")
         );
 
         logger.LogTrace("Parsing.");
@@ -755,7 +763,7 @@ public class {className}(IInteractionContext context)
 
         logger.LogTrace("Loading assembly.");
         await ModifyOriginalResponseAsync(
-            new MessageContents($"{config.LoadingEmote} Executing...")
+            new MessageContents($"{emotes.Loading} Executing...")
         );
 
         ms.Seek(0, SeekOrigin.Begin);
