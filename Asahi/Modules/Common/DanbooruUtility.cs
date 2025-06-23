@@ -99,56 +99,7 @@ namespace Asahi.Modules
                 if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
                     sourceUri.Scheme is "http" or "https")
                 {
-                    IEmote? buttonEmote = null;
-                    string platformName = sourceUri.Host;
-                    string sourceUrl = post.Source;
-
-                    if (post.PixivId != null)
-                    {
-                        buttonEmote = emotes.Pixiv;
-
-                        sourceUrl = $"https://www.pixiv.net/artworks/{post.PixivId}";
-                        platformName = "Pixiv";
-                    }
-                    else if (CompiledRegex.TwitterStatusIdRegex().IsMatch(post.Source))
-                    {
-                        buttonEmote = emotes.Twitter;
-
-                        platformName = "Twitter";
-                    }
-                    else if (CompiledRegex.IsAFanboxLinkRegex().IsMatch(post.Source))
-                    {
-                        buttonEmote = emotes.FanboxCc;
-
-                        platformName = "fanbox.cc";
-                    }
-                    else if (CompiledRegex.FantiaPostIdRegex().IsMatch(post.Source))
-                    {
-                        var id = CompiledRegex.FantiaPostIdRegex().Match(post.Source).Groups[1].Value;
-
-                        buttonEmote = emotes.Fantia;
-
-                        sourceUrl = $"https://fantia.jp/posts/{id}";
-                        platformName = "Fantia";
-                    }
-                    else if (sourceUri.Host is "baraag.net")
-                    {
-                        buttonEmote = emotes.Baraag;
-
-                        platformName = "Baraag";
-                    }
-                    else if (sourceUri.Host is "arca.live")
-                    {
-                        buttonEmote = emotes.ArcaLive;
-
-                        platformName = "arca.live";
-                    }
-                    else if (CompiledRegex.MisskeyNoteRegex().IsMatch(post.Source))
-                    {
-                        buttonEmote = emotes.Misskey;
-
-                        platformName = "Misskey.io";
-                    }
+                    var (platformName, sourceUrl, buttonEmote) = GetPlatformButtonInfo(post, sourceUri);
 
                     if (platformName.Length >= 80)
                         platformName = "Source";
@@ -171,6 +122,37 @@ namespace Asahi.Modules
 
             if (videoUrl != null)
                 yield return new MessageContents(videoUrl);
+        }
+
+        private (string PlatformName, string SourceUrl, IEmote? Emote) GetPlatformButtonInfo(DanbooruPost post,
+            Uri sourceUri)
+        {
+            if (post.PixivId != null)
+                return ("Pixiv", $"https://www.pixiv.net/artworks/{post.PixivId}", emotes.Pixiv);
+
+            if (CompiledRegex.IsAFanboxLinkRegex().IsMatch(post.Source))
+                return ("fanbox.cc", post.Source, emotes.FanboxCc);
+
+            var fantiaMatch = CompiledRegex.FantiaPostIdRegex().Match(post.Source);
+            if (fantiaMatch.Success)
+            {
+                var id = fantiaMatch.Groups[1].Value;
+                return ("Fantia", $"https://fantia.jp/posts/{id}", emotes.Fantia);
+            }
+
+            const string www = "www.";
+            var host = sourceUri.Host.StartsWith(www) ? sourceUri.Host[www.Length..] : sourceUri.Host;
+            
+            return host switch
+            {
+                "x.com" or "twitter.com" => ("Twitter", post.Source, emotes.Twitter),
+                "misskey.io" => ("Misskey.io", post.Source, emotes.Misskey),
+                "baraag.net" => ("Baraag", post.Source, emotes.Baraag),
+                "arca.live" => ("arca.live", post.Source, emotes.ArcaLive),
+                "weibo.com" => ("Weibo", post.Source, emotes.Weibo),
+                "yande.re" => ("yande.re", post.Source, emotes.YandereIcon),
+                _ => (sourceUri.Host, post.Source, null)
+            };
         }
 
         [Pure]
