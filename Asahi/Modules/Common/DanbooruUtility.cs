@@ -139,7 +139,7 @@ namespace Asahi.Modules
                 var id = fantiaMatch.Groups[1].Value;
                 return ("Fantia", $"https://fantia.jp/posts/{id}", emotes.Fantia);
             }
-
+            
             const string www = "www.";
             var host = sourceUri.Host.StartsWith(www) ? sourceUri.Host[www.Length..] : sourceUri.Host;
             
@@ -150,8 +150,9 @@ namespace Asahi.Modules
                 "baraag.net" => ("Baraag", post.Source, emotes.Baraag),
                 "arca.live" => ("arca.live", post.Source, emotes.ArcaLive),
                 "weibo.com" => ("Weibo", post.Source, emotes.Weibo),
-                "yande.re" => ("yande.re", post.Source, emotes.YandereIcon),
-                _ => (sourceUri.Host, post.Source, null)
+                "yande.re" => ("yande.re", post.Source, emotes.YandereLogo),
+                "bilibili.com" or "t.bilibili.com" => ("bilibili", post.Source, emotes.Bilibili),
+                _ => (host, post.Source, null)
             };
         }
 
