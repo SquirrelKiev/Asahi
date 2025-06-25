@@ -140,8 +140,7 @@ namespace Asahi.Modules
                 return ("Fantia", $"https://fantia.jp/posts/{id}", emotes.Fantia);
             }
             
-            const string www = "www.";
-            var host = sourceUri.Host.StartsWith(www) ? sourceUri.Host[www.Length..] : sourceUri.Host;
+            var host = sourceUri.Host.StartsWith("www.") ? sourceUri.Host[4..] : sourceUri.Host;
             
             return host switch
             {
