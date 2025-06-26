@@ -1751,8 +1751,6 @@ public class HighlightsModule(
     [MessageCommand("Force to highlights")]
     public async Task SpoilerMessageSlash(IMessage message)
     {
-        await DeferAsync(true);
-
         await using var context = await dbService.CreateDbContextAsync();
 
         var boards = await context
@@ -1761,37 +1759,32 @@ public class HighlightsModule(
 
         if (boards.Length == 0)
         {
-            await FollowupAsync("No boards!");
+            await RespondAsync("No boards!", ephemeral: true);
             return;
         }
 
-        var eb = new PageBuilder()
+        var eb = new EmbedBuilder()
             .WithTitle("Force to highlights")
             .WithDescription("Select the board to send the highlight to.");
 
-        var selBuilder = new SelectionBuilder<string>()
-            .AddUser(Context.User)
-            .WithOptions(boards.Select(x => x.Name).ToArray())
-            .WithInputType(InputType.SelectMenus)
-            .WithSelectionPage(eb)
-            .Build();
+        var componentId = Guid.NewGuid().ToString();
+        var components = new ComponentBuilder()
+            .WithSelectMenu(componentId, boards.Select(x =>
+                new SelectMenuOptionBuilder(x.Name, x.Name)).ToList());
 
-        var selectionResponse = await interactive.SendSelectionAsync(
-            selBuilder,
-            Context.Interaction,
-            TimeSpan.FromMinutes(1),
-            InteractionResponseType.DeferredChannelMessageWithSource
-        );
+        await RespondAsync(embed: eb.Build(), components: components.Build(), ephemeral: true);
+        
+        var selectionResponse = await interactive.NextMessageComponentAsync(
+            x => x.Data.CustomId == componentId && x.User.Id == Context.User.Id,
+            timeout: TimeSpan.FromMinutes(1));
 
-        var isSuccess = selectionResponse.IsSuccess;
-
-        if (!isSuccess)
+        if (!selectionResponse.IsSuccess)
         {
             await ModifyOriginalResponseAsync(new MessageContents("Timed out."));
             return;
         }
 
-        var selectedBoardStr = selectionResponse.Value;
+        var selectedBoardStr = selectionResponse.Value.Data.Values.First();
 
         var board = boards.FirstOrDefault(x => x.Name == selectedBoardStr);
 
@@ -1846,7 +1839,7 @@ public class HighlightsModule(
         [Summary(description: NameDescription)]
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
-            string name,
+        string name,
         [Summary(description: "The channel to check the threshold of.")]
         [ChannelTypes(
             ChannelType.Text,
@@ -1856,9 +1849,9 @@ public class HighlightsModule(
             ChannelType.Voice,
             ChannelType.Stage
         )]
-            IGuildChannel channel,
+        IGuildChannel channel,
         [Summary(description: "Whether to continue logging to the console or not.")]
-            bool stopLogging = false
+        bool stopLogging = false
     )
     {
         loggingShouldStop = stopLogging;

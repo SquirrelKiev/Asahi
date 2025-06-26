@@ -205,6 +205,7 @@ public class CommandHandler(
 
     private async Task InteractionCreated(SocketInteraction arg)
     {
+        // note to future me - IsManaged message override is forbidden, breaks other stuff
         var ctx = new SocketInteractionContext(client, arg);
 
         var handledByInteractiveService = interactiveService.IsManaged(ctx.Interaction) ||
