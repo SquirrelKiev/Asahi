@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using Asahi.Database.Models.Rss;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +29,7 @@ public class FeedsProcessorService(
         stateTracker.PruneMissingFeeds(feeds.Select(x => x.FeedUrl));
     }
 
-    public async Task ProcessFeed(string feedSource, FeedListener[] listeners, FeedsStateTracker stateTracker)
+    private async Task ProcessFeed(string feedSource, FeedListener[] listeners, FeedsStateTracker stateTracker)
     {
         var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
 
@@ -36,6 +37,8 @@ public class FeedsProcessorService(
             return;
 
         await feedProvider.Initialize(feedSource);
+        
+        stateTracker.UpdateDefaultFeedTitleCache(feedSource, feedProvider.DefaultFeedTitle);
 
         if (TryCacheInitialArticlesIfNecessary(feedSource, feedProvider, stateTracker))
         {

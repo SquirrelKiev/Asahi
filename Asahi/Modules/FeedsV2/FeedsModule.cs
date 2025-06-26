@@ -73,7 +73,7 @@ public class FeedsModule(
 
     [SlashCommand("rm-feed", "Removes a feed.")]
     public async Task RemoveFeedSlash(
-        [Summary(description: "The ID of the feed to remove.")] [Autocomplete<FeedAutocomplete>]
+        [Summary(description: "The ID of the feed to remove.")] [Autocomplete(typeof(FeedAutocomplete))]
         uint id)
     {
         await CommonFeedConfig(id, options =>
@@ -225,10 +225,12 @@ public class FeedsModule(
         var pages = feeds
             .Select(x =>
             {
-                if (string.IsNullOrWhiteSpace(x.FeedTitle))
+                var feedTitle = x.FeedTitle ?? stateTracker.GetCachedDefaultFeedTitle(x.FeedUrl);
+                
+                if (string.IsNullOrWhiteSpace(feedTitle))
                     return $"* ({x.Id}) <#{x.ChannelId}> - {x.FeedUrl}";
 
-                return $"* ({x.Id}) <#{x.ChannelId}> - [{x.FeedTitle}]({x.FeedUrl})";
+                return $"* ({x.Id}) <#{x.ChannelId}> - [{feedTitle}]({x.FeedUrl})";
             })
             .Chunk(20).Select(x => new PageBuilder().WithColor(roleColor)
                 .WithDescription(string.Join('\n', x)));

@@ -1,12 +1,13 @@
-﻿using System.Diagnostics.Contracts;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics.Contracts;
 
 namespace Asahi.Modules.FeedsV2;
 
 [Inject(ServiceLifetime.Singleton)]
 public class FeedsStateTracker
 {
-    private readonly Dictionary<int, HashSet<int>> seenArticleHashes = [];
-    private readonly Dictionary<int, string> feedSourceToTitleDictionary = [];
+    private readonly ConcurrentDictionary<int, HashSet<int>> seenArticleHashes = [];
+    private readonly ConcurrentDictionary<int, string> feedSourceToTitleDictionary = [];
 
     [Pure]
     public bool IsFirstTimeSeeingFeedSource(string feedSource)
@@ -24,17 +25,29 @@ public class FeedsStateTracker
 
         return !articleHashes.Contains(articleId);
     }
+    
+    [Pure]
+    public string GetBestDefaultFeedTitle(string feedSource)
+    {
+        return GetCachedDefaultFeedTitle(feedSource) ?? feedSource;
+    }
+
+    [Pure]
+    public string? GetCachedDefaultFeedTitle(string feedSource)
+    {
+        return feedSourceToTitleDictionary.TryGetValue(feedSource.GetHashCode(), out var title) ? title : null;
+    }
+    
+    public void UpdateDefaultFeedTitleCache(string feedSource, string title)
+    {
+        feedSourceToTitleDictionary[feedSource.GetHashCode()] = title;
+    }
 
     public void MarkArticleAsRead(string feedSource, int articleId)
     {
         var feedSourceHashCode = feedSource.GetHashCode();
         
-        if (!seenArticleHashes.TryGetValue(feedSourceHashCode, out var articleHashes))
-        {
-            articleHashes = new HashSet<int>();
-            
-            seenArticleHashes.Add(feedSourceHashCode, articleHashes);
-        }
+        var articleHashes = seenArticleHashes.GetOrAdd(feedSourceHashCode, _ => []);
 
         articleHashes.Add(articleId);
     }
@@ -64,7 +77,7 @@ public class FeedsStateTracker
 
         foreach (var feedHash in obsoleteFeeds)
         {
-            seenArticleHashes.Remove(feedHash);
+            seenArticleHashes.Remove(feedHash, out _);
         }
     }
 }

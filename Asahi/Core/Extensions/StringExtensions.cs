@@ -12,7 +12,7 @@ public static class StringExtensions
             return str;
         }
 
-        var subString = str[..limit].Trim();
+        var subString = str[..(limit - 1)].Trim();
 
         if (!useWordBoundary) return subString + '…';
 

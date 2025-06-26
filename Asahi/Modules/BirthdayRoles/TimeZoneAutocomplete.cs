@@ -9,8 +9,6 @@ public class TimeZoneAutocomplete : AutocompleteHandler
     public override Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context, IAutocompleteInteraction autocompleteInteraction,
         IParameterInfo parameter, IServiceProvider services)
     {
-        var logger = services.GetRequiredService<ILogger<TimeZoneAutocomplete>>();
-
         var ids = TzdbDateTimeZoneSource.Default.GetIds();
 
         var userInput = autocompleteInteraction.Data.Current.Value.ToString()!.ToLowerInvariant().Replace(' ', '_');
