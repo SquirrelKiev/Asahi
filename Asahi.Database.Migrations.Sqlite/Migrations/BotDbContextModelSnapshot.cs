@@ -34,7 +34,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasKey("EmoteKey");
 
-                    b.ToTable("InternalCustomEmoteTracking", (string)null);
+                    b.ToTable("InternalCustomEmoteTracking");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayConfig", b =>
@@ -98,7 +98,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasKey("Name", "GuildId");
 
-                    b.ToTable("BirthdayConfigs", (string)null);
+                    b.ToTable("BirthdayConfigs");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayEntry", b =>
@@ -131,7 +131,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("BirthdayConfigName", "BirthdayConfigGuildId");
 
-                    b.ToTable("Birthdays", (string)null);
+                    b.ToTable("Birthdays");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.BotWideConfig", b =>
@@ -160,7 +160,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasKey("BotId");
 
-                    b.ToTable("BotWideConfig", (string)null);
+                    b.ToTable("BotWideConfig");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedHighlightedMessage", b =>
@@ -209,7 +209,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("CachedHighlightedMessages", (string)null);
+                    b.ToTable("CachedHighlightedMessages");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedMessageReaction", b =>
@@ -234,7 +234,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("HighlightedMessageId");
 
-                    b.ToTable("CachedMessageReactions", (string)null);
+                    b.ToTable("CachedMessageReactions");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CachedUserRole", b =>
@@ -252,7 +252,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("CachedUsersRoles", (string)null);
+                    b.ToTable("CachedUsersRoles");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.CustomCommand", b =>
@@ -280,7 +280,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("CustomCommands", (string)null);
+                    b.ToTable("CustomCommands");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.EmoteAlias", b =>
@@ -299,7 +299,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasKey("GuildId", "EmoteName");
 
-                    b.ToTable("EmoteAliases", (string)null);
+                    b.ToTable("EmoteAliases");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.GuildConfig", b =>
@@ -344,7 +344,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("DefaultBirthdayConfigName", "DefaultBirthdayConfigGuildId");
 
-                    b.ToTable("GuildConfigs", (string)null);
+                    b.ToTable("GuildConfigs");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightBoard", b =>
@@ -389,6 +389,9 @@ namespace Asahi.Migrations.Sqlite.Migrations
                     b.Property<ulong>("HighlightsMuteRole")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IgnoreLockedChannels")
+                        .HasColumnType("INTEGER");
+
                     b.Property<ulong>("LoggingChannelId")
                         .HasColumnType("INTEGER");
 
@@ -397,7 +400,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasKey("GuildId", "Name");
 
-                    b.ToTable("HighlightBoards", (string)null);
+                    b.ToTable("HighlightBoards");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.HighlightThreshold", b =>
@@ -442,7 +445,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("HighlightThreshold", (string)null);
+                    b.ToTable("HighlightThreshold");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.LoggingChannelOverride", b =>
@@ -463,7 +466,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("LoggingChannelOverride", (string)null);
+                    b.ToTable("LoggingChannelOverride");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.Rss.FeedListener", b =>
@@ -504,7 +507,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("RssFeedListeners", (string)null);
+                    b.ToTable("RssFeedListeners");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.SpoilerChannel", b =>
@@ -527,7 +530,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("HighlightBoardGuildId", "HighlightBoardName");
 
-                    b.ToTable("SpoilerChannel", (string)null);
+                    b.ToTable("SpoilerChannel");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.Trackable", b =>
@@ -559,7 +562,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
                     b.HasIndex("AssignableRole", "MonitoredRole")
                         .IsUnique();
 
-                    b.ToTable("Trackables", (string)null);
+                    b.ToTable("Trackables");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.TrackedUser", b =>
@@ -579,7 +582,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
                     b.HasIndex("TrackableId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("TrackedUsers", (string)null);
+                    b.ToTable("TrackedUsers");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.TrustedId", b =>
@@ -603,7 +606,7 @@ namespace Asahi.Migrations.Sqlite.Migrations
 
                     b.HasIndex("BotWideConfigBotId");
 
-                    b.ToTable("TrustedIds", (string)null);
+                    b.ToTable("TrustedIds");
                 });
 
             modelBuilder.Entity("Asahi.Database.Models.BirthdayEntry", b =>

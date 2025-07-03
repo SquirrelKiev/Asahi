@@ -57,6 +57,8 @@ public class HighlightBoard
 
     public int AutoReactMaxAttempts { get; set; } = 1;
     public int AutoReactMaxReactions { get; set; } = 1;
+    
+    public bool IgnoreLockedChannels { get; set; } = true;
 
     public AutoReactEmoteChoicePreference AutoReactEmoteChoicePreference { get; set; } = AutoReactEmoteChoicePreference.ReactionsDescendingPopularity;
 

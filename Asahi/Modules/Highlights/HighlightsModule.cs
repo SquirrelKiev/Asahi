@@ -853,6 +853,27 @@ public class HighlightsModule(
         );
     }
 
+    [SlashCommand(
+        "set-locked-channels-handling",
+        "Sets how locked channels are handled. (Channels with @everyone send message perms disabled)."
+    )]
+    public Task SetIgnoreLockedChannelsSlash(
+        [Summary(description: NameDescription)]
+        [MaxLength(HighlightBoard.MaxNameLength)]
+        [Autocomplete(typeof(HighlightsNameAutocomplete))]
+        string name, 
+        [Summary(description: "Whether to ignore locked channels.")]
+        bool ignoreLockedChannels)
+    {
+        return CommonBoardConfig(
+            name,
+            async options =>
+            {
+                options.board.IgnoreLockedChannels = ignoreLockedChannels;
+                return new ConfigChangeResult(true, ignoreLockedChannels ? "Ignoring locked channels." : "Locked channels will not be ignored.");
+            });
+    }
+
     #endregion
 
     #region Filtered Channels
@@ -1773,7 +1794,7 @@ public class HighlightsModule(
                 new SelectMenuOptionBuilder(x.Name, x.Name)).ToList());
 
         await RespondAsync(embed: eb.Build(), components: components.Build(), ephemeral: true);
-        
+
         var selectionResponse = await interactive.NextMessageComponentAsync(
             x => x.Data.CustomId == componentId && x.User.Id == Context.User.Id,
             timeout: TimeSpan.FromMinutes(1));

@@ -634,25 +634,6 @@ public class HighlightsTrackingService(
         if (!shouldAddNewHighlight)
             return;
 
-        var everyoneChannelPermissions = PermissionsForRole(channel);
-
-        bool hasPerms =
-            parentChannel is IForumChannel
-                ? everyoneChannelPermissions.SendMessagesInThreads
-                : everyoneChannelPermissions.SendMessages;
-
-        if (threadChannel is not null)
-        {
-            if (threadChannel.IsLocked)
-                hasPerms = false;
-        }
-
-        if (!hasPerms && forcedBoards.Length == 0)
-        {
-            logger.LogDebug("Channel locked, skipping!");
-            return;
-        }
-
         if (
             await context.HighlightBoards.AnyAsync(x =>
                 x.LoggingChannelId == parentChannel.Id
@@ -672,6 +653,19 @@ public class HighlightsTrackingService(
         var nonUniqueReactions = msg.Reactions.Sum(x => x.Value.ReactionCount);
 
         var messageAge = (DateTimeOffset.UtcNow - msg.Timestamp).TotalSeconds;
+        
+        var everyoneChannelPermissions = PermissionsForRole(channel);
+
+        var isChannelLocked =
+            parentChannel is IForumChannel
+                ? !everyoneChannelPermissions.SendMessagesInThreads
+                : !everyoneChannelPermissions.SendMessages;
+
+        if (threadChannel is not null)
+        {
+            if (threadChannel.IsLocked)
+                isChannelLocked = true;
+        }
 
         var boardsQuery = context.HighlightBoards.Where(x =>
             x.GuildId == channel.Guild.Id
@@ -690,7 +684,7 @@ public class HighlightsTrackingService(
                                 : x.FilteredChannels.Any(y => y == channel.Id)
                         )
                     )
-                ) || forcedBoards.Contains(x.Name)
+                ) && (!x.IgnoreLockedChannels || !isChannelLocked) || forcedBoards.Contains(x.Name)
             )
             && !x.HighlightedMessages.Any(y =>
                 y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)
@@ -739,7 +733,7 @@ public class HighlightsTrackingService(
                     if (forcedBoards.Contains(board.Name))
                         return true;
 
-                    if (!hasPerms)
+                    if (!isChannelLocked)
                         return false;
 
                     var threshold = messageThresholds.GetOrCreate(
