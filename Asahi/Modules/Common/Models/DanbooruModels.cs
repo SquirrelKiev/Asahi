@@ -199,7 +199,7 @@ public class DanbooruSource
 
     public bool IsMostLikelyUseless(string inputUrl)
     {
-        return PageUrl == null || ImageUrls.Count <= 1 || ImageUrls[0] == inputUrl;
+        return PageUrl == null || ImageUrls.Count < 1 || ImageUrls[0] == inputUrl;
     }
 }
 

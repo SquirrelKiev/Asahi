@@ -205,7 +205,6 @@ namespace Asahi.Modules
         [Pure, PublicAPI]
         public async ValueTask<DanbooruVariantWithExtras?> GetFallbackVariant(string sourceUrl)
         {
-            // TODO: Migrate this to use https://danbooru.donmai.us/source
             var fallbackPixivMatch = CompiledRegex.ValidPixivDirectImageUrlRegex().Match(sourceUrl);
             if (fallbackPixivMatch.Success)
             {
