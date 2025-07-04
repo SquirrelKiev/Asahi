@@ -26,7 +26,7 @@ public class HighlightsModule(
     InteractiveService interactive
 ) : HighlightsSubmodule(dbService)
 {
-    public const string NameDescription = "The name of the board.";
+    private const string NameDescription = "The name of the board.";
 
     #region Create/Remove board
 
@@ -866,11 +866,10 @@ public class HighlightsModule(
         bool ignoreLockedChannels)
     {
         return CommonBoardConfig(
-            name,
-            async options =>
+            name, options =>
             {
                 options.board.IgnoreLockedChannels = ignoreLockedChannels;
-                return new ConfigChangeResult(true, ignoreLockedChannels ? "Ignoring locked channels." : "Locked channels will not be ignored.");
+                return Task.FromResult(new ConfigChangeResult(true, ignoreLockedChannels ? "Ignoring locked channels." : "Locked channels will not be ignored."));
             });
     }
 
@@ -1559,7 +1558,7 @@ public class HighlightsModule(
         [MaxLength(HighlightBoard.MaxNameLength)]
         [Autocomplete(typeof(HighlightsNameAutocomplete))]
         string name,
-        [Summary(description: "The threshold to edit.")]
+        [Summary(description: "The threshold to get.")]
         [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
         [MaxLength(20)]
         string overrideId
@@ -1586,7 +1585,7 @@ public class HighlightsModule(
 
         var board = await context
             .HighlightBoards.Include(x => x.Thresholds)
-            .FirstOrDefaultAsync(x => x.Name == name);
+            .FirstOrDefaultAsync(x => x.GuildId == Context.Guild.Id && x.Name == name);
 
         if (board == null)
         {
