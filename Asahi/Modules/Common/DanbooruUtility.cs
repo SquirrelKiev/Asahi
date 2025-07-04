@@ -133,6 +133,9 @@ namespace Asahi.Modules
             if (CompiledRegex.IsAFanboxLinkRegex().IsMatch(post.Source))
                 return ("fanbox.cc", post.Source, emotes.FanboxCc);
 
+            if (CompiledRegex.IsALofterLinkRegex().IsMatch(post.Source))
+                return ("Lofter", post.Source, emotes.Lofter);
+
             var fantiaMatch = CompiledRegex.FantiaPostIdRegex().Match(post.Source);
             if (fantiaMatch.Success)
             {
@@ -149,8 +152,9 @@ namespace Asahi.Modules
                 "baraag.net" => ("Baraag", post.Source, emotes.Baraag),
                 "arca.live" => ("arca.live", post.Source, emotes.ArcaLive),
                 "weibo.com" => ("Weibo", post.Source, emotes.Weibo),
-                "yande.re" => ("yande.re", post.Source, emotes.YandereLogo),
+                "yande.re" or "files.yande.re" => ("yande.re", post.Source, emotes.YandereLogo),
                 "bilibili.com" or "t.bilibili.com" => ("bilibili", post.Source, emotes.Bilibili),
+                "youtube.com" or "youtu.be" => ("YouTube", post.Source, emotes.YouTube),
                 _ => (host, post.Source, null)
             };
         }

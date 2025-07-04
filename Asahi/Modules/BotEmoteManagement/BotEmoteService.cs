@@ -15,7 +15,9 @@ public record BotEmotesSpecification
     public IEmoteSpecification ArcaLive { get; init; } = new InternalCustomEmoteSpecification("ArcaLiveLogo");
     public IEmoteSpecification Weibo { get; init; } = new InternalCustomEmoteSpecification("WeiboLogo");
     public IEmoteSpecification YandereLogo { get; init; } = new InternalCustomEmoteSpecification("YandereLogo"); // https://yande.re/
-    public IEmoteSpecification Bilibili { get; init; } = new InternalCustomEmoteSpecification("BilibiliLogo"); // https://yande.re/
+    public IEmoteSpecification Bilibili { get; init; } = new InternalCustomEmoteSpecification("BilibiliLogo");
+    public IEmoteSpecification Lofter { get; init; } = new InternalCustomEmoteSpecification("LofterLogo");
+    public IEmoteSpecification YouTube { get; init; } = new InternalCustomEmoteSpecification("YouTubeLogo");
 }
 
 [GenerateEmoteManager(typeof(BotEmotesSpecification))]

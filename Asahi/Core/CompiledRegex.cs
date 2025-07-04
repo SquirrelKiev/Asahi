@@ -36,6 +36,9 @@ public static partial class CompiledRegex
 
     [GeneratedRegex(@"^https:\/\/[a-zA-Z0-9]+\.fanbox.cc")]
     public static partial Regex IsAFanboxLinkRegex();
+    
+    [GeneratedRegex(@"^https:\/\/[a-zA-Z0-9]+\.lofter.com")]
+    public static partial Regex IsALofterLinkRegex();
 
     [GeneratedRegex(@"^https:\/\/c\.fantia\.jp/uploads/post/file/(\d+)\/")]
     public static partial Regex FantiaPostIdRegex();
