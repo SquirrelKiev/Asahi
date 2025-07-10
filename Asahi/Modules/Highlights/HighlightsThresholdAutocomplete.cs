@@ -31,7 +31,7 @@ public class HighlightsThresholdAutocomplete : AutocompleteHandler
         foreach (var threshold in board.Thresholds)
         {
             var name = (await context.Guild.GetChannelAsync(threshold.OverrideId))?.Name;
-            name = name == null ? (await context.Client.GetGuildAsync(threshold.OverrideId)).Name : $"#{name}";
+            name = name == null ? (await context.Client.GetGuildAsync(threshold.OverrideId))?.Name : $"#{name}";
 
             results.Add(new AutocompleteResult($"{name}", threshold.OverrideId.ToString()));
         }
