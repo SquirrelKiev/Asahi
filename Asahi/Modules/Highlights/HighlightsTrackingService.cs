@@ -8,7 +8,6 @@ using Discord.Rest;
 using Discord.Webhook;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +22,7 @@ namespace Asahi.Modules.Highlights;
 // per channel? maybe limit to like 5 tasks in case Discord gets mad? something to look into if the need arises.
 //
 // one day ill be bothered enough to write tests for this but mocking everything needed for this sounds like hell
+// rewriting this in such a way that it's easier to test while also not doing redundant IO also sounds like hell
 [Inject(ServiceLifetime.Singleton)]
 public class HighlightsTrackingService(
     IDbContextFactory<BotDbContext> dbService,
@@ -440,7 +440,8 @@ public class HighlightsTrackingService(
         public IEmote emote = emote;
     }
 
-    // god I love linq
+    // I love linq
+    // its such a mess tho lmao
     private async Task CheckMessageForHighlights(
         ulong messageId,
         ITextChannel channel,

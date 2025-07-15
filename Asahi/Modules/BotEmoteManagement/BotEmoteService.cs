@@ -6,6 +6,9 @@ public record BotEmotesSpecification
 {
     public IEmoteSpecification Error { get; init; } = new UnicodeEmoteSpecification("❓");
     public IEmoteSpecification Loading { get; init; } = new InternalCustomEmoteSpecification("Loading");
+    public IEmoteSpecification Refresh { get; init; } = new InternalCustomEmoteSpecification("RefreshIcon");
+    
+    // Logos
     public IEmoteSpecification Pixiv { get; init; } = new InternalCustomEmoteSpecification("PixivLogo");
     public IEmoteSpecification Twitter { get; init; } = new InternalCustomEmoteSpecification("TwitterLogo");
     public IEmoteSpecification Baraag { get; init; } = new InternalCustomEmoteSpecification("BaraagLogo");

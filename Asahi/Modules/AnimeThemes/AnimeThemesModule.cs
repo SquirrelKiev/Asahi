@@ -13,6 +13,7 @@ public class AnimeThemesModule(
     InteractiveService interactive,
     BotConfig config,
     BotEmoteService emotes,
+    BotEmoteService emoteService,
     ILogger<AnimeThemesModule> logger) : BotModule
 {
     private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(5);
@@ -39,7 +40,7 @@ public class AnimeThemesModule(
             .WithUsers(Context.User)
             .WithPageCount(state.CurrentStep.TotalPages)
             .WithUserState(state)
-            .WithPageFactory(p => AnimeThemesPaginatorGenerator.GeneratePage(p, config))
+            .WithPageFactory(p => AnimeThemesPaginatorGenerator.GeneratePage(p, config, emoteService))
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
             .Build();
@@ -117,6 +118,37 @@ public class AnimeThemesModule(
             selectedVideo);
 
         await ChangeStep(state, paginator, interaction, newStep);
+    }
+    
+    [ComponentInteraction(AnimeThemesPaginatorGenerator.RefreshVideoId)]
+    public async Task RefreshVideoButton()
+    {
+        var interaction = (IComponentInteraction)Context.Interaction;
+        if (!interactive.TryGetComponentPaginator(interaction.Message, out var paginator) ||
+            !paginator.CanInteract(interaction.User))
+        {
+            await DeferAsync();
+            return;
+        }
+
+        var state = paginator.GetUserState<AnimeThemesSelectionState>();
+
+        if (state.CurrentStep is not AnimeThemesSelectionState.VideoDisplayState videoDisplayState)
+        {
+            logger.LogWarning(
+                "RefreshVideoButton called when not in video display state, falling back to anime selection.");
+
+            state.CurrentStep = new AnimeThemesSelectionState.AnimeSelectionState(state.CurrentStep.SearchResponse);
+
+            paginator.PageCount = state.CurrentStep.TotalPages;
+            paginator.SetPage(0);
+
+            await paginator.RenderPageAsync(interaction);
+            return;
+        }
+
+        videoDisplayState.CacheBustingMeasures = true;
+        await paginator.RenderPageAsync(interaction);
     }
 
     [ComponentInteraction(AnimeThemesPaginatorGenerator.BackButtonId)]

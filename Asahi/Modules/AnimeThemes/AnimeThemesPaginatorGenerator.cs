@@ -11,15 +11,16 @@ public static class AnimeThemesPaginatorGenerator
     public const string AnimeChoiceButtonId = "atv3-ac:";
     public const string ThemeChoiceButtonId = "atv3-tc:";
     public const string BackButtonId = "atv3-tc:";
+    public const string RefreshVideoId = "atv3-rv:";
 
-    public static IPage GeneratePage(IComponentPaginator paginator, BotConfig config)
+    public static IPage GeneratePage(IComponentPaginator paginator, BotConfig config, BotEmoteService emoteService)
     {
         var state = paginator.GetUserState<AnimeThemesSelectionState>();
 
         return state.CurrentStep switch
         {
             AnimeThemesSelectionState.VideoDisplayState videoDisplayState =>
-                GenerateVideoDisplayPage(paginator, videoDisplayState),
+                GenerateVideoDisplayPage(paginator, videoDisplayState, emoteService),
 
             AnimeThemesSelectionState.ThemeSelectionState themeSelectionState =>
                 GenerateThemeSelectionPage(paginator, themeSelectionState, config),
@@ -63,7 +64,8 @@ public static class AnimeThemesPaginatorGenerator
 
         container.WithSeparator(new SeparatorBuilder().WithIsDivider(true).WithSpacing(SeparatorSpacingSize.Small));
         container.WithActionRow(new ActionRowBuilder().WithComponents(chunk.Select((x, i) =>
-            new ButtonBuilder((i + 1).ToString(), $"{AnimeChoiceButtonId}{x.id}", ButtonStyle.Success, isDisabled: p.ShouldDisable()))));
+            new ButtonBuilder((i + 1).ToString(), $"{AnimeChoiceButtonId}{x.id}", ButtonStyle.Success,
+                isDisabled: p.ShouldDisable()))));
 
         container.WithSeparator(new SeparatorBuilder().WithIsDivider(false).WithSpacing(SeparatorSpacingSize.Small));
 
@@ -114,7 +116,8 @@ public static class AnimeThemesPaginatorGenerator
 
             container.WithSection(titleSectionComponent);
 
-            foreach (var entryChunk in theme.animeThemeEntries.Chunk(4)) // 4 buttons is where discord seems to wrap buttons
+            foreach (var entryChunk in
+                     theme.animeThemeEntries.Chunk(4)) // 4 buttons is where discord seems to wrap buttons
             {
                 var actionRow = new ActionRowBuilder();
 
@@ -154,13 +157,18 @@ public static class AnimeThemesPaginatorGenerator
     }
 
     private static IPage GenerateVideoDisplayPage(IComponentPaginator p,
-        AnimeThemesSelectionState.VideoDisplayState state)
+        AnimeThemesSelectionState.VideoDisplayState state, BotEmoteService emoteService)
     {
-        
+        var videoUrl = state.SelectedVideo.link;
+        if (state.CacheBustingMeasures)
+        {
+            videoUrl += $"?cache-bust={Guid.NewGuid()}";
+        }
+
         var videoEmbedComponents = new ComponentBuilderV2().WithComponents([
             new ContainerBuilder().WithComponents([
                 new MediaGalleryBuilder([
-                    new MediaGalleryItemProperties(new UnfurledMediaItemProperties(state.SelectedVideo.link),
+                    new MediaGalleryItemProperties(new UnfurledMediaItemProperties(videoUrl),
                         isSpoiler: state.SelectedThemeEntry.spoiler.GetValueOrDefault())
                 ]),
                 new SectionBuilder()
@@ -169,9 +177,19 @@ public static class AnimeThemesPaginatorGenerator
                             $"{ThemeToString(state.SelectedTheme, $" • {state.SelectedThemeEntry}")}\nfrom *{state.SelectedAnime.name}*")
                     ]).WithAccessory(
                         new ThumbnailBuilder(new UnfurledMediaItemProperties(GetAnimeThumbnail(state.SelectedAnime)))),
+                // new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
+                //     .WithAccessory(new ButtonBuilder("Refresh Video", RefreshVideoId, ButtonStyle.Secondary,
+                //         emote: emoteService.Refresh, isDisabled: p.ShouldDisable())),
                 new SeparatorBuilder().WithIsDivider(true).WithSpacing(SeparatorSpacingSize.Large),
-                new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
-                    .WithAccessory(new ButtonBuilder("Back", BackButtonId, ButtonStyle.Danger, isDisabled: p.ShouldDisable())),
+                new ActionRowBuilder().WithComponents([
+                    new ButtonBuilder("Back", BackButtonId, ButtonStyle.Danger,
+                        isDisabled: p.ShouldDisable()),
+                    new ButtonBuilder("Refresh Video", RefreshVideoId, ButtonStyle.Secondary,
+                        emote: emoteService.Refresh, isDisabled: p.ShouldDisable()),
+                ])
+                // new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
+                // .WithAccessory(new ButtonBuilder("Back", BackButtonId, ButtonStyle.Danger,
+                // isDisabled: p.ShouldDisable())),
             ])
         ]);
 
@@ -252,5 +270,6 @@ public class AnimeThemesSelectionState(SearchResponse searchResponse)
         VideoResource SelectedVideo) : ThemeSelectionState(SearchResponse, SelectedAnime)
     {
         public override int TotalPages => 1;
+        public bool CacheBustingMeasures = false;
     }
 }
