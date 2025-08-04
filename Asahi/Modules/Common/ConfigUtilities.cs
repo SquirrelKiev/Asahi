@@ -59,7 +59,7 @@ public struct ConfigChangeResult(bool wasSuccess, string message, Embed[] extraE
     {
     }
 
-    public ConfigChangeResult(IReadOnlyList<IError> errorReasons) : this(false, $"Failed. {string.Join("; ", errorReasons.Select(x => $"`{x}`"))}", [])
+    public ConfigChangeResult(List<IError> errorReasons) : this(false, $"Failed. {string.Join("; ", errorReasons.Select(x => $"`{x}`"))}", [])
     {
     }
 }

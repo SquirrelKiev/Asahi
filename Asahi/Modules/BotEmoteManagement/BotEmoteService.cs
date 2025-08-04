@@ -8,14 +8,7 @@ public record BotEmotesSpecification
     public IEmoteSpecification Loading { get; init; } = new InternalCustomEmoteSpecification("Loading");
     public IEmoteSpecification Refresh { get; init; } = new InternalCustomEmoteSpecification("RefreshIcon");
     
-    // Danbooru ratings
-    public IEmoteSpecification DanbooruGeneral { get; init; } = new InternalCustomEmoteSpecification("RatingGeneral");
-    public IEmoteSpecification DanbooruSuggestive { get; init; } = new InternalCustomEmoteSpecification("RatingSuggestive");
-    public IEmoteSpecification DanbooruQuestionable { get; init; } = new InternalCustomEmoteSpecification("RatingQuestionable");
-    public IEmoteSpecification DanbooruExplicit { get; init; } = new InternalCustomEmoteSpecification("RatingExplicit");
-    
     // Logos
-    public IEmoteSpecification DanbooruLogo { get; init; } = new InternalCustomEmoteSpecification("DanbooruLogo");
     public IEmoteSpecification Pixiv { get; init; } = new InternalCustomEmoteSpecification("PixivLogo");
     public IEmoteSpecification Twitter { get; init; } = new InternalCustomEmoteSpecification("TwitterLogo");
     public IEmoteSpecification Baraag { get; init; } = new InternalCustomEmoteSpecification("BaraagLogo");

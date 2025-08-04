@@ -176,11 +176,14 @@ public static class Startup
             .AddSingleton<InteractiveService>()
             .AddSingleton<OverrideTrackerService>()
             .AddSingleton<IClock>(SystemClock.Instance)
-            .AddSingleton<AboutService>();
+            .AddSingleton<AboutService>()
+            .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)
+            .ConfigureHttpClient(x => AddDefaultProperties(x));
 
         serviceCollection.AddHttpClient("rss")
             .ConfigureHttpClient(x =>
             {
+                AddDefaultProperties(x);
                 x.MaxResponseContentBufferSize = 8000000;
 
                 x.DefaultRequestHeaders.Accept.Clear();
@@ -190,28 +193,23 @@ public static class Startup
                 x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/xml"));
             });
 
-        serviceCollection.ConfigureHttpClientDefaults(x =>
-            x.RemoveAllLoggers().ConfigureHttpClient(client =>
-            {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent);
-                client.Timeout = TimeSpan.FromSeconds(10);
-            }));
+        serviceCollection.ConfigureHttpClientDefaults(x => x.RemoveAllLoggers());
 
         // Anime themes says its implementing the JSON:API spec, but it's so different lol
         // new JsonApiSerializerSettings()
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 
         serviceCollection.AddRefitClient<IAnimeThemesClient>(settings)
-            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.animethemes.moe/"));
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.animethemes.moe/"));
 
         serviceCollection.AddRefitClient<ITatsuClient>(settings)
-            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.tatsu.gg/v1"));
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://api.tatsu.gg/v1"));
 
         serviceCollection.AddRefitClient<IRedditApi>(settings)
-            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://www.reddit.com"));
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://www.reddit.com"));
 
         serviceCollection.AddRefitClient<IDanbooruApi>(settings)
-            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://danbooru.donmai.us"));
+            .ConfigureHttpClient(x => AddDefaultProperties(x).BaseAddress = new Uri("https://danbooru.donmai.us"));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
@@ -238,5 +236,11 @@ public static class Startup
         serviceCollection.AddHostedService<BotService>();
 
         return serviceCollection;
+
+        HttpClient AddDefaultProperties(HttpClient client)
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent);
+            return client;
+        }
     }
 }

@@ -2,7 +2,9 @@
 using Asahi.Database.Models;
 using Discord.Interactions;
 using Discord.WebSocket;
+using FluentResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 
 namespace Asahi.Modules.Welcome;

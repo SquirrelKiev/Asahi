@@ -1,23 +1,7 @@
-﻿using System.Runtime.Serialization;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+﻿using Newtonsoft.Json;
 
 namespace Asahi.Modules.Models;
 
-[JsonConverter(typeof(StringEnumConverter))]
-public enum DanbooruRating
-{
-    [EnumMember(Value = "g")]
-    General,
-    [EnumMember(Value = "s")]
-    Suggestive,
-    [EnumMember(Value = "q")]
-    Questionable,
-    [EnumMember(Value = "e")]
-    Explicit
-}
-
-// should the indexes here be longs?
 public class DanbooruPost
 {
     [JsonProperty("id")]
@@ -48,7 +32,7 @@ public class DanbooruPost
     public string TagStringMeta { get; set; } = null!;
 
     [JsonProperty("rating")]
-    public DanbooruRating Rating { get; set; }
+    public string? Rating { get; set; }
 
     [JsonProperty("parent_id")]
     public int? ParentId { get; set; }

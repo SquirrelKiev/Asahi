@@ -13,7 +13,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             get => "Dummy feed";
         }
         
-        public Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
+        public Task<bool> Initialize(string feedSource)
         {
             Debug.Assert(feedSource == "dummy:");
 
@@ -28,7 +28,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             return Enumerable.Range(Math.Max(0, initializeCallCount-5), initializeCallCount);
         }
 
-        public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor, string? feedTitle, CancellationToken cancellationToken = default) =>
+        public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor, string? feedTitle) =>
             GetArticleMessageContentSync(articleId, embedColor, feedTitle).ToAsyncEnumerable();
 
         private IEnumerable<MessageContents> GetArticleMessageContentSync(int articleId, Color embedColor, string? feedTitle)
