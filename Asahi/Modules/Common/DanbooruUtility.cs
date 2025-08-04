@@ -25,6 +25,118 @@ namespace Asahi.Modules
         ];
 
         [Pure]
+        public async Task<MessageComponent> GetComponent(DanbooruPost post, Color embedColor, string feedTitle, CancellationToken cancellationToken = default)
+        {
+            var components = new ComponentBuilderV2();
+
+            var container = new ContainerBuilder();
+
+            // Do I do this as the same color as the rating icon?
+            container.WithAccentColor(embedColor);
+
+            // "Post by Author" text
+            string? authors = null;
+            if (!string.IsNullOrWhiteSpace(post.TagStringArtist))
+            {
+                authors = post.TagStringArtist.Split(' ')
+                    .Select(x => $"[{x}](https://danbooru.donmai.us/posts?tags={x})")
+                    .HumanizeStringArrayWithTruncation();
+            }
+
+            var characters = post.TagStringCharacter.Split(' ').Select(x => x.Titleize())
+                .HumanizeStringArrayWithTruncation();
+
+            var postUrl = $"https://danbooru.donmai.us/posts/{post.Id}/";
+            var titleString = $"### {emotes.DanbooruLogo} [{(string.IsNullOrWhiteSpace(characters) ? "Post" : characters)}]({postUrl})";
+            if (!string.IsNullOrWhiteSpace(authors))
+            {
+                titleString += $" by {authors}";
+            }
+
+            // Source Button
+            var button = CreatePlatformButton(post);
+
+            if (button != null)
+            {
+                container.WithSection(new SectionBuilder().WithTextDisplay(titleString).WithAccessory(button));
+            }
+            else
+            {
+                container.WithTextDisplay(titleString);
+            }
+
+            // Image/Video/Whatever
+            var bestVariant = await GetBestVariantOrFallback(post, cancellationToken);
+            if (bestVariant != null)
+            {
+                if (bestVariant.ExtraUrls == null)
+                {
+                    container.WithMediaGallery([bestVariant.Variant.Url]);
+                }
+                else
+                {
+                    container.WithMediaGallery([bestVariant.Variant.Url, ..bestVariant.ExtraUrls]);
+                }
+            }
+
+            // Footer
+            container.WithSeparator();
+
+            var ratingEmote = post.Rating switch
+            {
+                DanbooruRating.General => emotes.DanbooruGeneral,
+                DanbooruRating.Suggestive => emotes.DanbooruSuggestive,
+                DanbooruRating.Questionable => emotes.DanbooruQuestionable,
+                DanbooruRating.Explicit => emotes.DanbooruExplicit,
+                _ => throw new NotSupportedException()
+            };
+
+            var footerText = $"-# ";
+
+            footerText += $"{ratingEmote} {post.MediaAsset.FileExtension.ToUpperInvariant()} file";
+            if (bestVariant != null && bestVariant.Variant.Type != "original")
+            {
+                footerText +=
+                    $" • embed is {bestVariant.Variant.Type} quality ({bestVariant.Variant.FileExt.ToUpperInvariant()} file)\n-# ";
+            }
+            else
+            {
+                footerText += " • ";
+            }
+            
+            footerText += $"{feedTitle} • <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
+
+            container.WithTextDisplay(footerText);
+
+            components.WithContainer(container);
+
+            return components.Build();
+        }
+
+        private ButtonBuilder? CreatePlatformButton(DanbooruPost post)
+        {
+            if (!string.IsNullOrWhiteSpace(post.Source))
+            {
+                if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
+                    sourceUri.Scheme is "http" or "https")
+                {
+                    var (platformName, sourceUrl, buttonEmote) = GetPlatformButtonInfo(post, sourceUri);
+
+                    if (platformName.Length >= 80)
+                        platformName = "Source";
+
+                    if (sourceUrl.Length < 512)
+                    {
+                        return new ButtonBuilder(platformName, url: sourceUrl, emote: buttonEmote,
+                            style: ButtonStyle.Link);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        [Pure, Obsolete($"Use {nameof(GetComponent)} instead.")]
         public async IAsyncEnumerable<MessageContents> GetEmbeds(DanbooruPost post, Color embedColor,
             string feedTitle)
         {
@@ -142,9 +254,9 @@ namespace Asahi.Modules
                 var id = fantiaMatch.Groups[1].Value;
                 return ("Fantia", $"https://fantia.jp/posts/{id}", emotes.Fantia);
             }
-            
+
             var host = sourceUri.Host.StartsWith("www.") ? sourceUri.Host[4..] : sourceUri.Host;
-            
+
             return host switch
             {
                 "x.com" or "twitter.com" => ("Twitter", post.Source, emotes.Twitter),
@@ -192,18 +304,18 @@ namespace Asahi.Modules
         }
 
         [Pure]
-        public ValueTask<DanbooruVariantWithExtras?> GetBestVariantOrFallback(DanbooruPost post)
+        public ValueTask<DanbooruVariantWithExtras?> GetBestVariantOrFallback(DanbooruPost post, CancellationToken cancellationToken = default)
         {
             var bestVariant = GetBestVariant(post.MediaAsset.Variants);
 
             if (bestVariant != null)
                 return ValueTask.FromResult<DanbooruVariantWithExtras?>(new DanbooruVariantWithExtras(bestVariant));
 
-            return GetFallbackVariant(post.Source);
+            return GetFallbackVariant(post.Source, cancellationToken);
         }
 
         [Pure, PublicAPI]
-        public async ValueTask<DanbooruVariantWithExtras?> GetFallbackVariant(string sourceUrl)
+        public async ValueTask<DanbooruVariantWithExtras?> GetFallbackVariant(string sourceUrl, CancellationToken cancellationToken = default)
         {
             var fallbackPixivMatch = CompiledRegex.ValidPixivDirectImageUrlRegex().Match(sourceUrl);
             if (fallbackPixivMatch.Success)
@@ -243,7 +355,7 @@ namespace Asahi.Modules
                 }
             }
 
-            var danbooruFallback = await danbooruApi.GetSource(sourceUrl);
+            var danbooruFallback = await danbooruApi.GetSource(sourceUrl, cancellationToken);
 
             if (danbooruFallback.Error != null)
                 throw danbooruFallback.Error;

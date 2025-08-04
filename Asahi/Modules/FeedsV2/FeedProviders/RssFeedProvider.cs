@@ -2,6 +2,7 @@
 using CodeHollow.FeedReader;
 using CodeHollow.FeedReader.Feeds;
 using CodeHollow.FeedReader.Parser;
+using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders;
 
@@ -22,13 +23,13 @@ public class RssFeedProvider(HttpClient client) : IFeedProvider
     protected Feed? genericFeed;
 
     // TODO: This should use FeedReader.ParseFeedUrlsFromHtml() or smth
-    public async Task<bool> Initialize(string feedSource)
+    public async Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
     {
         FeedSource = feedSource;
 
-        var req = await client.GetAsync(feedSource);
+        var req = await client.GetAsync(feedSource, cancellationToken);
 
-        var reqContent = await req.Content.ReadAsStringAsync();
+        var reqContent = await req.Content.ReadAsStringAsync(cancellationToken);
         
         var feed = FeedReader.ReadFromString(reqContent);
 
@@ -46,7 +47,7 @@ public class RssFeedProvider(HttpClient client) : IFeedProvider
         return genericFeed.Items.Select(x => x.Id.GetHashCode());
     }
 
-    public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor, string? feedTitle)
+    public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor, string? feedTitle, CancellationToken cancellationToken = default)
     {
         Debug.Assert(genericFeed != null);
         
