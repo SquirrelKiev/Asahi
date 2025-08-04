@@ -25,7 +25,8 @@ namespace Asahi.Modules
         ];
 
         [Pure]
-        public async Task<MessageComponent> GetComponent(DanbooruPost post, Color embedColor, string feedTitle, CancellationToken cancellationToken = default)
+        public async Task<MessageComponent> GetComponent(DanbooruPost post, Color embedColor, string feedTitle,
+            CancellationToken cancellationToken = default)
         {
             var components = new ComponentBuilderV2();
 
@@ -46,42 +47,6 @@ namespace Asahi.Modules
             var characters = post.TagStringCharacter.Split(' ').Select(x => x.Titleize())
                 .HumanizeStringArrayWithTruncation();
 
-            var postUrl = $"https://danbooru.donmai.us/posts/{post.Id}/";
-            var titleString = $"### {emotes.DanbooruLogo} [{(string.IsNullOrWhiteSpace(characters) ? "Post" : characters)}]({postUrl})";
-            if (!string.IsNullOrWhiteSpace(authors))
-            {
-                titleString += $" by {authors}";
-            }
-
-            // Source Button
-            var button = CreatePlatformButton(post);
-
-            if (button != null)
-            {
-                container.WithSection(new SectionBuilder().WithTextDisplay(titleString).WithAccessory(button));
-            }
-            else
-            {
-                container.WithTextDisplay(titleString);
-            }
-
-            // Image/Video/Whatever
-            var bestVariant = await GetBestVariantOrFallback(post, cancellationToken);
-            if (bestVariant != null)
-            {
-                if (bestVariant.ExtraUrls == null)
-                {
-                    container.WithMediaGallery([bestVariant.Variant.Url]);
-                }
-                else
-                {
-                    container.WithMediaGallery([bestVariant.Variant.Url, ..bestVariant.ExtraUrls]);
-                }
-            }
-
-            // Footer
-            container.WithSeparator();
-
             var ratingEmote = post.Rating switch
             {
                 DanbooruRating.General => emotes.DanbooruGeneral,
@@ -91,24 +56,83 @@ namespace Asahi.Modules
                 _ => throw new NotSupportedException()
             };
 
-            var footerText = $"-# ";
+            var postUrl = $"https://danbooru.donmai.us/posts/{post.Id}/";
+            var titleString =
+                $"### {ratingEmote}  [{(string.IsNullOrWhiteSpace(characters) ? "Post" : characters)}]({postUrl})";
+            if (!string.IsNullOrWhiteSpace(authors))
+            {
+                titleString += $" by {authors}";
+            }
 
-            footerText += $"{ratingEmote} {post.MediaAsset.FileExtension.ToUpperInvariant()} file";
-            if (bestVariant != null && bestVariant.Variant.Type != "original")
-            {
-                footerText +=
-                    $" • embed is {bestVariant.Variant.Type} quality ({bestVariant.Variant.FileExt.ToUpperInvariant()} file)\n-# ";
-            }
-            else
-            {
-                footerText += " • ";
-            }
+            container.WithTextDisplay(titleString);
+            container.WithSeparator(isDivider: false);
+
+            // Image/Video/Whatever
             
-            footerText += $"{feedTitle} • <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
+            // TODO: better handling around failing to find a variant
+            var bestVariant = await GetBestVariantOrFallback(post, cancellationToken);
+            if (bestVariant != null)
+            {
+                var footerText = "";
 
-            container.WithTextDisplay(footerText);
+                footerText += $"{post.MediaAsset.FileExtension.ToUpperInvariant()} file";
+                if (bestVariant.Variant.Type != "original")
+                {
+                    footerText +=
+                        $" • embed is {bestVariant.Variant.Type} quality ({bestVariant.Variant.FileExt.ToUpperInvariant()} file)";
+                }
+                else
+                {
+                    footerText += " • ";
+                }
+
+                footerText += $"{feedTitle}";
+
+                // Will see if this is annoying or not
+                var shouldSpoiler = post.Rating is DanbooruRating.Explicit or DanbooruRating.Questionable;
+                if (bestVariant.ExtraUrls == null)
+                {
+                    container.WithMediaGallery([
+                        new MediaGalleryItemProperties(new UnfurledMediaItemProperties(bestVariant.Variant.Url),
+                            isSpoiler: shouldSpoiler, description: footerText)
+                    ]);
+                }
+                else
+                {
+                    container.WithMediaGallery([
+                        new MediaGalleryItemProperties(new UnfurledMediaItemProperties(bestVariant.Variant.Url),
+                            isSpoiler: shouldSpoiler, description: footerText),
+                        ..bestVariant.ExtraUrls.Select(x => new MediaGalleryItemProperties(new UnfurledMediaItemProperties(x)))
+                    ]);
+                }
+            }
+
+            // Footer
+            // container.WithSeparator();
+            //
+            // var footerText = $"-# ";
+            //
+            // footerText += $"{emotes.DanbooruLogo} {post.MediaAsset.FileExtension.ToUpperInvariant()} file";
+            // if (bestVariant != null && bestVariant.Variant.Type != "original")
+            // {
+            //     footerText +=
+            //         $" • embed is {bestVariant.Variant.Type} quality ({bestVariant.Variant.FileExt.ToUpperInvariant()} file)\n-# ";
+            // }
+            // else
+            // {
+            //     footerText += " • ";
+            // }
+            //
+            // footerText += $"{feedTitle} • <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
+            //
+            // container.WithTextDisplay(footerText);
+
+            // container.WithTextDisplay($"-# <t:{post.CreatedAt.ToUnixTimeSeconds()}>");
 
             components.WithContainer(container);
+
+            var sourceButton = CreatePlatformButton(post);
+            components.WithActionRow([sourceButton]);
 
             return components.Build();
         }
@@ -304,7 +328,8 @@ namespace Asahi.Modules
         }
 
         [Pure]
-        public ValueTask<DanbooruVariantWithExtras?> GetBestVariantOrFallback(DanbooruPost post, CancellationToken cancellationToken = default)
+        public ValueTask<DanbooruVariantWithExtras?> GetBestVariantOrFallback(DanbooruPost post,
+            CancellationToken cancellationToken = default)
         {
             var bestVariant = GetBestVariant(post.MediaAsset.Variants);
 
@@ -315,7 +340,8 @@ namespace Asahi.Modules
         }
 
         [Pure, PublicAPI]
-        public async ValueTask<DanbooruVariantWithExtras?> GetFallbackVariant(string sourceUrl, CancellationToken cancellationToken = default)
+        public async ValueTask<DanbooruVariantWithExtras?> GetFallbackVariant(string sourceUrl,
+            CancellationToken cancellationToken = default)
         {
             var fallbackPixivMatch = CompiledRegex.ValidPixivDirectImageUrlRegex().Match(sourceUrl);
             if (fallbackPixivMatch.Success)

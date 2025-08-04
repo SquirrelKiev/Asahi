@@ -7,7 +7,7 @@
    viewBox="0 0 16 16"
    version="1.1"
    id="svg1"
-   inkscape:export-filename="rating-s.png"
+   inkscape:export-filename="..\data\InternalEmotes\RatingSuggestive.png"
    inkscape:export-xdpi="3072"
    inkscape:export-ydpi="3072"
    inkscape:version="1.4 (86a8ad7, 2024-10-11)"
@@ -42,7 +42,7 @@
      inkscape:groupmode="layer"
      id="layer1">
     <rect
-       style="fill:#eab308;stroke-width:1.01082;fill-opacity:1"
+       style="fill:#ca8a04;stroke-width:1.01082;fill-opacity:1"
        id="rect1"
        width="16"
        height="16"
