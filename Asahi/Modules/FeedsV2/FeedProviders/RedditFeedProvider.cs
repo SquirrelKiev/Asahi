@@ -12,7 +12,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
         private SubredditPosts? posts;
 
-        public async Task<bool> Initialize(string feedSource)
+        public async Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
         {
             FeedSource = feedSource;
 
@@ -29,7 +29,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
             DefaultFeedTitle = $"r/{subreddit}";
 
-            posts = await redditApi.GetSubredditPosts(subreddit);
+            posts = await redditApi.GetSubredditPosts(subreddit, cancellationToken);
 
             return true;
         }
@@ -42,7 +42,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         }
 
         public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,
-            string? feedTitle)
+            string? feedTitle, CancellationToken cancellationToken = default)
         {
             Debug.Assert(posts != null);
             
