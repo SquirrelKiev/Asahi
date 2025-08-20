@@ -37,7 +37,7 @@ public class EmoteManagerGenerator : IIncrementalGenerator
         var result = GenerateCode(emoteManagerInfo);
         
         
-        context.AddSource($"{emoteManagerInfo.EmoteManagerClassName}.g.cs", SourceText.From(result, Encoding.UTF8));
+        context.AddSource($"{nameof(EmoteManagerGenerator)}.{emoteManagerInfo.Namespace}.{emoteManagerInfo.EmoteManagerClassName}.g.cs", SourceText.From(result, Encoding.UTF8));
     }
     
     private static string GenerateCode(EmoteManagerInfo emoteManagerInfo)
