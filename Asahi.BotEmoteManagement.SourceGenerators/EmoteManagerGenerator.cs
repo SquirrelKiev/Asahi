@@ -124,13 +124,13 @@ public class EmoteManagerGenerator : IIncrementalGenerator
             return null;
         }
 
+        token.ThrowIfCancellationRequested();
+
         var attributeData = managerSymbol.GetAttributes()
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == AttributeName);
 
         if (attributeData?.ConstructorArguments[0].Value is not INamedTypeSymbol specSymbol)
             return null;
-
-        token.ThrowIfCancellationRequested();
 
         var specMembers = specSymbol.GetMembers();
         var members = new List<string>(specMembers.Length);

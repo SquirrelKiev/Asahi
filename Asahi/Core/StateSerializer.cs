@@ -4,6 +4,8 @@ public static class StateSerializer
 {
     public static string SerializeObject<T>(T obj, string id)
     {
+        ArgumentNullException.ThrowIfNull(obj, nameof(obj));
+        
         return id + SerializeObject(obj);
     }
 

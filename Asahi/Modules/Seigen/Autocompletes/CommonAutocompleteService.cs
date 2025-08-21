@@ -7,7 +7,7 @@ namespace Asahi.Modules.Seigen;
 
 [Inject(ServiceLifetime.Singleton)]
 [Obsolete("Not maintained.")]
-public class CommonAutocompleteService(OverrideTrackerService overrideTracker)
+public class CommonAutocompleteService
 {
     public async Task<IEnumerable<AutocompleteResult>> GetAutoCompleteOptions(IInteractionContext context, ulong guildId, ulong userId)
     {
@@ -18,7 +18,7 @@ public class CommonAutocompleteService(OverrideTrackerService overrideTracker)
 
         var user = await guild.GetUserAsync(userId);
 
-        if (!user.GuildPermissions.Has(GuildPermission.ManageRoles) && !overrideTracker.HasOverride(userId))
+        if (!user.GuildPermissions.Has(GuildPermission.ManageRoles))
             return Enumerable.Empty<AutocompleteResult>();
 
         return guild.Roles.Select(x => new AutocompleteResult($"{x.Name} ({x.Id})", x.Id.ToString()));

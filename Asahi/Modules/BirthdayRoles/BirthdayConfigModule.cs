@@ -179,7 +179,7 @@ public class UserFacingBirthdayConfigModule(
                 new PaginatorButton("<", PaginatorAction.Backward, ButtonStyle.Secondary),
                 new PaginatorButton("Jump", PaginatorAction.Jump, ButtonStyle.Secondary),
                 new PaginatorButton(">", PaginatorAction.Forward, ButtonStyle.Secondary),
-                new PaginatorButton(ModulePrefixes.RED_BUTTON, null, "X", ButtonStyle.Danger),
+                new PaginatorButton(ModulePrefixes.RedButton, null, "X", ButtonStyle.Danger),
             ])
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
@@ -634,10 +634,10 @@ public class BirthdayConfigModule(
             DeniedForReasonPermissionsText = config.DeniedForReasonPermissionsText
         };
 
-        await RespondWithModalAsync($"{ModulePrefixes.BIRTHDAY_TEXT_MODAL}{config.Name}", modal);
+        await RespondWithModalAsync($"{ModulePrefixes.BirthdayTextModal}{config.Name}", modal);
     }
 
-    [ModalInteraction($"{ModulePrefixes.BIRTHDAY_TEXT_MODAL}*", true)]
+    [ModalInteraction($"{ModulePrefixes.BirthdayTextModal}*", true)]
     public async Task TextModal(string name, BirthdayTextModal modal)
     {
         await CommonBirthdayConfig(name, Context.Guild.Id, context =>

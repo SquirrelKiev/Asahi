@@ -3,7 +3,7 @@
 namespace Asahi.Modules.Seigen;
 
 [Inject(ServiceLifetime.Singleton)]
-public class TrackablesUtility(OverrideTrackerService overrideTracker)
+public class TrackablesUtility
 {
     public bool IsGuildValid(DiscordSocketClient client, ulong guildId, ulong userId)
     {
@@ -17,7 +17,7 @@ public class TrackablesUtility(OverrideTrackerService overrideTracker)
 
     public bool IsGuildValid(SocketGuild? guild, SocketGuildUser? user)
     {
-        return guild != null && user != null && (user.GuildPermissions.Has(GuildPermission.ManageGuild) || overrideTracker.HasOverride(user.Id));
+        return guild != null && user != null && (user.GuildPermissions.Has(GuildPermission.ManageGuild));
     }
 
     public bool IsGuildValidIgnoreNull(DiscordSocketClient client, ulong guildId, ulong userId)
@@ -36,6 +36,6 @@ public class TrackablesUtility(OverrideTrackerService overrideTracker)
         {
             return true;
         }
-        return user.GuildPermissions.Has(GuildPermission.ManageGuild) || overrideTracker.HasOverride(user.Id);
+        return user.GuildPermissions.Has(GuildPermission.ManageGuild);
     }
 }

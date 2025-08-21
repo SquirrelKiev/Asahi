@@ -174,7 +174,6 @@ public static class Startup
             .AddSingleton(new InteractiveConfig()
                 { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel })
             .AddSingleton<InteractiveService>()
-            .AddSingleton<OverrideTrackerService>()
             .AddSingleton<IClock>(SystemClock.Instance)
             .AddSingleton<AboutService>()
             .AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName)

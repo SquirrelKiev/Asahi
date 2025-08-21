@@ -16,7 +16,7 @@ public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IReadO
     /// <summary>
     /// The underlying <typeparamref name="T"/> array.
     /// </summary>
-    private readonly T[]? _array;
+    private readonly T[] _array;
 
     /// <summary>
     /// Creates a new <see cref="EquatableArray{T}"/> instance.
@@ -69,16 +69,18 @@ public readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IReadO
     /// <sinheritdoc/>
     IEnumerator<T> IEnumerable<T>.GetEnumerator()
     {
-        return ((IEnumerable<T>)(_array ?? Array.Empty<T>())).GetEnumerator();
+        return ((IEnumerable<T>)_array).GetEnumerator();
     }    
     
     /// <sinheritdoc/>
     IEnumerator IEnumerable.GetEnumerator()
     {
-        return ((IEnumerable<T>)(_array ?? Array.Empty<T>())).GetEnumerator();
+        return ((IEnumerable<T>)_array).GetEnumerator();
     }
+    
+    public T this[int index] => _array[index];
 
-    public int Count => _array?.Length ?? 0;
+    public int Count => _array.Length;
 
     /// <summary>
     /// Checks whether two <see cref="EquatableArray{T}"/> values are the same.
