@@ -212,7 +212,7 @@ public class CommandHandler(
                                           interactiveService.TriggersAnyFilter(ctx.Interaction);
 
         var componentIsNotRedButton = ctx.Interaction is not SocketMessageComponent component ||
-                                   component.Data.CustomId != ModulePrefixes.RED_BUTTON;
+                                   component.Data.CustomId != ModulePrefixes.RedButton;
             
         if (handledByInteractiveService && componentIsNotRedButton)
         {

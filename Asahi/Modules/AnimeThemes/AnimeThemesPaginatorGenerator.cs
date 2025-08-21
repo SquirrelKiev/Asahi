@@ -8,11 +8,6 @@ namespace Asahi.Modules.AnimeThemes;
 
 public static class AnimeThemesPaginatorGenerator
 {
-    public const string AnimeChoiceButtonId = "atv3-ac:";
-    public const string ThemeChoiceButtonId = "atv3-tc:";
-    public const string BackButtonId = "atv3-tc:";
-    public const string RefreshVideoId = "atv3-rv:";
-
     public static IPage GeneratePage(IComponentPaginator paginator, BotConfig config, BotEmoteService emoteService)
     {
         var state = paginator.GetUserState<AnimeThemesSelectionState>();
@@ -64,7 +59,8 @@ public static class AnimeThemesPaginatorGenerator
 
         container.WithSeparator(new SeparatorBuilder().WithIsDivider(true).WithSpacing(SeparatorSpacingSize.Small));
         container.WithActionRow(new ActionRowBuilder().WithComponents(chunk.Select((x, i) =>
-            new ButtonBuilder((i + 1).ToString(), $"{AnimeChoiceButtonId}{x.id}", ButtonStyle.Success,
+            new ButtonBuilder((i + 1).ToString(), StateSerializer.SerializeObject(x.id, ModulePrefixes.AnimeThemes.AnimeChoiceButtonId),
+                ButtonStyle.Success,
                 isDisabled: p.ShouldDisable()))));
 
         container.WithSeparator(new SeparatorBuilder().WithIsDivider(false).WithSpacing(SeparatorSpacingSize.Small));
@@ -125,7 +121,8 @@ public static class AnimeThemesPaginatorGenerator
                 {
                     var button = new ButtonBuilder(entry.ToString(),
                         StateSerializer.SerializeObject(new ThemeAndEntrySelection
-                            { SelectedEntry = entry.id, SelectedTheme = theme.id }, ThemeChoiceButtonId),
+                                { SelectedEntry = entry.id, SelectedTheme = theme.id },
+                            ModulePrefixes.AnimeThemes.ThemeChoiceButtonId),
                         ButtonStyle.Success, isDisabled: p.ShouldDisable());
 
                     actionRow.WithButton(button);
@@ -145,7 +142,8 @@ public static class AnimeThemesPaginatorGenerator
             .AddPreviousButton(p, "<", ButtonStyle.Secondary)
             .AddPageIndicatorButton(p)
             .AddNextButton(p, ">", ButtonStyle.Secondary)
-            .WithButton("Back", BackButtonId, ButtonStyle.Danger, disabled: p.ShouldDisable()));
+            .WithButton("Back", ModulePrefixes.AnimeThemes.BackButtonId, ButtonStyle.Danger,
+                disabled: p.ShouldDisable()));
 
         var components = new ComponentBuilderV2()
             .WithContainer(container);
@@ -182,9 +180,9 @@ public static class AnimeThemesPaginatorGenerator
                 //         emote: emoteService.Refresh, isDisabled: p.ShouldDisable())),
                 new SeparatorBuilder().WithIsDivider(true).WithSpacing(SeparatorSpacingSize.Large),
                 new ActionRowBuilder().WithComponents([
-                    new ButtonBuilder("Back", BackButtonId, ButtonStyle.Danger,
+                    new ButtonBuilder("Back", ModulePrefixes.AnimeThemes.BackButtonId, ButtonStyle.Danger,
                         isDisabled: p.ShouldDisable()),
-                    new ButtonBuilder("Refresh Video", RefreshVideoId, ButtonStyle.Secondary,
+                    new ButtonBuilder("Refresh Video", ModulePrefixes.AnimeThemes.RefreshVideoId, ButtonStyle.Secondary,
                         emote: emoteService.Refresh, isDisabled: p.ShouldDisable()),
                 ])
                 // new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
@@ -233,10 +231,11 @@ public static class AnimeThemesPaginatorGenerator
         return $"-# {theme.slug}{entryInformation}\n{songInfo}";
     }
 
+    [ProtoBuf.ProtoContract]
     public struct ThemeAndEntrySelection
     {
-        public required int SelectedTheme;
-        public required int SelectedEntry;
+        [ProtoBuf.ProtoMember(1)] public required int SelectedTheme;
+        [ProtoBuf.ProtoMember(2)] public required int SelectedEntry;
     }
 
     #endregion
