@@ -3,7 +3,7 @@
 namespace Asahi.Modules.About;
 
 [Inject(Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton)]
-public class AboutService(BotConfig botConfig, OverrideTrackerService overrideService)
+public class AboutService(BotConfig botConfig)
 {
     /// <remarks>About page is also used as a secret place for the manager stuff (like overrides). For more info, see <see cref="BotConfig.ManagerUserIds"/></remarks>
     ///
@@ -28,12 +28,6 @@ public class AboutService(BotConfig botConfig, OverrideTrackerService overrideSe
         }
 
         var components = new ComponentBuilder();
-
-        if (botConfig.ManagerUserIds.Contains(userId))
-        {
-            components.WithButton("Toggle override", ModulePrefixes.ABOUT_OVERRIDE_TOGGLE,
-                overrideService.HasOverride(userId) ? ButtonStyle.Danger : ButtonStyle.Success);
-        }
 
         components.WithRedButton();
 
@@ -60,10 +54,10 @@ public class AboutService(BotConfig botConfig, OverrideTrackerService overrideSe
 
     public static async Task<KeyValuePair<string, string>[]> GetPlaceholders(IDiscordClient client)
     {
-        return new KeyValuePair<string, string>[]
-        {
+        return
+        [
             new("guilds", (await client.GetGuildsAsync()).Count.ToString()),
             new("botUsername", client.CurrentUser.Username)
-        };
+        ];
     }
 }

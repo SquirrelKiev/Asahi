@@ -14,14 +14,20 @@ public class ModSpoilerModule(ModSpoilerService mss, IDbContextFactory<BotDbCont
     {
         public string Title => "Spoiler Message";
 
-        [ModalTextInput(ModulePrefixes.SPOILER_MODAL_CONTEXT_INPUT, maxLength: 500)]
+        [ModalTextInput(ModulePrefixes.SpoilerModalContextInput, maxLength: 500)]
         [RequiredInput(false)]
         public string? Context { get; set; } = null;
     }
 
+    [ProtoBuf.ProtoContract]
     public struct MessageReference
     {
-        public ulong guildId, channelId, messageId;
+        [ProtoBuf.ProtoMember(1)] 
+        public ulong GuildId;
+        [ProtoBuf.ProtoMember(2)] 
+        public ulong ChannelId;
+        [ProtoBuf.ProtoMember(3)] 
+        public ulong MessageId;
     }
 
     [MessageCommand("Spoiler Message")]
@@ -35,13 +41,13 @@ public class ModSpoilerModule(ModSpoilerService mss, IDbContextFactory<BotDbCont
 
         var messageRef = new MessageReference()
         {
-            guildId = channel.GuildId,
-            channelId = channel.Id,
-            messageId = message.Id
+            GuildId = channel.GuildId,
+            ChannelId = channel.Id,
+            MessageId = message.Id
         };
 
         await RespondWithModalAsync<SetContextModal>(StateSerializer.SerializeObject(messageRef,
-            ModulePrefixes.SPOILER_MODAL));
+            ModulePrefixes.SpoilerModal));
     }
 
     [SlashCommand("spoiler-emote", "Sets the reaction emote that mods use to mark a message as spoiler.")]
@@ -92,26 +98,26 @@ public class ModSpoilerModule(ModSpoilerService mss, IDbContextFactory<BotDbCont
         await FollowupAsync($"Bot will now {(delete ? "delete" : "not delete")} the context messages.", allowedMentions: AllowedMentions.None);
     }
 
-    [ModalInteraction(ModulePrefixes.SPOILER_MODAL + "*", true)]
+    [ModalInteraction(ModulePrefixes.SpoilerModal + "*", true)]
     public async Task SpoilerModal(string state, SetContextModal modal)
     {
         await DeferAsync(ephemeral: true);
 
         var messageRef = StateSerializer.DeserializeObject<MessageReference>(state);
 
-        var guild = await Context.Client.GetGuildAsync(messageRef.guildId);
+        var guild = await Context.Client.GetGuildAsync(messageRef.GuildId);
         if (guild == null)
         {
             await FollowupAsync("Invalid Guild? tf?", ephemeral: true);
             return;
         }
-        var channel = await guild.GetTextChannelAsync(messageRef.channelId);
+        var channel = await guild.GetTextChannelAsync(messageRef.ChannelId);
         if (channel == null)
         {
             await FollowupAsync("Invalid channel? tf?", ephemeral: true);
             return;
         }
-        var message = await channel.GetMessageAsync(messageRef.messageId);
+        var message = await channel.GetMessageAsync(messageRef.MessageId);
         if (message == null)
         {
             await FollowupAsync("Couldn't find the message to spoil.", ephemeral: true);

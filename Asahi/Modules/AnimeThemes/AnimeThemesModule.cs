@@ -49,7 +49,7 @@ public class AnimeThemesModule(
             resetTimeoutOnInput: true, responseType: InteractionResponseType.DeferredUpdateMessage);
     }
 
-    [ComponentInteraction(AnimeThemesPaginatorGenerator.AnimeChoiceButtonId + "*")]
+    [ComponentInteraction(ModulePrefixes.AnimeThemes.AnimeChoiceButtonId + "*")]
     public async Task AnimeChoiceButton(string choice)
     {
         var interaction = (IComponentInteraction)Context.Interaction;
@@ -62,7 +62,7 @@ public class AnimeThemesModule(
 
         var state = paginator.GetUserState<AnimeThemesSelectionState>();
 
-        var animeId = int.Parse(choice);
+        var animeId = StateSerializer.DeserializeObject<int>(choice);
 
         var newStep = new AnimeThemesSelectionState.ThemeSelectionState(
             state.CurrentStep.SearchResponse,
@@ -71,7 +71,7 @@ public class AnimeThemesModule(
         await ChangeStep(state, paginator, interaction, newStep);
     }
 
-    [ComponentInteraction(AnimeThemesPaginatorGenerator.ThemeChoiceButtonId + "*")]
+    [ComponentInteraction(ModulePrefixes.AnimeThemes.ThemeChoiceButtonId + "*")]
     public async Task ThemeChoiceButton(string choiceStr)
     {
         var interaction = (IComponentInteraction)Context.Interaction;
@@ -120,7 +120,7 @@ public class AnimeThemesModule(
         await ChangeStep(state, paginator, interaction, newStep);
     }
     
-    [ComponentInteraction(AnimeThemesPaginatorGenerator.RefreshVideoId)]
+    [ComponentInteraction(ModulePrefixes.AnimeThemes.RefreshVideoId)]
     public async Task RefreshVideoButton()
     {
         var interaction = (IComponentInteraction)Context.Interaction;
@@ -151,7 +151,7 @@ public class AnimeThemesModule(
         await paginator.RenderPageAsync(interaction);
     }
 
-    [ComponentInteraction(AnimeThemesPaginatorGenerator.BackButtonId)]
+    [ComponentInteraction(ModulePrefixes.AnimeThemes.BackButtonId)]
     public async Task BackButton()
     {
         var interaction = (IComponentInteraction)Context.Interaction;

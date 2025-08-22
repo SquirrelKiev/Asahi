@@ -4,7 +4,7 @@ namespace Asahi.Modules.RedButton
 {
     public class RedButtonModule : BotModule
     {
-        [ComponentInteraction(ModulePrefixes.RED_BUTTON)]
+        [ComponentInteraction(ModulePrefixes.RedButton)]
         public async Task OnButton()
         {
             await DeferAsync();
@@ -16,7 +16,7 @@ namespace Asahi.Modules.RedButton
     {
         public static ComponentBuilder WithRedButton(this ComponentBuilder componentBuilder, string label = "X", int row = 0)
         {
-            componentBuilder.WithButton(label, ModulePrefixes.RED_BUTTON, ButtonStyle.Danger, row: row);
+            componentBuilder.WithButton(label, ModulePrefixes.RedButton, ButtonStyle.Danger, row: row);
 
             return componentBuilder;
         }

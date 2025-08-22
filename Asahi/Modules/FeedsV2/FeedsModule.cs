@@ -242,7 +242,7 @@ public class FeedsModule(
                 new PaginatorButton("<", PaginatorAction.Backward, ButtonStyle.Secondary),
                 new PaginatorButton("Jump", PaginatorAction.Jump, ButtonStyle.Secondary),
                 new PaginatorButton(">", PaginatorAction.Forward, ButtonStyle.Secondary),
-                new PaginatorButton(ModulePrefixes.RED_BUTTON, null, "X", ButtonStyle.Danger),
+                new PaginatorButton(ModulePrefixes.RedButton, null, "X", ButtonStyle.Danger),
             ])
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
