@@ -87,7 +87,7 @@ public class HashedComponentIdGenerator : IIncrementalGenerator
         bool firstEntry = true;
         foreach (var attribute in hashedComponentIdClassInfo.HashedIdAttributes)
         {
-            var unhashedValue = classPrefix + attribute.Name;
+            var unhashedValue = $"{classPrefix}.{attribute.Name}";
 
             var hashedValue = Base2048Converter.Encode(Crc32.Hash(Encoding.UTF8.GetBytes(unhashedValue))) + ':';
 
