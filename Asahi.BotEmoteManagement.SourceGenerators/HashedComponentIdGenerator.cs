@@ -1,5 +1,4 @@
 ﻿using System.CodeDom.Compiler;
-using System.Diagnostics;
 using System.IO.Hashing;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -78,7 +77,7 @@ public class HashedComponentIdGenerator : IIncrementalGenerator
             sourceBuilder.WriteLine($"partial class {className}");
             sourceBuilder.WriteLine("{");
             sourceBuilder.Indent++;
-            
+
             classPrefix.Append(hashedComponentIdClassInfo.ReversedClassHierarchy[i]);
             if (i != 0)
                 classPrefix.Append('.');
@@ -87,7 +86,7 @@ public class HashedComponentIdGenerator : IIncrementalGenerator
         bool firstEntry = true;
         foreach (var attribute in hashedComponentIdClassInfo.HashedIdAttributes)
         {
-            var unhashedValue = classPrefix + attribute.Name;
+            var unhashedValue = attribute.UnhashedValue ?? $"{classPrefix}.{attribute.ConstantFieldName}";
 
             var hashedValue = Base2048Converter.Encode(Crc32.Hash(Encoding.UTF8.GetBytes(unhashedValue))) + ':';
 
@@ -102,7 +101,7 @@ public class HashedComponentIdGenerator : IIncrementalGenerator
 
             sourceBuilder.WriteLine($"/// <summary>Base2048-encoded CRC32 hash of \"{unhashedValue}\".</summary>");
             sourceBuilder.WriteLine(
-                $"public const string {attribute.Name} = \"{hashedValue}\";");
+                $"public const string {attribute.ConstantFieldName} = \"{hashedValue}\";");
         }
 
         for (int i = hashedComponentIdClassInfo.ReversedClassHierarchy.Count - 1; i >= 0; i--)
@@ -129,10 +128,19 @@ public class HashedComponentIdGenerator : IIncrementalGenerator
         var hashedIdAttributes = new List<HashedIdAttributeInfo>(attributes.Length);
         foreach (var attribute in attributes.Where(a => a.AttributeClass?.ToDisplayString() == IdAttributeName))
         {
-            if (attribute.ConstructorArguments[0].Value is not string value)
+            if (attribute.ConstructorArguments[0].Value is not string constantFieldName)
                 continue;
 
-            hashedIdAttributes.Add(new HashedIdAttributeInfo(value));
+            var unhashedValue = attribute.NamedArguments
+                .FirstOrDefault(x => x is
+                {
+                    Key: "UnhashedValue",
+                    Value.IsNull: false,
+                    Value.Value: string
+                }).Value.Value as string;
+            ;
+
+            hashedIdAttributes.Add(new HashedIdAttributeInfo(constantFieldName, unhashedValue));
         }
 
         // not sure what the correct ToString is
@@ -157,14 +165,9 @@ public class HashedComponentIdGenerator : IIncrementalGenerator
     private readonly record struct HashedComponentIdClassInfo(
         string Namespace,
         EquatableArray<string> ReversedClassHierarchy,
-        EquatableArray<HashedIdAttributeInfo> HashedIdAttributes)
-    {
-    }
+        EquatableArray<HashedIdAttributeInfo> HashedIdAttributes);
 
     // the name is slightly confusing, it means information about the attribute "HashedIdAttribute"
     // not that its information about a hashed ID
-    private readonly record struct HashedIdAttributeInfo(string Name)
-    {
-        public readonly string Name = Name;
-    }
+    private readonly record struct HashedIdAttributeInfo(string ConstantFieldName, string? UnhashedValue = null);
 }
