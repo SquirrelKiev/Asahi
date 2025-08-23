@@ -27,7 +27,20 @@ public class TestModule(
 
         var variant = await danbooruUtility.GetBestVariantOrFallback(content);
 
-        await FollowupAsync(variant?.Variant.Url ?? "uh oh");
+        var components = new ComponentBuilderV2();
+
+        components.WithMediaGallery([variant!.Variant.Url]);
+
+        components.WithActionRow([new ButtonBuilder("say hi to the cat", ModulePrefixes.TestPrefix)]);
+        
+        await FollowupAsync(components: components.Build());
+    }
+
+    [ComponentInteraction(ModulePrefixes.TestPrefix)]
+    [RequireCommandInvoker]
+    public async Task ScratchPadComponent()
+    {
+        await RespondAsync($"{Context.User.Mention} says hello!", allowedMentions: AllowedMentions.None);
     }
 }
 #endif
