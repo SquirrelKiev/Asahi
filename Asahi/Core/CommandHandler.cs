@@ -219,23 +219,6 @@ public class CommandHandler(
             return;
         }
 
-        if (ctx.Interaction is SocketMessageComponent componentInteraction)
-        {
-            var ogRes = componentInteraction.Message;
-
-            var ogAuthor = ogRes.Interaction?.User.Id;
-
-            if (ogAuthor == null || ogAuthor != ctx.Interaction.User.Id)
-            {
-                await componentInteraction.RespondAsync(
-                    "You did not originally trigger this. Please run the command yourself.",
-                    ephemeral: true
-                );
-
-                return;
-            }
-        }
-
         await interactionService.ExecuteCommandAsync(ctx, services);
     }
 

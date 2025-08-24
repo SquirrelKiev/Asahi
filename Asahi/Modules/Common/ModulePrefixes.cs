@@ -3,6 +3,8 @@
 namespace Asahi.Modules;
 
 [GenerateHashedIds]
+[HashedId("TestPrefix")]
+//
 [HashedId("RedButton")]
 //
 [HashedId("SpoilerModal")]
