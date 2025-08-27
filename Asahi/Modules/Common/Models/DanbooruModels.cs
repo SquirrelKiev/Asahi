@@ -174,7 +174,7 @@ public class DanbooruMediaAsset
 public class DanbooruVariant
 {
     [JsonProperty("type")]
-    public string Type { get; set; } = null!;
+    public DanbooruVariantType Type { get; set; } = DanbooruVariantType.Invalid;
 
     [JsonProperty("url")]
     public string Url { get; set; } = null!;
@@ -187,6 +187,45 @@ public class DanbooruVariant
 
     [JsonProperty("file_ext")]
     public string FileExt { get; set; } = null!;
+}
+
+[JsonConverter(typeof(StringEnumConverter))]
+public enum DanbooruVariantType
+{
+    Invalid,
+    [EnumMember(Value = "180x180")]
+    _180x180,
+    [EnumMember(Value = "360x360")]
+    _360x360,
+    [EnumMember(Value = "720x720")]
+    _720x720,
+    [EnumMember(Value = "sample")]
+    Sample,
+    [EnumMember(Value = "full")]
+    Full,
+    [EnumMember(Value = "original")]
+    Original,
+    FallbackDanbooru,
+    FallbackPixiv,
+    FallbackFantia,
+}
+
+public static class DanbooruVariantTypeExtensions
+{
+    public static string ToReadableString(this DanbooruVariantType variantType) =>
+        variantType switch
+        {
+            DanbooruVariantType._180x180 => "180p",
+            DanbooruVariantType._360x360 => "360p",
+            DanbooruVariantType._720x720 => "720p",
+            DanbooruVariantType.Sample => "Sample",
+            DanbooruVariantType.Full => "Full",
+            DanbooruVariantType.Original => "Original",
+            DanbooruVariantType.FallbackDanbooru => "Fallback (Danbooru source)",
+            DanbooruVariantType.FallbackPixiv => "Fallback (Pixiv)",
+            DanbooruVariantType.FallbackFantia => "Fallback (Fantia)",
+            _ => "Unknown",
+        };
 }
 
 public class DanbooruVariantWithExtras(DanbooruVariant variant)
@@ -257,3 +296,75 @@ public class DanbooruSourceArtistCommentary
     [JsonProperty("dtext_description")]
     public string? DtextDescription { get; set; }
 }
+
+    public class DanbooruUser
+    {
+        [JsonProperty("id")]
+        public int Id { get; set; }
+
+        [JsonProperty("created_at")]
+        public DateTimeOffset CreatedAt { get; set; }
+
+        [JsonProperty("name")]
+        public required string Name { get; set; }
+
+        [JsonProperty("inviter_id")]
+        public int? InviterId { get; set; }
+
+        [JsonProperty("level")]
+        public int Level { get; set; }
+
+        [JsonProperty("post_upload_count")]
+        public int PostUploadCount { get; set; }
+
+        [JsonProperty("post_update_count")]
+        public int PostUpdateCount { get; set; }
+
+        [JsonProperty("note_update_count")]
+        public int NoteUpdateCount { get; set; }
+
+        [JsonProperty("is_deleted")]
+        public bool IsDeleted { get; set; }
+
+        [JsonProperty("level_string")]
+        public required string LevelString { get; set; }
+
+        [JsonProperty("is_banned")]
+        public bool IsBanned { get; set; }
+
+        [JsonProperty("wiki_page_version_count")]
+        public int WikiPageVersionCount { get; set; }
+
+        [JsonProperty("artist_version_count")]
+        public int ArtistVersionCount { get; set; }
+
+        [JsonProperty("artist_commentary_version_count")]
+        public int ArtistCommentaryVersionCount { get; set; }
+
+        [JsonProperty("pool_version_count")]
+        public int PoolVersionCount { get; set; }
+
+        [JsonProperty("forum_post_count")]
+        public int ForumPostCount { get; set; }
+
+        [JsonProperty("comment_count")]
+        public int CommentCount { get; set; }
+
+        [JsonProperty("favorite_group_count")]
+        public int FavoriteGroupCount { get; set; }
+
+        [JsonProperty("appeal_count")]
+        public int AppealCount { get; set; }
+
+        [JsonProperty("flag_count")]
+        public int FlagCount { get; set; }
+
+        [JsonProperty("positive_feedback_count")]
+        public int PositiveFeedbackCount { get; set; }
+
+        [JsonProperty("neutral_feedback_count")]
+        public int NeutralFeedbackCount { get; set; }
+
+        [JsonProperty("negative_feedback_count")]
+        public int NegativeFeedbackCount { get; set; }
+    }

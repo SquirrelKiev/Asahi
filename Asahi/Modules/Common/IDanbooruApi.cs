@@ -12,4 +12,10 @@ public interface IDanbooruApi
     
     [Get("/source.json"), QueryUriFormat(UriFormat.UriEscaped)]
     Task<ApiResponse<DanbooruSource>> GetSource([Query] string url, CancellationToken cancellationToken = default);
+    
+    [Get($"/posts/{{{nameof(id)}}}.json")]
+    Task<ApiResponse<DanbooruPost>> GetPost(uint id, CancellationToken cancellationToken = default);
+    
+    [Get($"/users/{{{nameof(id)}}}.json")]
+    Task<ApiResponse<DanbooruUser>> GetUser(int id, CancellationToken cancellationToken = default);
 }

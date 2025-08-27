@@ -8,7 +8,13 @@ public record BotEmotesSpecification
     public IEmoteSpecification Loading { get; init; } = new InternalCustomEmoteSpecification("Loading");
     public IEmoteSpecification Refresh { get; init; } = new InternalCustomEmoteSpecification("RefreshIcon");
     
-    // Danbooru ratings
+    // Danbooru CV2
+    public IEmoteSpecification DanbooruDeletePost { get; init; } = new InternalCustomEmoteSpecification("PutLitterInItsPlaceNoBg");
+    public IEmoteSpecification DanbooruDeletedPostNote { get; init; } = new InternalCustomEmoteSpecification("InfoIcon");
+    public IEmoteSpecification DanbooruDeletedPostAddNote { get; init; } = new InternalCustomEmoteSpecification("AddNotesIcon");
+    public IEmoteSpecification DanbooruRestoreDeletedPost { get; init; } = new InternalCustomEmoteSpecification("RestoreFromTrashIcon");
+    public IEmoteSpecification DanbooruMoreInfo { get; init; } = new InternalCustomEmoteSpecification("MoreIcon");
+    
     public IEmoteSpecification DanbooruGeneral { get; init; } = new InternalCustomEmoteSpecification("RatingGeneral");
     public IEmoteSpecification DanbooruSuggestive { get; init; } = new InternalCustomEmoteSpecification("RatingSuggestive");
     public IEmoteSpecification DanbooruQuestionable { get; init; } = new InternalCustomEmoteSpecification("RatingQuestionable");

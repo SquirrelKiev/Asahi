@@ -24,12 +24,12 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             var json = await req.Content.ReadAsStringAsync(cancellationToken);
 
             // TODO: Validate
-            posts = JsonConvert.DeserializeObject<DanbooruPost[]>(json!);
+            posts = JsonConvert.DeserializeObject<DanbooruPost[]>(json);
 
             var query = HttpUtility.ParseQueryString(uri.Query);
 
             var tags = query["tags"];
-            DefaultFeedTitle = tags == null ? "Danbooru Feed" : $"Danbooru: {tags}";
+            DefaultFeedTitle = tags == null ? "Danbooru Feed" : $"Danbooru: {tags}".Truncate(64, false);
 
             return true;
         }
@@ -48,7 +48,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             
             var post = posts.First(x => x.Id == articleId);
 
-            yield return new MessageContents(await danbooruUtility.GetComponent(post, embedColor, feedTitle ?? DefaultFeedTitle, cancellationToken));
+            yield return new MessageContents(await danbooruUtility.GetComponent(post, embedColor, feedTitle ?? DefaultFeedTitle, cancellationToken: cancellationToken));
         }
     }
 }
