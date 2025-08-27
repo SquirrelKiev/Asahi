@@ -48,7 +48,11 @@ public class DanbooruModule(
             extraInfo.FeedTitle, true, extraInfo.MessageDeletedBy != 0ul, extraInfo.MessageDeletedBy);
 
         await responseTask;
-        await ModifyOriginalResponseAsync(x => x.Components = component);
+        await ModifyOriginalResponseAsync(x =>
+        {
+            x.Components = component;
+            x.AllowedMentions = AllowedMentions.None;
+        });
     }
 
     [ComponentInteraction(ModulePrefixes.Danbooru.DeleteButton + "*")]
@@ -66,22 +70,37 @@ public class DanbooruModule(
     [ComponentInteraction(ModulePrefixes.Danbooru.DeletionRestoreButton + "*")]
     public async Task RestoreButton(string data)
     {
+        var loading =
+            ((IComponentInteraction)Context.Interaction).UpdateAsync(x =>
+                x.Components = new ComponentBuilderV2().WithTextDisplay($"{emotes.Loading} Loading...").Build());
+
         var extraInfo = StateSerializer.DeserializeObject<DanbooruExtraInfoData>(data);
-
-        var post = await danbooruApi.GetPost(extraInfo.PostId);
-
-        if (!post.IsSuccessful)
+        try
         {
-            logger.LogError(post.Error, "Failed to get Danbooru post #{postId} to restore.", extraInfo.PostId);
+            var post = await danbooruApi.GetPost(extraInfo.PostId);
 
-            await RespondAsync("Failed to get post from Danbooru.", ephemeral: true);
-            return;
+            if (!post.IsSuccessful)
+            {
+                logger.LogError(post.Error, "Failed to get Danbooru post #{postId} to restore.", extraInfo.PostId);
+
+                await loading;
+                await ModifyOriginalResponseAsync(x => x.Components = GetDeletionInfoComponent(extraInfo));
+                await RespondAsync("Failed to get post from Danbooru.", ephemeral: true);
+                return;
+            }
+
+            var component =
+                await danbooruUtility.GetComponent(post.Content, new Color(extraInfo.EmbedColor), extraInfo.FeedTitle);
+
+            await loading;
+            await ModifyOriginalResponseAsync(x => { x.Components = component; });
         }
-
-        var component =
-            await danbooruUtility.GetComponent(post.Content, new Color(extraInfo.EmbedColor), extraInfo.FeedTitle);
-
-        await ((IComponentInteraction)Context.Interaction).UpdateAsync(x => { x.Components = component; });
+        catch (Exception)
+        {
+            await loading;
+            await ModifyOriginalResponseAsync(x => x.Components = GetDeletionInfoComponent(extraInfo));
+            throw;
+        }
     }
 
     [ComponentInteraction(ModulePrefixes.Danbooru.DeletionNotesButton + "*")]
