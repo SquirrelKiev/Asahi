@@ -10,7 +10,7 @@ public interface IFeedProvider
     /// <summary>
     /// Gets the data from the provided feed.
     /// </summary>
-    public Task<bool> Initialize(string feedSource);
+    public Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns IDs that can be used with <see cref="GetArticleMessageContent"/>.
@@ -28,8 +28,9 @@ public interface IFeedProvider
     /// <param name="articleId">The article ID as provided by <see cref="ListArticleIds"/></param>
     /// <param name="embedColor">The default color to be applied to article embeds.</param>
     /// <param name="feedTitle">The title of the feed this message is being generated for.</param>
+    /// <param name="cancellationToken">Cancels the iteration.</param>
     /// <returns>All the messages that article needs to represent a summary of its contents. Should be as small as possible, ideally one message.</returns>
     [Pure]
     public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,
-        string? feedTitle);
+        string? feedTitle, CancellationToken cancellationToken = default);
 }

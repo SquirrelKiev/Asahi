@@ -1009,7 +1009,7 @@ public class HighlightsTrackingService(
         {
             highlightMessages.Add(
                 await webhookClient.SendMessageAsync(
-                    queuedMessage.body.Truncate(2000),
+                    queuedMessage.body?.Truncate(2000),
                     embeds: queuedMessage.embeds,
                     components: queuedMessage.components,
                     username: username,

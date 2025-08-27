@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Asahi.Database.Models.Rss;
 using Microsoft.Extensions.Logging;
 
@@ -14,11 +13,14 @@ public class FeedsProcessorService(
 {
     public async Task PollFeeds(FeedsStateTracker stateTracker, FeedListener[] feeds)
     {
+        // might be good to parallelize this, but i need to figure out some solution to avoid rate-limits
+        // TODO: separate feed requests and feed processing and message dispatching into separate tasks, so each can run separately
         foreach (var feed in feeds.GroupBy(x => x.FeedUrl).Where(x => x.Any(y => y.Enabled)))
         {
             try
             {
-                await ProcessFeed(feed.Key, feed.ToArray(), stateTracker);
+                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                await ProcessFeed(feed.Key, feed.ToArray(), stateTracker, cts.Token);
             }
             catch (Exception ex)
             {
@@ -27,16 +29,21 @@ public class FeedsProcessorService(
         }
 
         stateTracker.PruneMissingFeeds(feeds.Select(x => x.FeedUrl));
+        
+        // logger.LogTrace("Finished processing all feeds.");
     }
 
-    private async Task ProcessFeed(string feedSource, FeedListener[] listeners, FeedsStateTracker stateTracker)
+    private async Task ProcessFeed(string feedSource, FeedListener[] listeners, FeedsStateTracker stateTracker, CancellationToken cancellationToken = default)
     {
         var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
 
         if (feedProvider == null)
             return;
 
-        await feedProvider.Initialize(feedSource);
+        if (!await feedProvider.Initialize(feedSource, cancellationToken))
+        {
+            return;
+        }
         
         stateTracker.UpdateDefaultFeedTitleCache(feedSource, feedProvider.DefaultFeedTitle);
 
@@ -47,6 +54,8 @@ public class FeedsProcessorService(
 
         foreach (var articleId in feedProvider.ListArticleIds())
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            
             if (!stateTracker.IsNewArticle(feedSource, articleId))
             {
                 // logger.LogTrace("Already seen article {articleId} for feed {feedSource}.", articleId, feedSource);
@@ -55,6 +64,7 @@ public class FeedsProcessorService(
 
             foreach (var listener in listeners)
             {
+                // Part of me wants to check the cancellation token here, but I feel it's important to let the messages send no matter what
                 try
                 {
                     if(!listener.Enabled)
@@ -65,7 +75,7 @@ public class FeedsProcessorService(
                     Debug.Assert(listener.FeedUrl == feedSource);
 
                     var articleMessages = feedProvider.GetArticleMessageContent(articleId,
-                        await colorProvider.GetEmbedColor(listener.GuildId), listener.FeedTitle);
+                        await colorProvider.GetEmbedColor(listener.GuildId), listener.FeedTitle, CancellationToken.None);
 
                     await messageDispatcher.SendMessages(listener, articleMessages);
                 }
@@ -80,6 +90,8 @@ public class FeedsProcessorService(
             stateTracker.MarkArticleAsRead(feedSource, articleId);
             stateTracker.PruneMissingArticles(feedProvider);
         }
+        
+        // logger.LogTrace("Finished processing feed {feedSource}.", feedSource);
     }
 
     /// <summary>

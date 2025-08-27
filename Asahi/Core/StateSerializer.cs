@@ -2,7 +2,7 @@
 
 public static class StateSerializer
 {
-    public static string SerializeObject<T>(T obj, string id)
+    public static string SerializeObject(object obj, string id)
     {
         ArgumentNullException.ThrowIfNull(obj, nameof(obj));
         
