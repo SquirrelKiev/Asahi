@@ -108,25 +108,41 @@ namespace Asahi.Modules
                     if (!forceFullSizeImage)
                     {
                         var extraInfoText = $"{footerText}\n**Posted on:** <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
-                        
+
+                        if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
+                            sourceUri.Scheme is "http" or "https")
+                        {
+                            var (platformName, sourceUrl, emote) = GetPlatformButtonInfo(post, sourceUri);
+                            
+                            extraInfoText += $"\n**Source:** {emote} [{platformName}]({sourceUrl})";
+                        }
+
                         var section = new SectionBuilder()
                             .WithTextDisplay(titleString + userInfo)
                             .WithTextDisplay(extraInfoText)
                             .WithAccessory(new ThumbnailBuilder(bestVariant.Variant.Url, isSpoiler: shouldSpoiler));
-                        
+
                         container.WithSection(section);
                     }
                     else
                     {
-                        var text =
+                        var extraInfoText =
                             $"{titleString}{userInfo}\n{footerText}\n**Posted on:** <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
                         
+                        if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
+                            sourceUri.Scheme is "http" or "https")
+                        {
+                            var (platformName, sourceUrl, emote) = GetPlatformButtonInfo(post, sourceUri);
+                            
+                            extraInfoText += $"\n**Source:** {emote} [{platformName}]({sourceUrl})";
+                        }
+
                         if (deletedByUserId != 0ul)
                         {
-                            text += $"\n-# Message deleted by <@{deletedByUserId}>";
+                            extraInfoText += $"\n-# Message deleted by <@{deletedByUserId}>";
                         }
-                        
-                        container.WithTextDisplay(text);
+
+                        container.WithTextDisplay(extraInfoText);
                     }
                 }
                 else
