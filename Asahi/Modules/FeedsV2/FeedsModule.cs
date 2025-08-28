@@ -29,11 +29,13 @@ public class FeedsModule(
     public async Task AddFeedSlash(
         [Summary(description: "The feed source. usually a URL."), MaxLength(512)]
         string feedSource,
-        [Summary(description: "The channel to send updates to.")]
-        IMessageChannel channel)
+        [Summary(description: "The channel to send updates to. Defaults to the current channel.")]
+        IMessageChannel? channel = null)
     {
         await CommonConfig(async (context, eb) =>
         {
+            channel ??= Context.Channel;
+            
             if (await context.RssFeedListeners.AnyAsync(x => x.GuildId == Context.Guild.Id &&
                                                              x.ChannelId == channel.Id &&
                                                              x.FeedUrl == feedSource))
