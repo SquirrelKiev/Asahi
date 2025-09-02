@@ -222,7 +222,10 @@ namespace Asahi.Modules
                     .WithEmote(emotes.DanbooruDeletePost)
                     .WithStyle(ButtonStyle.Secondary);
 
-                components.WithActionRow([sourceButton, moreInfoButton, deleteButton]);
+                if (sourceButton != null)
+                    components.WithActionRow([sourceButton, moreInfoButton, deleteButton]);
+                else
+                    components.WithActionRow([moreInfoButton, deleteButton]);
             }
 
             return components.Build();
