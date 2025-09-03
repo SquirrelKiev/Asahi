@@ -18,10 +18,19 @@ public class FeedListener : DbModel
     [MaxLength(80)]
     public string? WebhookName { get; set; }
 
+    /// <summary>
+    /// If the user has the feed enabled or disabled.
+    /// </summary>
     public bool Enabled { get; set; } = true;
 
+    /// <summary>
+    /// If the feed should be disabled forcibly. overrides <see cref="Enabled"/>.
+    /// </summary>
     public bool ForcedDisable { get; set; } = false;
     
+    /// <summary>
+    /// The reason for a feed being force disabled.
+    /// </summary>
     [MaxLength(512)]
     public string DisabledReason { get; set; } = "";
 }

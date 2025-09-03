@@ -66,13 +66,26 @@ public class FeedAutocomplete : AutocompleteHandler
 
     private static AutocompleteResult CreateAutocompleteResult(FeedListener x, FeedsStateTracker state, IReadOnlyCollection<ITextChannel> channels)
     {
-        var disabledPrefix = x.Enabled ? "" : "(DISABLED) ";
+        string disabledPrefix;
+        if (x.ForcedDisable)
+        {
+            disabledPrefix = "(FORCED DISABLED) ";
+        }
+        else if (!x.Enabled)
+        {
+            disabledPrefix = "(DISABLED) ";
+        }
+        else
+        {
+            disabledPrefix = string.Empty;
+        }
+        
         var suffix = $" (#{(channels.FirstOrDefault(y => y.Id == x.ChannelId)?.Name ?? x.ChannelId.ToString()).Truncate(32, false)}) ({x.Id})";
         
         var fixedLength = disabledPrefix.Length + suffix.Length;
         var availableForTitle = Math.Max(1, 100 - fixedLength);
         
-        var truncatedTitle = state.GetBestDefaultFeedTitle(x.FeedUrl).Truncate(availableForTitle, false);
+        var truncatedTitle = x.FeedTitle ?? state.GetBestDefaultFeedTitle(x.FeedUrl).Truncate(availableForTitle, false);
 
         var res = $"{disabledPrefix}{truncatedTitle}{suffix}";
         

@@ -35,7 +35,7 @@ public class FeedsModule(
         await CommonConfig(async (context, eb) =>
         {
             channel ??= Context.Channel;
-            
+
             if (await context.RssFeedListeners.AnyAsync(x => x.GuildId == Context.Guild.Id &&
                                                              x.ChannelId == channel.Id &&
                                                              x.FeedUrl == feedSource))
@@ -150,7 +150,8 @@ public class FeedsModule(
 
     [SlashCommand("set-webhook-name", "Sets or clears the name of the webhook to look for to send with.")]
     public async Task SetFeedWebhookNameSlash(
-        [Summary(description: "The ID of the feed to edit.")] [Autocomplete<FeedAutocomplete>] uint id,
+        [Summary(description: "The ID of the feed to edit.")] [Autocomplete<FeedAutocomplete>]
+        uint id,
         [Summary(description: "The new webhook name for the feed."), MaxLength(64)]
         string? webhookName = null)
     {
@@ -174,22 +175,26 @@ public class FeedsModule(
 
     [SlashCommand("toggle", "Turns a feed on or off.")]
     public async Task ToggleFeedSlash(
-        [Summary(description: "The ID of the feed.")] [Autocomplete<FeedAutocomplete>] uint id,
+        [Summary(description: "The ID of the feed.")] [Autocomplete<FeedAutocomplete>]
+        uint id,
         [Summary(description: "Whether the feed should be enabled or disabled.")]
         bool state)
     {
         await CommonFeedConfig(id, options =>
         {
-            if (options.feedListener is { Enabled: false, ForcedDisable: true })
+            if (options.feedListener.ForcedDisable)
             {
                 return Task.FromResult(new ConfigChangeResult(false,
                     $"This feed has been temporarily disabled for reason **{options.feedListener.DisabledReason}**. You cannot enable it."));
             }
 
             options.feedListener.Enabled = state;
-            options.feedListener.DisabledReason = state ? "" : $"Disabled by <@{Context.User.Id}>.";
 
-            return Task.FromResult(new ConfigChangeResult(true, $"Feed has been {(state ? "enabled" : "disabled")}."));
+            var feedTitle = options.feedListener.FeedTitle ??
+                            stateTracker.GetBestDefaultFeedTitle(options.feedListener.FeedUrl);
+
+            return Task.FromResult(new ConfigChangeResult(true,
+                $"Feed `{feedTitle}` has been {(state ? "enabled" : "disabled")}."));
         });
     }
 
@@ -228,11 +233,11 @@ public class FeedsModule(
             .Select(x =>
             {
                 var feedTitle = x.FeedTitle ?? stateTracker.GetCachedDefaultFeedTitle(x.FeedUrl);
-                
+
                 if (string.IsNullOrWhiteSpace(feedTitle))
                     return $"* ({x.Id}) <#{x.ChannelId}> - {x.FeedUrl}";
-
-                return $"* ({x.Id}) <#{x.ChannelId}> - [{feedTitle}]({x.FeedUrl})";
+                else
+                    return $"* ({x.Id}) <#{x.ChannelId}> - [{feedTitle}]({x.FeedUrl})";
             })
             .Chunk(20).Select(x => new PageBuilder().WithColor(roleColor)
                 .WithDescription(string.Join('\n', x)));

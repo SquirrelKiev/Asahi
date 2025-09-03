@@ -15,7 +15,7 @@ public class FeedsProcessorService(
     {
         // might be good to parallelize this, but i need to figure out some solution to avoid rate-limits
         // TODO: separate feed requests and feed processing and message dispatching into separate tasks, so each can run separately
-        foreach (var feed in feeds.GroupBy(x => x.FeedUrl).Where(x => x.Any(y => y.Enabled)))
+        foreach (var feed in feeds.GroupBy(x => x.FeedUrl).Where(x => x.Any(y => y is { Enabled: true, ForcedDisable: false })))
         {
             try
             {
