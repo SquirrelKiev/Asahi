@@ -8,7 +8,11 @@ using NodaTime;
 namespace Asahi.Modules.BirthdayRoles;
 
 [Inject(ServiceLifetime.Singleton)]
-public class BirthdayTimerService(DiscordSocketClient client, IDbContextFactory<BotDbContext> dbService, IClock clock, ILogger<BirthdayTimerService> logger)
+public class BirthdayTimerService(
+    DiscordSocketClient client,
+    IDbContextFactory<BotDbContext> dbService,
+    IClock clock,
+    ILogger<BirthdayTimerService> logger)
 {
     public Task? timerTask;
 
@@ -31,6 +35,7 @@ public class BirthdayTimerService(DiscordSocketClient client, IDbContextFactory<
             {
                 logger.LogError(ex, "Unhandled exception in TimerTask! {message}", ex.Message);
             }
+
             using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
@@ -44,11 +49,16 @@ public class BirthdayTimerService(DiscordSocketClient client, IDbContextFactory<
                 }
             }
         }
-        catch (TaskCanceledException) {}
-        catch (OperationCanceledException) {}
+        catch (TaskCanceledException)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception e)
         {
-            logger.LogCritical(e, "Unhandled exception in TimerTask! Except much worse because this was outside of the loop!!");
+            logger.LogCritical(e,
+                "Unhandled exception in TimerTask! Except much worse because this was outside of the loop!!");
         }
     }
 
@@ -71,7 +81,7 @@ public class BirthdayTimerService(DiscordSocketClient client, IDbContextFactory<
         var birthdays = await GetCurrentBirthdays(context, now);
         var groupedBirthdays = birthdays.GroupBy(x => x.BirthdayConfig);
 
-        if(birthdays.Length != 0)
+        if (birthdays.Length != 0)
             logger.LogTrace("got {count} birthdays", birthdays.Length);
 
         List<BirthdayAndy> birthdayAndys = [];
@@ -87,13 +97,13 @@ public class BirthdayTimerService(DiscordSocketClient client, IDbContextFactory<
             foreach (var entry in group)
             {
                 var user = guild.GetUser(entry.UserId);
-                
-                if(user != null)
+
+                if (user != null)
                     birthdayAndys.Add(new BirthdayAndy(role, user));
             }
         }
 
-        
+
         var birthdaysInGuild = birthdayAndys
             .GroupBy(x => x.User.Guild).ToDictionary(x => x.Key, x => x.ToArray());
 
@@ -140,20 +150,38 @@ public class BirthdayTimerService(DiscordSocketClient client, IDbContextFactory<
                         andysRoleGroup.Where(x => andysRoleGroup.Key.Members.All(y => y.Id != x.User.Id)));
                 }
 
-                logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count, guild.Name);
+                logger.LogTrace("removing {count} members from birthday role (guild is {guild})", andysToRemove.Count,
+                    guild.Name);
 
                 foreach (var andy in andysToRemove)
                 {
-                    await andy.User.RemoveRoleAsync(andy.Role,
-                        new RequestOptions { AuditLogReason = "It's no longer their birthday :(" });
+                    try
+                    {
+                        await andy.User.RemoveRoleAsync(andy.Role,
+                            new RequestOptions { AuditLogReason = "It's no longer their birthday :(" });
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to remove birthday role for user {user} in guild {guild}.",
+                            andy.User.Id, guild.Id);
+                    }
                 }
 
-                logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count, guild.Name);
+                logger.LogTrace("adding {count} members to birthday role (guild is {guild})", andysToAdd.Count,
+                    guild.Name);
 
                 foreach (var andy in andysToAdd)
                 {
-                    await andy.User.AddRoleAsync(andy.Role,
-                        new RequestOptions { AuditLogReason = "It's their birthday! :D" });
+                    try
+                    {
+                        await andy.User.AddRoleAsync(andy.Role,
+                            new RequestOptions { AuditLogReason = "It's their birthday! :D" });
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to add birthday role for user {user} in guild {guild}.",
+                            andy.User.Id, guild.Id);
+                    }
                 }
             }
             catch (Exception ex)
