@@ -10,6 +10,9 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
         public string DefaultFeedTitle { get; private set; } = "Reddit Feed";
 
+        // HACK: for debugging. remove later
+        public string? Json { get; private set; }
+
         private SubredditPosts? posts;
 
         public async Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
@@ -29,7 +32,13 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
             DefaultFeedTitle = $"r/{subreddit}";
 
-            posts = await redditApi.GetSubredditPosts(subreddit, cancellationToken);
+            var res = await redditApi.GetSubredditPosts(subreddit, cancellationToken);
+            if (!res.IsSuccessful)
+                return false;
+
+            posts = res.Content;
+            if (res.RequestMessage?.Content != null)
+                Json = await res.RequestMessage.Content.ReadAsStringAsync(cancellationToken);
 
             return posts.Kind == "Listing";
         }
@@ -37,19 +46,26 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         public IEnumerable<int> ListArticleIds()
         {
             Debug.Assert(posts != null);
-            
-            return posts.Data.Children.Select(x => x.Data.Id.GetHashCode());
+
+            return ListArticleRedditIds().Select(x => x.GetHashCode());
+        }
+
+        public IEnumerable<string> ListArticleRedditIds()
+        {
+            Debug.Assert(posts != null);
+
+            return posts.Data.Children.Select(x => x.Data.Id);
         }
 
         public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,
             string? feedTitle, CancellationToken cancellationToken = default)
         {
             Debug.Assert(posts != null);
-            
+
             var post = posts.Data.Children.First(x => x.Data.Id.GetHashCode() == articleId);
 
             IEnumerable<MessageContents> contents = [GetArticleMessageContent(post.Data)];
-            
+
             return contents.ToAsyncEnumerable();
         }
 

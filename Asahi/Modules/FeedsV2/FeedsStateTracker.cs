@@ -37,6 +37,13 @@ public class FeedsStateTracker
     {
         return feedSourceToTitleDictionary.TryGetValue(feedSource.GetHashCode(), out var title) ? title : null;
     }
+
+    /// <remarks>Provided for debugging purposes. Use <see cref="IsNewArticle"/> for most other cases.</remarks>
+    [Pure]
+    public IReadOnlyCollection<int>? GetSeenArticleIds(string feedSource)
+    {
+        return seenArticleHashes.TryGetValue(feedSource.GetHashCode(), out var articleHashes) ? articleHashes : null;
+    }
     
     public void UpdateDefaultFeedTitleCache(string feedSource, string title)
     {
