@@ -36,7 +36,7 @@ public class FeedsProcessorService(
     }
 
     // HACK: debugging stuff, remove once reddit has stopped spamming channels
-    private Dictionary<string, List<string>?> previousArticleIds = null;
+    private readonly Dictionary<string, List<string>?> previousArticleIds = [];
 
     private async Task ProcessFeed(string feedSource, FeedListener[] listeners, FeedsStateTracker stateTracker,
         CancellationToken cancellationToken = default)
