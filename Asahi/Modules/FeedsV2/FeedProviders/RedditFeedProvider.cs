@@ -31,7 +31,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
             posts = await redditApi.GetSubredditPosts(subreddit, cancellationToken);
 
-            return true;
+            return posts.Kind == "Listing";
         }
 
         public IEnumerable<int> ListArticleIds()

@@ -42,6 +42,7 @@ public class FeedsProcessorService(
 
         if (!await feedProvider.Initialize(feedSource, cancellationToken))
         {
+            logger.LogWarning("Failed to initialize feed {feedSource}.", feedSource);
             return;
         }
         

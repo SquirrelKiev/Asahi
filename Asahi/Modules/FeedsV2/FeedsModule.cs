@@ -50,7 +50,10 @@ public class FeedsModule(
 
             try
             {
-                await feedProvider.Initialize(feedSource);
+                if (!await feedProvider.Initialize(feedSource))
+                {
+                    throw new Exception("Feed failed to initialize.");
+                }
             }
             catch (Exception e)
             {
@@ -118,7 +121,10 @@ public class FeedsModule(
 
             try
             {
-                await feedProvider.Initialize(feedSource);
+                if (!await feedProvider.Initialize(feedSource))
+                {
+                    throw new Exception("Feed failed to initialize.");
+                }
             }
             catch (Exception e)
             {
@@ -278,7 +284,10 @@ public class FeedsModule(
 
         try
         {
-            await feedProvider.Initialize(feedSource);
+            if (!await feedProvider.Initialize(feedSource))
+            {
+                throw new Exception("Feed failed to initialize.");
+            }
         }
         catch
         {
