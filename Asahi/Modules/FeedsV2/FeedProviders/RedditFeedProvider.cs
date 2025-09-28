@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Asahi.Modules.Models;
 using CodeHollow.FeedReader;
+using Newtonsoft.Json;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
 {
@@ -32,13 +33,13 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
             DefaultFeedTitle = $"r/{subreddit}";
 
-            var res = await redditApi.GetSubredditPosts(subreddit, cancellationToken);
+            var res = await redditApi.GetSubredditPostsRaw(subreddit, cancellationToken);
             if (!res.IsSuccessful)
                 return false;
 
-            posts = res.Content;
-            if (res.RequestMessage?.Content != null)
-                Json = await res.RequestMessage.Content.ReadAsStringAsync(cancellationToken);
+            posts = JsonConvert.DeserializeObject<SubredditPosts>(res.Content)!;
+
+            Json = res.Content;
 
             return posts.Kind == "Listing";
         }

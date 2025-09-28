@@ -130,14 +130,14 @@ public class FeedsProcessorService(
         if (rfp != null)
         {
             var newSeenArticleIds = stateTracker.GetSeenArticleIds(feedSource)?.ToList();
-
-            var idDiffs = newSeenArticleIds?.Except(previousSeenArticleIds ?? []).ToList();
+            
+            var idDiffs = previousSeenArticleIds?.Except(newSeenArticleIds ?? []).ToList();
             if (idDiffs?.Count > 5)
             {
                 logger.LogError(
                     "R/DEBUG: more than 5 articles have been now marked as unseen in one go, assuming stuff has blown up. feed is {feed}. seen ids are {seenIds}. old article ids are {previousIds}, new ids are {newIds}. diff is {idDiffs}. feed json is {json}",
                     feedSource, stateTracker.GetSeenArticleIds(feedSource), previousArticleIds[feedSource],
-                    newSeenArticleIds, idDiffs, rfp.Json);
+                    newArticleIds, idDiffs, rfp.Json);
             }
 
             previousArticleIds[feedSource] = newArticleIds;
@@ -147,7 +147,7 @@ public class FeedsProcessorService(
     }
 
     /// <summary>
-    /// If this is the first time seeing the feed source, this will cache the initial returned articles from it so they aren't sent multiple times.
+    /// If this is the first time seeing the feed source, this will cache the initially returned articles from it so they aren't sent multiple times.
     /// </summary>
     /// <returns>Whether it cached anything or not.</returns>
     public bool TryCacheInitialArticlesIfNecessary(string feedSource, IFeedProvider feedProvider,
