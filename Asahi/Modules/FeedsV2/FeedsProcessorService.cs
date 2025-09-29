@@ -139,6 +139,13 @@ public class FeedsProcessorService(
                     feedSource, stateTracker.GetSeenArticleIds(feedSource), previousArticleIds[feedSource],
                     newArticleIds, idDiffs, rfp.Json);
             }
+            else
+            {
+                logger.LogTrace(
+                    "R/DEBUG: feed is {feed}. seen ids are {seenIds}. old article ids are {previousIds}, new ids are {newIds}. diff is {idDiffs}. feed json is {json}",
+                    feedSource, newSeenArticleIds, previousArticleIds[feedSource],
+                    newArticleIds, idDiffs, rfp.Json);
+            }
 
             previousArticleIds[feedSource] = newArticleIds;
         }

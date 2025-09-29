@@ -1,10 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.Contracts;
+using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.FeedsV2;
 
 [Inject(ServiceLifetime.Singleton)]
-public class FeedsStateTracker
+public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 {
     private readonly ConcurrentDictionary<int, HashSet<int>> seenArticleHashes = [];
     private readonly ConcurrentDictionary<int, string> feedSourceToTitleDictionary = [];
@@ -56,7 +57,14 @@ public class FeedsStateTracker
         
         var articleHashes = seenArticleHashes.GetOrAdd(feedSourceHashCode, _ => []);
 
-        articleHashes.Add(articleId);
+        if (articleHashes.Add(articleId))
+        {
+            logger.LogTrace("Marked article {articleId} as read for feed {feedSource}.", articleId, feedSource);
+        }
+        else
+        {
+            logger.LogTrace("Already seen article {articleId} for feed {feedSource}, not marking as read.", articleId, feedSource);
+        }
     }
 
     public void PruneMissingArticles(IFeedProvider feedProvider)
@@ -70,6 +78,11 @@ public class FeedsStateTracker
 
         var prunableHashes = feedProvider.ListArticleIds().Where(x => articleHashes.All(y => y != x)).ToArray();
 
+        if (prunableHashes.Length != 0)
+        {
+            logger.LogTrace("Pruning {prunableCount} articles from feed {feedSource} - {prunedArticles}", prunableHashes.Length, feedSource, prunableHashes);
+        }
+        
         foreach (var prunableHash in prunableHashes)
         {
             articleHashes.Remove(prunableHash);
@@ -82,6 +95,11 @@ public class FeedsStateTracker
 
         var obsoleteFeeds = seenArticleHashes.Keys.Where(feedHash => !validFeedHashes.Contains(feedHash)).ToList();
 
+        if (obsoleteFeeds.Count != 0)
+        {
+            logger.LogTrace("Pruning {prunableCount} feeds - {prunedArticles}", obsoleteFeeds.Count, obsoleteFeeds);
+        }
+        
         foreach (var feedHash in obsoleteFeeds)
         {
             seenArticleHashes.Remove(feedHash, out _);
