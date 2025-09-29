@@ -136,14 +136,14 @@ public class FeedsProcessorService(
             {
                 logger.LogError(
                     "R/DEBUG: more than 5 articles have been now marked as unseen in one go, assuming stuff has blown up. feed is {feed}. seen ids are {seenIds}. old article ids are {previousIds}, new ids are {newIds}. diff is {idDiffs}. feed json is {json}",
-                    feedSource, stateTracker.GetSeenArticleIds(feedSource), previousArticleIds[feedSource],
+                    feedSource, stateTracker.GetSeenArticleIds(feedSource), previousArticleIds.GetValueOrDefault(feedSource),
                     newArticleIds, idDiffs, rfp.Json);
             }
             else
             {
                 logger.LogTrace(
                     "R/DEBUG: feed is {feed}. seen ids are {seenIds}. old article ids are {previousIds}, new ids are {newIds}. diff is {idDiffs}. feed json is {json}",
-                    feedSource, newSeenArticleIds, previousArticleIds[feedSource],
+                    feedSource, newSeenArticleIds, previousArticleIds.GetValueOrDefault(feedSource),
                     newArticleIds, idDiffs, rfp.Json);
             }
 
