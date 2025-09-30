@@ -163,6 +163,9 @@ public class FeedsProcessorService(
     public bool TryCacheInitialArticlesIfNecessary(string feedSource, IFeedProvider feedProvider,
         FeedsStateTracker stateTracker)
     {
+        // this will eternally happen if the feed has no posts
+        // probably not an issue tho
+        // probably
         if (!stateTracker.IsFirstTimeSeeingFeedSource(feedSource))
         {
             return false;

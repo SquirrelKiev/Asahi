@@ -309,8 +309,8 @@ namespace Asahi.Modules.Models
         public int SubredditSubscribers { get; set; }
 
         [JsonProperty("created_utc")]
-        [JsonConverter(typeof(UtcTimestampConverter))]
-        public DateTime CreatedUTC { get; set; }
+        // [JsonConverter(typeof(UtcTimestampConverter))]
+        public ulong CreatedUTC { get; set; }
 
         [JsonProperty("mod_reports")]
         public JArray ModReports { get; set; }

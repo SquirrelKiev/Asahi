@@ -13,9 +13,9 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         // HACK: for debugging. remove later
         public string? Json { get; private set; }
 
-        private SubredditPosts? posts;
-        
-        private string? lastReceivedPostPreviousRun;
+        private List<PostChild>? posts;
+
+        private RedditContinuationToken? lastReceivedPostPreviousRun;
 
         public async Task<bool> Initialize(string feedSource, object? continuationToken = null,
             CancellationToken cancellationToken = default)
@@ -34,26 +34,40 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             var subreddit = regex.Groups["subreddit"].Value;
 
             DefaultFeedTitle = $"r/{subreddit}";
-            
-            var lastReceivedPost = continuationToken as string;
+
+            var lastReceivedPost = continuationToken as RedditContinuationToken?;
             lastReceivedPostPreviousRun = lastReceivedPost;
-            
-            var res = await redditApi.GetSubredditPostsRaw(subreddit, before: lastReceivedPost, cancellationToken: cancellationToken);
+
+            var res = await redditApi.GetSubredditPostsRaw(subreddit, before: lastReceivedPost?.LastReceivedId,
+                cancellationToken: cancellationToken);
             if (!res.IsSuccessful)
                 return false;
 
-            posts = JsonConvert.DeserializeObject<SubredditPosts>(res.Content)!;
+            var deserialized = JsonConvert.DeserializeObject<SubredditPosts>(res.Content)!;
+
+            if (deserialized.Kind != "Listing")
+                return false;
+            
+            posts = deserialized.Data.Children.Where(x =>
+                    lastReceivedPostPreviousRun == null ||
+                    x.Data.CreatedUTC > lastReceivedPostPreviousRun.Value.LastReceivedTimestamp)
+                .ToList();
 
             Json = res.Content;
 
-            return posts.Kind == "Listing";
+            return true;
         }
 
         public object? GetContinuationToken()
         {
             Debug.Assert(posts != null);
-            
-            return posts.Data.Children.FirstOrDefault()?.Data.Name ?? lastReceivedPostPreviousRun;
+
+            var lastReceivedPost = posts.FirstOrDefault();
+
+            if (lastReceivedPost != null)
+                return new RedditContinuationToken(lastReceivedPost.Data.Name, lastReceivedPost.Data.CreatedUTC);
+            else
+                return lastReceivedPostPreviousRun;
         }
 
         public IEnumerable<int> ListArticleIds()
@@ -67,7 +81,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         {
             Debug.Assert(posts != null);
 
-            return posts.Data.Children.Select(x => x.Data.Name);
+            return posts.Select(x => x.Data.Name);
         }
 
         public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,
@@ -75,7 +89,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         {
             Debug.Assert(posts != null);
 
-            var post = posts.Data.Children.First(x => x.Data.Name.GetHashCode() == articleId);
+            var post = posts.First(x => x.Data.Name.GetHashCode() == articleId);
 
             IEnumerable<MessageContents> contents = [GetArticleMessageContent(post.Data)];
 
@@ -89,5 +103,8 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             else
                 return new MessageContents($"https://www.rxddit.com{post.Permalink}");
         }
+
+        // tracking timestamp to get around a reddit API bug where it randomly decides to send old JSON sometimes.
+        private readonly record struct RedditContinuationToken(string LastReceivedId, ulong LastReceivedTimestamp);
     }
 }
