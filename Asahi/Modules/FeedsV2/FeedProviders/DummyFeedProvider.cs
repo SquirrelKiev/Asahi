@@ -13,7 +13,8 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             get => "Dummy feed";
         }
         
-        public Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
+        public Task<bool> Initialize(string feedSource, object? continuationToken = null,
+            CancellationToken cancellationToken = default)
         {
             Debug.Assert(feedSource == "dummy:");
 
@@ -21,6 +22,11 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
             initializeCallCount++;
             return Task.FromResult(true);
+        }
+
+        public object? GetContinuationToken()
+        {
+            return null;
         }
 
         public IEnumerable<int> ListArticleIds()

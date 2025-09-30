@@ -13,7 +13,8 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
         private DanbooruPost[]? posts;
 
-        public async Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
+        public async Task<bool> Initialize(string feedSource, object? continuationToken = null,
+            CancellationToken cancellationToken = default)
         {
             FeedSource = feedSource;
             
@@ -32,6 +33,11 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             DefaultFeedTitle = tags == null ? "Danbooru Feed" : $"Danbooru: {tags}".Truncate(64, false);
 
             return true;
+        }
+
+        public object? GetContinuationToken()
+        {
+            return null;
         }
 
         public IEnumerable<int> ListArticleIds()

@@ -10,7 +10,14 @@ public interface IFeedProvider
     /// <summary>
     /// Gets the data from the provided feed.
     /// </summary>
-    public Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default);
+    public Task<bool> Initialize(string feedSource, object? continuationToken = null,
+        CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Returns a token that represents the current "position" in the feed. Used by <see cref="Initialize"/> for avoiding fetching redundant data that we know has already been seen before. Optional.
+    /// </summary>
+    /// <returns></returns>
+    public object? GetContinuationToken();
 
     /// <summary>
     /// Returns IDs that can be used with <see cref="GetArticleMessageContent"/>.

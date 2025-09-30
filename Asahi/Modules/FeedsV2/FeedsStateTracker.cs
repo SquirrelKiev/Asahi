@@ -9,13 +9,14 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 {
     private readonly ConcurrentDictionary<int, HashSet<int>> seenArticleHashes = [];
     private readonly ConcurrentDictionary<int, string> feedSourceToTitleDictionary = [];
+    private readonly ConcurrentDictionary<int, object> feedSourceToContinuationTokenDictionary = [];
 
     [Pure]
     public bool IsFirstTimeSeeingFeedSource(string feedSource)
     {
         return !seenArticleHashes.ContainsKey(feedSource.GetHashCode());
     }
-    
+
     [Pure]
     public bool IsNewArticle(string feedSource, int articleId)
     {
@@ -26,7 +27,7 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 
         return !articleHashes.Contains(articleId);
     }
-    
+
     [Pure]
     public string GetBestDefaultFeedTitle(string feedSource)
     {
@@ -39,13 +40,27 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
         return feedSourceToTitleDictionary.TryGetValue(feedSource.GetHashCode(), out var title) ? title : null;
     }
 
-    /// <remarks>Provided for debugging purposes. Use <see cref="IsNewArticle"/> for most other cases.</remarks>
+    /// <remarks>Provided for debugging purposes. Use <see cref="IsNewArticle"/> for all other cases.</remarks>
     [Pure]
     public IReadOnlyCollection<int>? GetSeenArticleIds(string feedSource)
     {
         return seenArticleHashes.TryGetValue(feedSource.GetHashCode(), out var articleHashes) ? articleHashes : null;
     }
-    
+
+    [Pure]
+    public object? GetFeedSourceContinuationToken(string feedSource)
+    {
+        return feedSourceToContinuationTokenDictionary.GetValueOrDefault(feedSource.GetHashCode());
+    }
+
+    public void SetFeedSourceContinuationToken(string feedSource, object? continuationToken)
+    {
+        if (continuationToken == null)
+            feedSourceToContinuationTokenDictionary.TryRemove(feedSource.GetHashCode(), out _);
+        else
+            feedSourceToContinuationTokenDictionary[feedSource.GetHashCode()] = continuationToken;
+    }
+
     public void UpdateDefaultFeedTitleCache(string feedSource, string title)
     {
         feedSourceToTitleDictionary[feedSource.GetHashCode()] = title;
@@ -54,7 +69,7 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
     public void MarkArticleAsRead(string feedSource, int articleId)
     {
         var feedSourceHashCode = feedSource.GetHashCode();
-        
+
         var articleHashes = seenArticleHashes.GetOrAdd(feedSourceHashCode, _ => []);
 
         if (articleHashes.Add(articleId))
@@ -63,7 +78,8 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
         }
         else
         {
-            logger.LogTrace("Already seen article {articleId} for feed {feedSource}, not marking as read.", articleId, feedSource);
+            logger.LogTrace("Already seen article {articleId} for feed {feedSource}, not marking as read.", articleId,
+                feedSource);
         }
     }
 
@@ -80,9 +96,10 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 
         if (prunableHashes.Length != 0)
         {
-            logger.LogTrace("Pruning {prunableCount} articles from feed {feedSource} - {prunedArticles}", prunableHashes.Length, feedSource, prunableHashes);
+            logger.LogTrace("Pruning {prunableCount} articles from feed {feedSource} - {prunedArticles}",
+                prunableHashes.Length, feedSource, prunableHashes);
         }
-        
+
         foreach (var prunableHash in prunableHashes)
         {
             articleHashes.Remove(prunableHash);
@@ -99,10 +116,12 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
         {
             logger.LogTrace("Pruning {prunableCount} feeds - {prunedArticles}", obsoleteFeeds.Count, obsoleteFeeds);
         }
-        
+
         foreach (var feedHash in obsoleteFeeds)
         {
             seenArticleHashes.Remove(feedHash, out _);
+            feedSourceToTitleDictionary.Remove(feedHash, out _);
+            feedSourceToContinuationTokenDictionary.Remove(feedHash, out _);
         }
     }
 }

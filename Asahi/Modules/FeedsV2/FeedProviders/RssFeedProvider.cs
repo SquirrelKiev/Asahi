@@ -23,7 +23,8 @@ public class RssFeedProvider(HttpClient client) : IFeedProvider
     protected Feed? genericFeed;
 
     // TODO: This should use FeedReader.ParseFeedUrlsFromHtml() or smth
-    public async Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
+    public async Task<bool> Initialize(string feedSource, object? continuationToken = null,
+        CancellationToken cancellationToken = default)
     {
         FeedSource = feedSource;
 
@@ -40,6 +41,12 @@ public class RssFeedProvider(HttpClient client) : IFeedProvider
 
         return true;
     }
+
+    public object? GetContinuationToken()
+    {
+        return null;
+    }
+
     public IEnumerable<int> ListArticleIds()
     {
         Debug.Assert(genericFeed != null);

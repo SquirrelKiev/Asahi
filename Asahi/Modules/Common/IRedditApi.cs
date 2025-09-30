@@ -8,9 +8,9 @@ public interface IRedditApi
     [Get($"/r/{{{nameof(subreddit)}}}/about.json")]
     Task<ApiResponse<SubredditChild>> GetSubredditInfo(string subreddit, CancellationToken cancellationToken = default);
     
-    [Get($"/r/{{{nameof(subreddit)}}}/new.json?sort=new&limit=10")]
-    Task<ApiResponse<SubredditPosts>> GetSubredditPosts(string subreddit, CancellationToken cancellationToken = default);
+    [Get($"/r/{{{nameof(subreddit)}}}/new.json")]
+    Task<ApiResponse<SubredditPosts>> GetSubredditPosts(string subreddit, [Query] string sort = "new", [Query] int limit = 10, [Query] string? before = null, CancellationToken cancellationToken = default);
     
-    [Get($"/r/{{{nameof(subreddit)}}}/new.json?sort=new&limit=10")]
-    Task<ApiResponse<string>> GetSubredditPostsRaw(string subreddit, CancellationToken cancellationToken = default);
+    [Get($"/r/{{{nameof(subreddit)}}}/new.json")]
+    Task<ApiResponse<string>> GetSubredditPostsRaw(string subreddit, [Query] string sort = "new", [Query] int limit = 10, [Query] string? before = null, CancellationToken cancellationToken = default);
 }

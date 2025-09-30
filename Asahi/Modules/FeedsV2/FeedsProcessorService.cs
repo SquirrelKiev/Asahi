@@ -46,11 +46,15 @@ public class FeedsProcessorService(
         if (feedProvider == null)
             return;
 
-        if (!await feedProvider.Initialize(feedSource, cancellationToken))
+        var continuationToken = stateTracker.GetFeedSourceContinuationToken(feedSource);
+        
+        if (!await feedProvider.Initialize(feedSource, continuationToken, cancellationToken: cancellationToken))
         {
             logger.LogWarning("Failed to initialize feed {feedSource}.", feedSource);
             return;
         }
+        
+        stateTracker.SetFeedSourceContinuationToken(feedSource, feedProvider.GetContinuationToken());
 
         stateTracker.UpdateDefaultFeedTitleCache(feedSource, feedProvider.DefaultFeedTitle);
 
@@ -121,8 +125,7 @@ public class FeedsProcessorService(
         }
         else
         {
-            // TODO: only produce this log if we can confirm the feed isn't usually empty, to avoid spam.
-            logger.LogWarning("Skipping pruning for {feedSource} due to empty article list.", feedSource);
+            logger.LogTrace("Skipping pruning for {feedSource} due to empty article list.", feedSource);
         }
 
         // TODO: remove all this hack stuff

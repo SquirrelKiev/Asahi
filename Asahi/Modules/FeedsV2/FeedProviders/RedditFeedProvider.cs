@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using Asahi.Modules.Models;
-using CodeHollow.FeedReader;
 using Newtonsoft.Json;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
@@ -15,8 +14,11 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         public string? Json { get; private set; }
 
         private SubredditPosts? posts;
+        
+        private string? lastReceivedPostPreviousRun;
 
-        public async Task<bool> Initialize(string feedSource, CancellationToken cancellationToken = default)
+        public async Task<bool> Initialize(string feedSource, object? continuationToken = null,
+            CancellationToken cancellationToken = default)
         {
             FeedSource = feedSource;
 
@@ -32,8 +34,11 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             var subreddit = regex.Groups["subreddit"].Value;
 
             DefaultFeedTitle = $"r/{subreddit}";
-
-            var res = await redditApi.GetSubredditPostsRaw(subreddit, cancellationToken);
+            
+            var lastReceivedPost = continuationToken as string;
+            lastReceivedPostPreviousRun = lastReceivedPost;
+            
+            var res = await redditApi.GetSubredditPostsRaw(subreddit, before: lastReceivedPost, cancellationToken: cancellationToken);
             if (!res.IsSuccessful)
                 return false;
 
@@ -42,6 +47,13 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             Json = res.Content;
 
             return posts.Kind == "Listing";
+        }
+
+        public object? GetContinuationToken()
+        {
+            Debug.Assert(posts != null);
+            
+            return posts.Data.Children.FirstOrDefault()?.Data.Name ?? lastReceivedPostPreviousRun;
         }
 
         public IEnumerable<int> ListArticleIds()
@@ -55,7 +67,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         {
             Debug.Assert(posts != null);
 
-            return posts.Data.Children.Select(x => x.Data.Id);
+            return posts.Data.Children.Select(x => x.Data.Name);
         }
 
         public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,
@@ -63,14 +75,14 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         {
             Debug.Assert(posts != null);
 
-            var post = posts.Data.Children.First(x => x.Data.Id.GetHashCode() == articleId);
+            var post = posts.Data.Children.First(x => x.Data.Name.GetHashCode() == articleId);
 
             IEnumerable<MessageContents> contents = [GetArticleMessageContent(post.Data)];
 
             return contents.ToAsyncEnumerable();
         }
 
-        private MessageContents GetArticleMessageContent(Post post)
+        private static MessageContents GetArticleMessageContent(Post post)
         {
             if (post.Spoiler)
                 return new MessageContents($"|| https://www.rxddit.com{post.Permalink} ||");
