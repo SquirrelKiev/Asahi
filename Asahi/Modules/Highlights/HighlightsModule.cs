@@ -1833,7 +1833,7 @@ public class HighlightsModule(
         //await context.SaveChangesAsync();
 
         hts.ForceMessageToHighlights(
-            new HighlightsTrackingService.QueuedMessage(
+            new MessageIdInfo(
                 Context.Guild.Id,
                 Context.Channel.Id,
                 message.Id

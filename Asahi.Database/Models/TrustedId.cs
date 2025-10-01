@@ -32,4 +32,5 @@ public enum TrustedUserPerms
     CodeExecutionPerms = 1 << 4,
     TestCommandNukingPerms = 1 << 5,
     FeedTogglingPerms = 1 << 6,
+    SendMessageAsBotPerms = 1 << 7,
 }

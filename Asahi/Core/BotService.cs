@@ -167,7 +167,7 @@ public class BotService(
         )
         {
             highlightsTrackingService.QueueMessage(
-                new HighlightsTrackingService.QueuedMessage(
+                new MessageIdInfo(
                     channel.Guild.Id,
                     channel.Id,
                     cachedMessage.Id
@@ -200,7 +200,7 @@ public class BotService(
         )
         {
             highlightsTrackingService.QueueMessage(
-                new HighlightsTrackingService.QueuedMessage(
+                new MessageIdInfo(
                     channel.Guild.Id,
                     channel.Id,
                     cachedMessage.Id

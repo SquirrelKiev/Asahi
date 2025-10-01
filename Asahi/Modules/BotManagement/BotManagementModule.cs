@@ -149,7 +149,11 @@ public class BotManagementModule(
         [Summary(
             description: "Should the user be able to toggle any guild's feed(s)?"
         )]
-        bool feedTogglingPerms
+        bool feedTogglingPerms,
+        [Summary(
+            description: "Should the user be able to send messages as the bot?"
+        )]
+        bool sendMessageAsBotPerms
     )
     {
         await ConfigUtilities.CommonConfig(
@@ -180,6 +184,7 @@ public class BotManagementModule(
                 UpdatePermissionFlags(codeExecutionPerms, TrustedUserPerms.CodeExecutionPerms);
                 UpdatePermissionFlags(nukeTestBotCommandsPerms, TrustedUserPerms.TestCommandNukingPerms);
                 UpdatePermissionFlags(feedTogglingPerms, TrustedUserPerms.FeedTogglingPerms);
+                UpdatePermissionFlags(sendMessageAsBotPerms, TrustedUserPerms.SendMessageAsBotPerms);
 
                 // why does it break if I just add to the botWideConfig.TrustedIds list?? but only on the 2nd time??? wtf????
                 // weird ass concurrency error, but it shouldn't be a concurrency issue as nothing will be getting modified
@@ -602,6 +607,166 @@ public class BotManagementModule(
                         .WithOptionalColor(await colorProviderService.GetEmbedColor(guildId))
                         .Build());
                 }
+            }
+        }
+    }
+
+    [Group("send-message", "Sending messages as the bot user.")]
+    [TrustedMember(TrustedUserPerms.SendMessageAsBotPerms)]
+    public class SendMessageModule(HttpClient httpClient, BotConfig config) : BotModule
+    {
+        [SlashCommand("with-text", "Send a message to a channel with the specified text.")]
+        public async Task SendMessageWithContent(
+            [Summary(description: "The channel to send the message to.")]
+            ITextChannel channel,
+            [Summary(description: "The text to send.")]
+            string text)
+        {
+            var defer = DeferAsync();
+
+            var message = await channel.SendMessageAsync(text);
+
+            await defer;
+            await FollowupAsync($"Sent! See {message.GetJumpUrl()}");
+        }
+
+        [SlashCommand("using-template", "Sends a message to a channel, using the specified message as a template.")]
+        public async Task SendMessageUsingTemplate(
+            [Summary(description: "The channel to send the message to.")]
+            ITextChannel channel,
+            [Summary(description: "The message to use as a template. Put a link to a message here.")]
+            string templateMessage)
+        {
+            var defer = DeferAsync();
+
+            var res = await ResolveMessageLinkAsync(templateMessage, Context.User.Id);
+            if (res.IsFailed)
+            {
+                await defer;
+                await FollowupAsync($"Failed to resolve message link: {res.Error}");
+                return;
+            }
+
+            var message = res.Value;
+
+            if (message is not IUserMessage userMessage)
+            {
+                await defer;
+                await FollowupAsync("Message is not a user message.");
+                return;
+            }
+
+            MessageComponent? components = null;
+            if (userMessage.Components.Count > 0)
+            {
+                if ((userMessage.Flags & MessageFlags.ComponentsV2) != 0)
+                {
+                    components = new ComponentBuilderV2(userMessage.Components).Build();
+                }
+                else
+                {
+                    components = ComponentBuilder.FromComponents(userMessage.Components).Build();
+                }
+            }
+
+            PollProperties? poll = null;
+            if (userMessage.Poll.HasValue)
+            {
+                var usersPoll = userMessage.Poll.Value;
+
+                poll = new PollProperties
+                {
+                    AllowMultiselect = usersPoll.AllowMultiselect,
+                    Duration = (uint)(usersPoll.ExpiresAt.ToUnixTimeSeconds() -
+                                      userMessage.CreatedAt.ToUnixTimeSeconds()),
+                    LayoutType = usersPoll.LayoutType,
+                    Question = new PollMediaProperties
+                    {
+                        Emoji = usersPoll.Question.Emoji,
+                        Text = usersPoll.Question.Text
+                    },
+                    Answers = usersPoll.Answers.Select(x => new PollMediaProperties
+                    {
+                        Emoji = x.PollMedia.Emoji,
+                        Text = x.PollMedia.Text
+                    }).ToList()
+                };
+            }
+
+            var newMessage = await channel.SendMessageAsync(userMessage.Content, userMessage.IsTTS, null, null,
+                AllowedMentions.All, null, components, null,
+                userMessage.Embeds.Select(x => x.ToEmbedBuilderForce().Build()).ToArray(), MessageFlags.None, poll);
+
+            await defer;
+            await FollowupAsync($"Sent! See {newMessage.GetJumpUrl()}");
+        }
+        
+        // i should definitely de-serialize their json and serialize it myself to to be safe but like
+        // i cant be bothered to implement all the models a message needs
+        // so this is probably fine
+        // probably
+
+        [SlashCommand("from-json-file", "Sends a message to a channel, using the specified message JSON.")]
+        public async Task SendMessageFromJsonFile(
+            [Summary(description: "The channel to send the message to.")]
+            ITextChannel channel,
+            [Summary(description: "The message JSON to use.")]
+            IAttachment json)
+        {
+            var defer = DeferAsync();
+
+            if (json.ContentType != "application/json")
+            {
+                await defer;
+                await FollowupAsync("File is not a JSON file.");
+                return;
+            }
+
+            var res = await httpClient.GetAsync(json.Url);
+            
+            if(!res.IsSuccessStatusCode)
+            {
+                await defer;
+                await FollowupAsync($"Failed to download JSON file: {res.StatusCode}");
+                return;
+            }
+            
+            var jsonString = await res.Content.ReadAsStringAsync();
+            
+            await DoJsonThings(channel, jsonString, defer);
+        }
+
+        [SlashCommand("from-json-text", "Sends a message to a channel, using the specified message JSON.")]
+        public async Task SendMessageFromJsonText(
+            [Summary(description: "The channel to send the message to.")]
+            ITextChannel channel,
+            [Summary(description: "The message JSON to use.")]
+            string json)
+        {
+            var defer = DeferAsync();
+
+            await DoJsonThings(channel, json, defer);
+        }
+        
+        private async Task DoJsonThings(ITextChannel channel, string jsonString, Task defer)
+        {
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post,
+                $"https://discord.com/api/v10/channels/{channel.Id}/messages");
+            
+            httpRequest.Headers.Add("Authorization", $"Bot {config.BotToken}");
+            
+            httpRequest.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
+            
+            var res2 = await httpClient.SendAsync(httpRequest);
+            
+            await defer;
+            if(res2.IsSuccessStatusCode)
+            {
+                await FollowupAsync("Sent! Probably");
+            }
+            else
+            {
+                await FollowupAsync($"Failed to send message: {res2.StatusCode}");
             }
         }
     }

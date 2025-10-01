@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Diagnostics.Contracts;
+using System.Text.RegularExpressions;
+using Asahi.Modules.Highlights;
 
 namespace Asahi;
 
@@ -45,4 +47,21 @@ public static partial class CompiledRegex
 
     [GeneratedRegex(@"^https:\/\/misskey\.io\/notes\/([a-z0-9]+)\/?$")]
     public static partial Regex MisskeyNoteRegex();
+
+    [Pure]
+    public static MessageIdInfo? ParseMessageLink(string messageLink)
+    {
+        var messageProcessed = MessageLinkRegex().Match(messageLink);
+
+        if (!messageProcessed.Success)
+        {
+            return null;
+        }
+
+        var guildId = ulong.Parse(messageProcessed.Groups["guild"].Value);
+        var channelId = ulong.Parse(messageProcessed.Groups["channel"].Value);
+        var messageId = ulong.Parse(messageProcessed.Groups["message"].Value);
+
+        return new MessageIdInfo(guildId, channelId, messageId);
+    }
 }

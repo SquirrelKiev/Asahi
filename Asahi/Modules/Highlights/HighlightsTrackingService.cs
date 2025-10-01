@@ -40,26 +40,18 @@ public class HighlightsTrackingService(
         }
     }
 
-    public record struct QueuedMessage(ulong GuildId, ulong ChannelId, ulong MessageId)
-    {
-        public readonly bool Equals(QueuedMessage? other)
-        {
-            return other.HasValue && other.Value.MessageId == MessageId;
-        }
-    };
-
-    public record struct ForcedMessage(QueuedMessage QueuedMessage, string BoardName);
+    public record struct ForcedMessage(MessageIdInfo QueuedMessage, string BoardName);
 
     private readonly ConcurrentDictionary<ulong, ConcurrentQueue<CachedMessage>> messageCaches = [];
     private readonly MemoryCache messageThresholds = new(new MemoryCacheOptions());
 
     private Task? timerTask;
     private readonly object lockMessageQueue = new();
-    private readonly HashSet<QueuedMessage> messageQueue = [];
-    private readonly HashSet<QueuedMessage> messageQueueShouldSendHighlight = [];
+    private readonly HashSet<MessageIdInfo> messageQueue = [];
+    private readonly HashSet<MessageIdInfo> messageQueueShouldSendHighlight = [];
     private readonly HashSet<ForcedMessage> messageQueueForceToHighlights = [];
 
-    public void QueueMessage(QueuedMessage messageToQueue, bool shouldSendHighlight)
+    public void QueueMessage(MessageIdInfo messageToQueue, bool shouldSendHighlight)
     {
         lock (lockMessageQueue)
         {
@@ -70,7 +62,7 @@ public class HighlightsTrackingService(
         }
     }
 
-    public void ForceMessageToHighlights(QueuedMessage messageToQueue, string boardName)
+    public void ForceMessageToHighlights(MessageIdInfo messageToQueue, string boardName)
     {
         lock (lockMessageQueue)
         {
@@ -331,7 +323,7 @@ public class HighlightsTrackingService(
     private async Task OnFinishWaitingForTick(CancellationToken cancellationToken)
     {
         ForcedMessage[] forcedMessages;
-        HashSet<QueuedMessage> messages;
+        HashSet<MessageIdInfo> messages;
         HashSet<ulong> messagesShouldSendHighlight;
         lock (lockMessageQueue)
         {
@@ -449,7 +441,7 @@ public class HighlightsTrackingService(
         string[] forcedBoards
     )
     {
-        logger.LogTrace("Checking message");
+        logger.LogTrace("Checking message {messageId}", messageId);
 
         await using var context = await dbService.CreateDbContextAsync();
 

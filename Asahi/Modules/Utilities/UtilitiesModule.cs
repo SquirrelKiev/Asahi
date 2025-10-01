@@ -144,60 +144,37 @@ public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : Bo
     [SlashCommand("quote", "Quote a message")]
     public async Task QuoteSlash([Summary(description: "A link to the message to quote.")] string messageLink)
     {
-        await DeferAsync();
+        var defer = DeferAsync();
+        
+        var res = await ResolveMessageLinkAsync(messageLink, Context.User.Id);
 
-        var messageProcessed = CompiledRegex.MessageLinkRegex().Match(messageLink);
-
-        if (!messageProcessed.Success)
+        if (res.IsFailed)
         {
-            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
-                new ConfigChangeResult(false, "Message link provided could not be parsed.")));
+            await defer;
+            await RespondAsync($"Failed to resolve message link: {res.Error}");
             return;
         }
 
-        var guildId = ulong.Parse(messageProcessed.Groups["guild"].Value);
-        var channelId = ulong.Parse(messageProcessed.Groups["channel"].Value);
-        var messageId = ulong.Parse(messageProcessed.Groups["message"].Value);
+        var message = res.Value;
+        
+        var channel = message.Channel as IGuildChannel;
 
-        var guild = await Context.Client.GetGuildAsync(guildId);
-
-        var executorGuildUser = await guild.GetUserAsync(Context.User.Id);
-        if (executorGuildUser == null)
+        if (channel == null)
         {
-            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
-                new ConfigChangeResult(false, "No permission.")));
+            await defer;
+            await RespondAsync("message doesnt come from a guild?");
             return;
         }
-
-        var channel = await guild.GetTextChannelAsync(channelId);
-        var perms = executorGuildUser.GetPermissions(channel);
-        if (!perms.ViewChannel || !perms.ReadMessageHistory)
-        {
-            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
-                new ConfigChangeResult(false, "No permission.")));
-            return;
-        }
-
-        if (channel is SocketThreadChannel { Type: ThreadType.PrivateThread } threadChannel)
-        {
-            _ = await threadChannel.GetUsersAsync();
-            if (threadChannel.GetUser(Context.User.Id) == null)
-            {
-                await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
-                    new ConfigChangeResult(false, "No permission.")));
-                return;
-            }
-        }
-        var message = await channel.GetMessageAsync(messageId);
-
-        var author = await guild.GetUserAsync(message.Author.Id);
+        
+        var author = await channel.Guild.GetUserAsync(message.Author.Id);
 
         var quoteMessages = QuotingHelpers.QuoteMessage(message, QuotingHelpers.GetUserRoleColorWithFallback(author, Color.Green), logger,
             true, []);
 
+        await defer;
         foreach (var quoteMessage in quoteMessages)
         {
-            await FollowupAsync(quoteMessage);
+            await RespondAsync(quoteMessage);
         }
     }
 }
