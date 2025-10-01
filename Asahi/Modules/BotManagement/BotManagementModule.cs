@@ -622,7 +622,7 @@ public class BotManagementModule(
             [Summary(description: "The text to send.")]
             string text)
         {
-            var defer = DeferAsync();
+            var defer = DeferAsync(true);
 
             var message = await channel.SendMessageAsync(text);
 
@@ -637,7 +637,7 @@ public class BotManagementModule(
             [Summary(description: "The message to use as a template. Put a link to a message here.")]
             string templateMessage)
         {
-            var defer = DeferAsync();
+            var defer = DeferAsync(true);
 
             var res = await ResolveMessageLinkAsync(templateMessage, Context.User.Id);
             if (res.IsFailed)
@@ -700,7 +700,7 @@ public class BotManagementModule(
             await defer;
             await FollowupAsync($"Sent! See {newMessage.GetJumpUrl()}");
         }
-        
+
         // i should definitely de-serialize their json and serialize it myself to to be safe but like
         // i cant be bothered to implement all the models a message needs
         // so this is probably fine
@@ -713,7 +713,7 @@ public class BotManagementModule(
             [Summary(description: "The message JSON to use.")]
             IAttachment json)
         {
-            var defer = DeferAsync();
+            var defer = DeferAsync(true);
 
             if (json.ContentType != "application/json")
             {
@@ -723,16 +723,16 @@ public class BotManagementModule(
             }
 
             var res = await httpClient.GetAsync(json.Url);
-            
-            if(!res.IsSuccessStatusCode)
+
+            if (!res.IsSuccessStatusCode)
             {
                 await defer;
                 await FollowupAsync($"Failed to download JSON file: {res.StatusCode}");
                 return;
             }
-            
+
             var jsonString = await res.Content.ReadAsStringAsync();
-            
+
             await DoJsonThings(channel, jsonString, defer);
         }
 
@@ -743,30 +743,31 @@ public class BotManagementModule(
             [Summary(description: "The message JSON to use.")]
             string json)
         {
-            var defer = DeferAsync();
+            var defer = DeferAsync(true);
 
             await DoJsonThings(channel, json, defer);
         }
-        
+
         private async Task DoJsonThings(ITextChannel channel, string jsonString, Task defer)
         {
             var httpRequest = new HttpRequestMessage(HttpMethod.Post,
                 $"https://discord.com/api/v10/channels/{channel.Id}/messages");
-            
+
             httpRequest.Headers.Add("Authorization", $"Bot {config.BotToken}");
-            
+
             httpRequest.Content = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            
-            var res2 = await httpClient.SendAsync(httpRequest);
-            
+
+            var res = await httpClient.SendAsync(httpRequest);
+
             await defer;
-            if(res2.IsSuccessStatusCode)
+            var contents = await res.Content.ReadAsStringAsync();
+            if (res.IsSuccessStatusCode)
             {
                 await FollowupAsync("Sent! Probably");
             }
             else
             {
-                await FollowupAsync($"Failed to send message: {res2.StatusCode}");
+                await FollowupAsync($"Failed to send message: {res.StatusCode}\n```json\n{contents}\n```");
             }
         }
     }
