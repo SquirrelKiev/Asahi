@@ -38,7 +38,6 @@
         <PackageReference Include="Discord.Net" Version="3.18.0" />
         <PackageReference Include="EntityFrameworkCore.Sqlite.NodaTime" Version="9.1.0"/>
         <PackageReference Include="Fergun.Interactive" Version="1.9.0" />
-        <PackageReference Include="FluentResults" Version="4.0.0" />
         <PackageReference Include="Fluid.Core" Version="2.25.0" />
         <PackageReference Include="Humanizer.Core" Version="2.14.1"/>
         <PackageReference Include="JetBrains.Annotations" Version="2025.2.0" />

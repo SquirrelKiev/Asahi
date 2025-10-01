@@ -1,6 +1,5 @@
 ﻿using Asahi.Database;
 using Discord.WebSocket;
-using FluentResults;
 using Fluid;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,7 +10,7 @@ namespace Asahi.Modules.Welcome;
 [Inject(ServiceLifetime.Singleton)]
 public class WelcomeService(IDbContextFactory<BotDbContext> dbService, ILogger<WelcomeService> logger)
 {
-    private FluidParser parser = new();
+    private readonly FluidParser parser = new();
     
     public async ValueTask<Result<MessageModel>> ParseJson(string json, SocketGuildUser user)
     {
@@ -59,16 +58,16 @@ public class WelcomeService(IDbContextFactory<BotDbContext> dbService, ILogger<W
         }
         catch (Exception ex)
         {
-            return Result.Fail(new ExceptionalError(ex));
+            return Result<MessageModel>.Fail($"{ex.GetType()}: {ex.Message}");
         }
 
 
         if (message is null)
         {
-            return Result.Fail<MessageModel>("JSON deserialized as null.");
+            return Result<MessageModel>.Fail("JSON deserialized as null.");
         }
 
-        return Result.Ok(message);
+        return Result<MessageModel>.Ok(message);
     }
 
     public async Task OnUserJoined(SocketGuildUser user)
@@ -84,7 +83,7 @@ public class WelcomeService(IDbContextFactory<BotDbContext> dbService, ILogger<W
         if (welcomeMessageRes.IsFailed)
         {
             logger.LogWarning("Failed to parse welcome message for Guild {guildId}. {error}", user.Guild.Id,
-                welcomeMessageRes.Errors);
+                welcomeMessageRes.Error);
             return;
         }
 

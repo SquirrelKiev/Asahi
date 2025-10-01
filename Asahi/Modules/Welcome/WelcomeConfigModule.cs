@@ -25,7 +25,7 @@ public class WelcomeConfigModule(IDbContextFactory<BotDbContext> dbService, Welc
 
             if (parsedMessageRes.IsFailed)
             {
-                return new ConfigChangeResult(parsedMessageRes.Errors);
+                return new ConfigChangeResult(false, parsedMessageRes.Error);
             }
 
             context.Config.WelcomeMessageJson = jsonTemplate;
@@ -75,7 +75,7 @@ public class WelcomeConfigModule(IDbContextFactory<BotDbContext> dbService, Welc
         if (welcomeMessageRes.IsFailed)
         {
             var embeds = ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(), new EmbedBuilder(),
-                new ConfigChangeResult(welcomeMessageRes.Errors));
+                new ConfigChangeResult(false, welcomeMessageRes.Error));
 
             await FollowupAsync(embeds: embeds);
             
