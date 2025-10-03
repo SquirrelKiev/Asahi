@@ -151,7 +151,7 @@ public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : Bo
         if (res.IsFailed)
         {
             await defer;
-            await RespondAsync($"Failed to resolve message link: {res.Error}");
+            await FollowupAsync($"Failed to resolve message link: {res.Error}");
             return;
         }
 
@@ -162,7 +162,7 @@ public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : Bo
         if (channel == null)
         {
             await defer;
-            await RespondAsync("message doesnt come from a guild?");
+            await FollowupAsync("message doesnt come from a guild?");
             return;
         }
         
@@ -174,7 +174,7 @@ public class UtilitiesModule(IClock clock, ILogger<UtilitiesModule> logger) : Bo
         await defer;
         foreach (var quoteMessage in quoteMessages)
         {
-            await RespondAsync(quoteMessage);
+            await FollowupAsync(quoteMessage);
         }
     }
 }
