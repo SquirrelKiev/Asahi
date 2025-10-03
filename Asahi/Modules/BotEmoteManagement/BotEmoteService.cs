@@ -4,6 +4,9 @@ namespace Asahi.Modules;
 
 public record BotEmotesSpecification
 {
+    public IEmoteSpecification BotIcon { get; init; } = new InternalCustomEmoteSpecification("AsahiIcon");
+    public IEmoteSpecification AsahiIcon { get; init; } = new InternalCustomEmoteSpecification("AsahiIcon");
+    
     public IEmoteSpecification Error { get; init; } = new UnicodeEmoteSpecification("❓");
     public IEmoteSpecification Loading { get; init; } = new InternalCustomEmoteSpecification("Loading");
     public IEmoteSpecification Refresh { get; init; } = new InternalCustomEmoteSpecification("RefreshIcon");

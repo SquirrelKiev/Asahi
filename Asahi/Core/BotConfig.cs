@@ -19,6 +19,9 @@ public class BotConfig
                               "Example Sqlite string: Data Source=data/BotDb.db")]
     public string DatabaseConnectionString { get; set; } = "Data Source=data/BotDb.db";
 
+    [YamlMember(Description = "The folders to search for emote images. Descending priority order.")]
+    public string[] InternalEmoteImagesDirectories { get; set; } = [Path.Combine("%DataDir%", "InternalEmotes")];
+    
     public BotEmotesSpecification Emotes { get; set; } = new();
 
     [YamlMember(Description = "A set of UserIDs. Users in this set will be granted permission to use commands to manage the instance itself.\n" +
@@ -59,50 +62,6 @@ public class BotConfig
 
     [YamlMember(Description = "The Asahi web services url to use as a base. Expects an instance of Asahi.WebServices.")]
     public string AsahiWebServicesBaseUrl { get; set; } = "https://asahi-services.onk.moe";
-
-    /// <summary>
-    /// For any string here, the following will be replaced:
-    /// - {{guilds}} will be substituted with how many guilds (servers) the bot is in.
-    /// - {{botUsername}} will be substituted with the bot's username.
-    /// </summary>
-    [YamlMember(Description = "***** ABOUT PAGE *****\n" +
-                              "For any string here, the following will be replaced:\n" +
-                              "- {{guilds}} will be substituted with how many guilds (servers) the bot is in.\n" +
-                              "- {{botUsername}} will be substituted with the bot's username.\n" +
-                              "\n" +
-                              "The about page title.")]
-    public string AboutPageTitle { get; set; } = "About {{botUsername}}";
-
-    /// <summary>
-    /// For any string here, the following will be replaced:
-    /// - {{guilds}} will be substituted with how many guilds (servers) the bot is in.
-    /// - {{botUsername}} will be substituted with the bot's username.
-    /// </summary>
-    [YamlMember(Description = "The about page description.")]
-    public string AboutPageDescription { get; set; } = "Various miscellaneous tools. " +
-                                                                "Originally called Seigen and just had the trackables stuff, " +
-                                                                "but has since expanded to include more.";
-
-
-    [YamlMember(Description = "Fields within the about page.")]
-    public AboutField[] AboutPageFields { get; set; } =
-    [
-        new AboutField
-        {
-            Name = "Servers",
-            Value = "{{guilds}}"
-        },
-        new AboutField
-        {
-            Name = "Credits:",
-            Value = "Bot by [enonibobble](https://github.com/SquirrelKiev)"
-        },
-        new AboutField
-        {
-            Name = "Source Code:",
-            Value = "https://github.com/SquirrelKiev/Asahi"
-        }
-    ];
 
     public bool IsValid()
     {

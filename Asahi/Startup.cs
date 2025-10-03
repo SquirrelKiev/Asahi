@@ -164,7 +164,8 @@ public static class Startup
             }))
             .AddSingleton<CommandHandler>()
             .AddSingleton<IInternalEmoteSource, FileSystemInternalEmoteSource>(_ =>
-                new FileSystemInternalEmoteSource(BotConfigFactory.BotInternalEmotesDirectory))
+                new FileSystemInternalEmoteSource(config.InternalEmoteImagesDirectories
+                    .Select(x => x.Replace("%DataDir%", BotConfigFactory.DefaultDataDirectory)).ToArray()))
             .AddSingleton<IEmoteResolver, DiscordEmoteResolverService>()
             .AddSingleton<BotEmoteService>()
             .AddDbContextFactory<BotDbContext>()
@@ -174,8 +175,7 @@ public static class Startup
             .AddSingleton(new InteractiveConfig()
                 { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel })
             .AddSingleton<InteractiveService>()
-            .AddSingleton<IClock>(SystemClock.Instance)
-            .AddSingleton<AboutService>();
+            .AddSingleton<IClock>(SystemClock.Instance);
 
         serviceCollection.AddHttpClient("rss")
             .ConfigureHttpClient(x =>

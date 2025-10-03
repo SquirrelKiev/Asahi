@@ -295,8 +295,6 @@ public class BotService(
 
     private async Task SyncEmotesAsync(CancellationToken cancellationToken = default)
     {
-        Directory.CreateDirectory(BotConfigFactory.BotInternalEmotesDirectory);
-
         await using var context = await dbService.CreateDbContextAsync(cancellationToken);
         var emoteTracking = await context.InternalCustomEmoteTracking.ToListAsync(cancellationToken: cancellationToken);
         var originalEmoteTracking = new List<InternalCustomEmoteTracking>(emoteTracking);

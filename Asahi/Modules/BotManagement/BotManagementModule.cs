@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Asahi.Database;
 using Asahi.Database.Models;
 using Asahi.Database.Models.Rss;
+using Asahi.Modules.About;
 using Asahi.Modules.FeedsV2;
 using Discord.Interactions;
 using Discord.Rest;
@@ -34,6 +35,7 @@ public class BotManagementModule(
     DiscordSocketClient client,
     HttpClient http,
     IServiceProvider services,
+    AboutService aboutService,
     ILogger<BotManagementModule> logger
 ) : BotModule
 {
@@ -396,6 +398,15 @@ public class BotManagementModule(
         await botClient.LogoutAsync();
 
         await FollowupAsync("Deleted.");
+    }
+
+    [TrustedMember(TrustedUserPerms.None)]
+    [SlashCommand("nuke-about-cache", "Resets the /about component cache.")]
+    public async Task ResetAboutCacheSlash()
+    {
+        aboutService.NukeCache();
+
+        await RespondAsync("Done.");
     }
 
     [Group("feeds", "Feed management.")]

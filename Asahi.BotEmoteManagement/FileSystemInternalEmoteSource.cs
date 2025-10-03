@@ -4,24 +4,27 @@ namespace Asahi.BotEmoteManagement;
 
 public class FileSystemInternalEmoteSource : IInternalEmoteSource
 {
-    private readonly string emoteImagesFolder;
+    // private readonly string[] emoteImageDirectories;
     private readonly Lazy<IReadOnlyDictionary<string, string>> emoteToKeyPathMap;
 
-    public FileSystemInternalEmoteSource(string emoteImagesFolder)
+    public FileSystemInternalEmoteSource(string[] emoteImageDirectories)
     {
-        this.emoteImagesFolder = emoteImagesFolder;
+        // this.emoteImageDirectories = emoteImageDirectories;
 
         emoteToKeyPathMap = new Lazy<IReadOnlyDictionary<string, string>>(() =>
         {
-            if (!Directory.Exists(emoteImagesFolder))
+            foreach (var folder in emoteImageDirectories)
             {
-                // not sure if this is a good approach
-                Directory.CreateDirectory(emoteImagesFolder);
+                if (!Directory.Exists(folder))
+                {
+                    // not sure if this is a good approach
+                    Directory.CreateDirectory(folder);
+                }
             }
             
-            return Directory.EnumerateFiles(emoteImagesFolder)
-                .GroupBy(path => Path.GetFileNameWithoutExtension(path) ?? string.Empty)
-                .ToDictionary(g => g.Key, g => g.First());
+            return emoteImageDirectories.SelectMany(Directory.EnumerateFiles)
+                .GroupBy(Path.GetFileNameWithoutExtension)
+                .ToDictionary(g => g.Key!, g => g.First());
         });
     }
     
