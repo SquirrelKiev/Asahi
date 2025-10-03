@@ -36,14 +36,13 @@ public record ExternalCustomEmoteSpecification(string EmoteName, ulong EmoteId, 
 
 /// <summary>
 /// Represents a custom emote that is managed internally by the bot.
-/// The bot will upload and synchronise this emote to the application's emotes.
+/// The bot will upload and synchronize this emote to the application's emotes.
 /// </summary>
 /// <param name="EmoteKey">
-/// A unique key for the internal emote. This key is used to find the corresponding
-/// image file (e.g., "EmoteKey.png" or "EmoteKey.gif") in the folder specified by
-/// <see cref="BotEmoteManagerConfig.InternalEmoteImagesFolder"/>.
+/// A unique key for the internal emote. This key is used by the respective InternalEmoteSource to find the emote.
 /// The key will also be used as the emote name on Discord.
 /// </param>
+/// <seealso cref="FileSystemInternalEmoteSource"/>
 /// <remarks>
 /// The <see cref="ReflectionBasedBotEmoteManagerService{TEmoteSpecification,TEmoteModel}"/> expects a corresponding
 /// image file (e.g. EmoteKey.png, EmoteKey.gif) to exist in the configured internal emotes folder.
