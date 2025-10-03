@@ -1,10 +1,10 @@
 ﻿using System.Globalization;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
 using Asahi.BotEmoteManagement;
 using Asahi.Database;
 using Asahi.Modules;
-using Asahi.Modules.About;
 using Asahi.Modules.AnimeThemes;
 using Asahi.Modules.FeedsV2;
 using Asahi.Modules.Tatsu;
@@ -177,6 +177,21 @@ public static class Startup
             .AddSingleton<InteractiveService>()
             .AddSingleton<IClock>(SystemClock.Instance);
 
+        var currentAssembly = Assembly.GetExecutingAssembly();
+        var projectName = currentAssembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product;
+        var informationalVersion = currentAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+        var repositoryUrl = currentAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(x => x.Key == "RepositoryUrl")?.Value;
+        serviceCollection.ConfigureHttpClientDefaults(x =>
+        {
+            x.RemoveAllLoggers().ConfigureHttpClient(client =>
+            {
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                    $"{projectName}/{informationalVersion} (+{repositoryUrl})");
+                client.Timeout = TimeSpan.FromSeconds(10);
+            });
+        });
+        
         serviceCollection.AddHttpClient("rss")
             .ConfigureHttpClient(x =>
             {
@@ -188,13 +203,6 @@ public static class Startup
                 x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("text/xml"));
                 x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/xml"));
             });
-
-        serviceCollection.ConfigureHttpClientDefaults(x =>
-            x.RemoveAllLoggers().ConfigureHttpClient(client =>
-            {
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(config.UserAgent);
-                client.Timeout = TimeSpan.FromSeconds(10);
-            }));
 
         // Anime themes says its implementing the JSON:API spec, but it's so different lol
         // new JsonApiSerializerSettings()

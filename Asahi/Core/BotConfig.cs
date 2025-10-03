@@ -38,9 +38,6 @@ public class BotConfig
 
     [YamlMember(Description = "The default prefix for the bot.")]
     public string DefaultPrefix { get; set; } = "]";
-
-    [YamlMember(Description = "The default UserAgent to use when making web requests.")]
-    public string UserAgent { get; set; } = "AsahiBot/NoSetVersion (https://github.com/SquirrelKiev/Asahi)";
     
     [YamlMember(Description = "The App ID to use for the Wolfram command. Can get one from https://developer.wolframalpha.com/.")]
     public string WolframAppId { get; set; } = "";
