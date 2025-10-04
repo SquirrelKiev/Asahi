@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Buffers.Text;
+using System.Text;
 using Asahi.Modules.FeedsV2;
 using Asahi.Modules.Models;
 using Humanizer;
@@ -13,7 +14,6 @@ namespace Asahi.Modules
         [
             "jpg",
             "png",
-            "gif",
             "webp",
         ];
 
@@ -21,6 +21,7 @@ namespace Asahi.Modules
         [
             "zip",
             "mp4",
+            "gif",
             "webm"
         ];
 
@@ -392,7 +393,7 @@ namespace Asahi.Modules
         }
 
         [Pure]
-        private static DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants)
+        private DanbooruVariant? GetBestVariant(DanbooruVariant[]? variants)
         {
             if (variants == null)
                 return null;
@@ -414,6 +415,12 @@ namespace Asahi.Modules
 
             if (originalVariant != null)
             {
+                if (KnownVideoExtensions.Contains(originalVariant.FileExt))
+                {
+                    originalVariant.Url = config.VideoProxyUrl.Replace("{{URL}}",
+                        Base64Url.EncodeToString(System.Text.Encoding.UTF8.GetBytes(originalVariant.Url)));
+                }
+                
                 return originalVariant;
             }
 
@@ -457,7 +464,7 @@ namespace Asahi.Modules
                 if (KnownImageExtensions.Contains(extension) || KnownVideoExtensions.Contains(extension))
                 {
                     var fallbackUrl = config.ProxyUrl.Replace("{{URL}}",
-                        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sourceUrl)));
+                        Base64Url.EncodeToString(System.Text.Encoding.UTF8.GetBytes(sourceUrl)));
 
                     return new DanbooruVariantWithExtras(new DanbooruVariant
                     {
@@ -473,7 +480,7 @@ namespace Asahi.Modules
                 if (KnownImageExtensions.Contains(extension))
                 {
                     var fallbackUrl = config.ProxyUrl.Replace("{{URL}}",
-                        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(sourceUrl)));
+                        Base64Url.EncodeToString(System.Text.Encoding.UTF8.GetBytes(sourceUrl)));
 
                     return new DanbooruVariantWithExtras(new DanbooruVariant
                     {

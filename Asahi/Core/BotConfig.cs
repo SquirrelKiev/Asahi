@@ -53,6 +53,9 @@ public class BotConfig
 
     [YamlMember(Description = "The URL pattern to use for proxying images (if necessary).\n{{URL}} will be replaced with the URL, encoded in base64.")]
     public string ProxyUrl { get; set; } = "https://services.f-ck.me/v1/image/{{URL}}?source=asahi_bot";
+    
+    [YamlMember(Description = "The URL pattern to use for proxying videos (if necessary).\n{{URL}} will be replaced with the URL, encoded in base64.")]
+    public string VideoProxyUrl { get; set; } = "https://asahi-services.onk.moe/api/proxy/{{URL}}?source=asahi_bot";
 
     [YamlMember(Description = "The fxtwitter API url to use as a base.")]
     public string FxTwitterApiUrl { get; set; } = "https://api.fxtwitter.com";
