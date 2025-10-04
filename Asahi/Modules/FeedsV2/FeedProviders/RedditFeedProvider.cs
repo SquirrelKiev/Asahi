@@ -10,9 +10,6 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
         public string DefaultFeedTitle { get; private set; } = "Reddit Feed";
 
-        // HACK: for debugging. remove later
-        public string? Json { get; private set; }
-
         private List<PostChild>? posts;
 
         private RedditContinuationToken? lastReceivedPostPreviousRun;
@@ -52,8 +49,6 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
                     lastReceivedPostPreviousRun == null ||
                     x.Data.CreatedUTC > lastReceivedPostPreviousRun.Value.LastReceivedTimestamp)
                 .ToList();
-
-            Json = res.Content;
 
             return true;
         }

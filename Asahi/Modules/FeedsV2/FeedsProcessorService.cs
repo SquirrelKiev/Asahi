@@ -35,9 +35,6 @@ public class FeedsProcessorService(
         logger.LogTrace("Finished processing all feeds.");
     }
 
-    // HACK: debugging stuff, remove once reddit has stopped spamming channels
-    private readonly Dictionary<string, List<string>?> previousArticleIds = [];
-
     private async Task ProcessFeed(string feedSource, FeedListener[] listeners, FeedsStateTracker stateTracker,
         CancellationToken cancellationToken = default)
     {
@@ -61,23 +58,6 @@ public class FeedsProcessorService(
         if (TryCacheInitialArticlesIfNecessary(feedSource, feedProvider, stateTracker))
         {
             return;
-        }
-
-        // HACK: debugging stuff, remove once reddit has stopped spamming channels
-        List<string>? newArticleIds = null;
-        List<int>? previousSeenArticleIds = null;
-        RedditFeedProvider? rfp = feedProvider as RedditFeedProvider;
-        if (rfp != null)
-        {
-            newArticleIds = rfp.ListArticleRedditIds().ToList();
-            previousSeenArticleIds = stateTracker.GetSeenArticleIds(feedSource)?.ToList();
-
-            if (feedProvider.ListArticleIds().Except(stateTracker.GetSeenArticleIds(feedSource) ?? []).Count() > 5)
-            {
-                logger.LogError(
-                    "R/DEBUG: more than 5 articles are unseen, assuming stuff has blown up. feed is {feed}. seen ids are {seenIds}. feed json is {json}",
-                    feedSource, stateTracker.GetSeenArticleIds(feedSource), rfp.Json);
-            }
         }
 
         foreach (var articleId in feedProvider.ListArticleIds())
@@ -126,31 +106,6 @@ public class FeedsProcessorService(
         else
         {
             logger.LogTrace("Skipping pruning for {feedSource} due to empty article list.", feedSource);
-        }
-
-        // TODO: remove all this hack stuff
-        // HACK: debugging stuff, remove once reddit has stopped spamming channels
-        if (rfp != null)
-        {
-            var newSeenArticleIds = stateTracker.GetSeenArticleIds(feedSource)?.ToList();
-            
-            var idDiffs = previousSeenArticleIds?.Except(newSeenArticleIds ?? []).ToList();
-            if (idDiffs?.Count > 5)
-            {
-                logger.LogError(
-                    "R/DEBUG: more than 5 articles have been now marked as unseen in one go, assuming stuff has blown up. feed is {feed}. seen ids are {seenIds}. old article ids are {previousIds}, new ids are {newIds}. diff is {idDiffs}. feed json is {json}",
-                    feedSource, stateTracker.GetSeenArticleIds(feedSource), previousArticleIds.GetValueOrDefault(feedSource),
-                    newArticleIds, idDiffs, rfp.Json);
-            }
-            else
-            {
-                logger.LogTrace(
-                    "R/DEBUG: feed is {feed}. seen ids are {seenIds}. old article ids are {previousIds}, new ids are {newIds}. diff is {idDiffs}. feed json is {json}",
-                    feedSource, newSeenArticleIds, previousArticleIds.GetValueOrDefault(feedSource),
-                    newArticleIds, idDiffs, rfp.Json);
-            }
-
-            previousArticleIds[feedSource] = newArticleIds;
         }
 
         logger.LogTrace("Finished processing feed {feedSource}.", feedSource);
