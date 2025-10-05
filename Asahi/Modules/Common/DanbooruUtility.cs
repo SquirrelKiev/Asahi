@@ -34,7 +34,7 @@ namespace Asahi.Modules
 
             var container = new ContainerBuilder();
 
-            // Do I do this as the same color as the rating icon?
+            // do I do this as the same color as the rating icon?
             container.WithAccentColor(embedColor);
 
             // "Post by Author" text
@@ -66,59 +66,64 @@ namespace Asahi.Modules
                 titleString += $" by {authors}";
             }
 
-            // Image/Video/Whatever
+            // the image/video/whatever
 
             // TODO: better handling around failing to find a variant
             var bestVariant = await GetBestVariantOrFallback(post, cancellationToken);
-            if (bestVariant != null)
+
+            var footerText = new StringBuilder($"{post.MediaAsset.FileExtension.ToUpperInvariant()} file");
+            if (bestVariant == null)
             {
-                var footerText = new StringBuilder($"{post.MediaAsset.FileExtension.ToUpperInvariant()} file");
-                if (bestVariant.Variant.Type != DanbooruVariantType.Original)
+                footerText.Append(" • No image found to embed");
+            }
+            else if (bestVariant.Variant.Type != DanbooruVariantType.Original)
+            {
+                footerText.Append(
+                    $" • embed is {bestVariant.Variant.Type.ToReadableString()} quality ({bestVariant.Variant.FileExt.ToUpperInvariant()} file)");
+            }
+
+            if (extraInfoMode)
+            {
+                footerText.Append("\n**Feed title:** ");
+            }
+            else
+            {
+                footerText.Append(" • ");
+            }
+
+            footerText.Append($"{feedTitle}");
+
+            var shouldSpoiler = post.Rating is DanbooruRating.Explicit or DanbooruRating.Questionable;
+            if (extraInfoMode)
+            {
+                var userRes = await danbooruApi.GetUser(post.UploaderId, cancellationToken);
+
+                var user = userRes.IsSuccessful ? userRes.Content : null;
+
+                var userInfo =
+                    $"\n-# Uploaded by [{(user != null ? user.Name : post.UploaderId.ToString())}](https://danbooru.donmai.us/users/{post.UploaderId})";
+
+                if (user != null)
                 {
-                    footerText.Append(
-                        $" • embed is {bestVariant.Variant.Type.ToReadableString()} quality ({bestVariant.Variant.FileExt.ToUpperInvariant()} file)");
+                    userInfo += $" ({user.PostUploadCount} posts)";
                 }
 
-                if (extraInfoMode)
+                if (!forceFullSizeImage)
                 {
-                    footerText.Append("\n**Feed title:** ");
-                }
-                else
-                {
-                    footerText.Append(" • ");
-                }
+                    var extraInfoText = $"{footerText}\n**Posted on:** <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
 
-                footerText.Append($"{feedTitle}");
-
-                // Will see if this is annoying or not
-                var shouldSpoiler = post.Rating is DanbooruRating.Explicit or DanbooruRating.Questionable;
-                if (extraInfoMode)
-                {
-                    var userRes = await danbooruApi.GetUser(post.UploaderId, cancellationToken);
-
-                    var user = userRes.IsSuccessful ? userRes.Content : null;
-
-                    var userInfo =
-                        $"\n-# Uploaded by [{(user != null ? user.Name : post.UploaderId.ToString())}](https://danbooru.donmai.us/users/{post.UploaderId})";
-
-                    if (user != null)
+                    if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
+                        sourceUri.Scheme is "http" or "https")
                     {
-                        userInfo += $" ({user.PostUploadCount} posts)";
+                        var (platformName, sourceUrl, emote) = GetPlatformButtonInfo(post, sourceUri);
+
+                        extraInfoText += $"\n**Source:** {emote} [{platformName}]({sourceUrl})";
                     }
 
-                    if (!forceFullSizeImage)
+                    SectionBuilder? section;
+                    if (bestVariant != null)
                     {
-                        var extraInfoText = $"{footerText}\n**Posted on:** <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
-
-                        if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
-                            sourceUri.Scheme is "http" or "https")
-                        {
-                            var (platformName, sourceUrl, emote) = GetPlatformButtonInfo(post, sourceUri);
-                            
-                            extraInfoText += $"\n**Source:** {emote} [{platformName}]({sourceUrl})";
-                        }
-
-                        var section = new SectionBuilder()
+                        section = new SectionBuilder()
                             .WithTextDisplay(titleString + userInfo)
                             .WithTextDisplay(extraInfoText)
                             .WithAccessory(new ThumbnailBuilder(bestVariant.Variant.Url, isSpoiler: shouldSpoiler));
@@ -127,58 +132,65 @@ namespace Asahi.Modules
                     }
                     else
                     {
-                        var extraInfoText =
-                            $"{titleString}{userInfo}\n{footerText}\n**Posted on:** <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
-                        
-                        if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
-                            sourceUri.Scheme is "http" or "https")
-                        {
-                            var (platformName, sourceUrl, emote) = GetPlatformButtonInfo(post, sourceUri);
-                            
-                            extraInfoText += $"\n**Source:** {emote} [{platformName}]({sourceUrl})";
-                        }
-
-                        if (deletedByUserId != 0ul)
-                        {
-                            extraInfoText += $"\n-# Message deleted by <@{deletedByUserId}>";
-                        }
-
-                        container.WithTextDisplay(extraInfoText);
+                        container.WithTextDisplay(titleString + userInfo)
+                            .WithTextDisplay(extraInfoText);
                     }
                 }
                 else
                 {
-                    container.WithTextDisplay(titleString);
-                    container.WithSeparator(isDivider: false);
-                }
+                    var extraInfoText =
+                        $"{titleString}{userInfo}\n{footerText}\n**Posted on:** <t:{post.CreatedAt.ToUnixTimeSeconds()}>";
 
-                if (!extraInfoMode || forceFullSizeImage)
-                {
-                    if (bestVariant.ExtraUrls == null)
+                    if (Uri.TryCreate(post.Source, UriKind.Absolute, out var sourceUri) &&
+                        sourceUri.Scheme is "http" or "https")
                     {
-                        container.WithMediaGallery([
-                            new MediaGalleryItemProperties(new UnfurledMediaItemProperties(bestVariant.Variant.Url),
-                                isSpoiler: shouldSpoiler, description: footerText.ToString())
-                        ]);
+                        var (platformName, sourceUrl, emote) = GetPlatformButtonInfo(post, sourceUri);
+
+                        extraInfoText += $"\n**Source:** {emote} [{platformName}]({sourceUrl})";
                     }
-                    else
+
+                    if (deletedByUserId != 0ul)
                     {
-                        container.WithMediaGallery([
-                            new MediaGalleryItemProperties(new UnfurledMediaItemProperties(bestVariant.Variant.Url),
-                                isSpoiler: shouldSpoiler, description: footerText.ToString()),
-                            ..bestVariant.ExtraUrls.Select(x =>
-                                new MediaGalleryItemProperties(new UnfurledMediaItemProperties(x)))
-                        ]);
+                        extraInfoText += $"\n-# Message deleted by <@{deletedByUserId}>";
                     }
+
+                    container.WithTextDisplay(extraInfoText);
                 }
             }
             else
             {
                 container.WithTextDisplay(titleString);
-                container.WithSeparator(isDivider: false);
+                if (bestVariant == null)
+                {
+                    container.WithTextDisplay("No image found to embed.");
+                }
+                else
+                {
+                    container.WithSeparator(isDivider: false);
+                }
             }
 
-            // Footer
+            if (bestVariant != null && (!extraInfoMode || forceFullSizeImage))
+            {
+                if (bestVariant.ExtraUrls == null)
+                {
+                    container.WithMediaGallery([
+                        new MediaGalleryItemProperties(new UnfurledMediaItemProperties(bestVariant.Variant.Url),
+                            isSpoiler: shouldSpoiler, description: footerText.ToString())
+                    ]);
+                }
+                else
+                {
+                    container.WithMediaGallery([
+                        new MediaGalleryItemProperties(new UnfurledMediaItemProperties(bestVariant.Variant.Url),
+                            isSpoiler: shouldSpoiler, description: footerText.ToString()),
+                        ..bestVariant.ExtraUrls.Select(x =>
+                            new MediaGalleryItemProperties(new UnfurledMediaItemProperties(x), isSpoiler: shouldSpoiler))
+                    ]);
+                }
+            }
+
+            // footer
             // container.WithSeparator();
             //
             // var footerText = $"-# ";
@@ -420,7 +432,7 @@ namespace Asahi.Modules
                     originalVariant.Url = config.VideoProxyUrl.Replace("{{URL}}",
                         Base64Url.EncodeToString(System.Text.Encoding.UTF8.GetBytes(originalVariant.Url)));
                 }
-                
+
                 return originalVariant;
             }
 
