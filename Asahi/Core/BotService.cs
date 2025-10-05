@@ -32,7 +32,7 @@ public class BotService(
     FeedsTimerService feedsTimerService,
     InteractionService interactionService,
     InteractiveService interactiveService,
-    CommandService commandService,
+    // CommandService commandService,
     // RoleManagementService roleManagementService,
     BirthdayTimerService birthdayTimerService,
     BotEmoteService botEmoteService,
@@ -100,7 +100,7 @@ public class BotService(
         client.MessageReceived += Client_MessageReceived;
 
         interactionService.Log += Client_Log;
-        commandService.Log += Client_Log;
+        // commandService.Log += Client_Log;
         interactiveService.Log += Client_Log;
 
         await client.LoginAsync(TokenType.Bot, config.BotToken);

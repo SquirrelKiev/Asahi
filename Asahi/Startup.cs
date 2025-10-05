@@ -157,11 +157,11 @@ public static class Startup
                     LogLevel = logLevel,
                     DefaultRunMode = Discord.Interactions.RunMode.Async
                 }))
-            .AddSingleton(new CommandService(new CommandServiceConfig
-            {
-                LogLevel = logLevel,
-                DefaultRunMode = Discord.Commands.RunMode.Async
-            }))
+            // .AddSingleton(new CommandService(new CommandServiceConfig
+            // {
+            //     LogLevel = logLevel,
+            //     DefaultRunMode = Discord.Commands.RunMode.Async
+            // }))
             .AddSingleton<CommandHandler>()
             .AddSingleton<IInternalEmoteSource, FileSystemInternalEmoteSource>(_ =>
                 new FileSystemInternalEmoteSource(config.InternalEmoteImagesDirectories

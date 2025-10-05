@@ -13,12 +13,12 @@ namespace Asahi;
 
 public class CommandHandler(
     InteractionService interactionService,
-    CommandService commandService,
+    // CommandService commandService,
     DiscordSocketClient client,
     IServiceProvider services,
-    IDbContextFactory<BotDbContext> dbService,
+    // IDbContextFactory<BotDbContext> dbService,
     InteractiveService interactiveService,
-    BotEmoteService emotes,
+    // BotEmoteService emotes,
     ILogger<CommandHandler> logger
 )
 {
@@ -32,7 +32,7 @@ public class CommandHandler(
         try
         {
             await InitializeInteractionService(assemblies);
-            await InitializeCommandService(assemblies);
+            // await InitializeCommandService(assemblies);
 
             runOnce = true;
         }
@@ -42,125 +42,124 @@ public class CommandHandler(
         }
     }
 
-    #region Prefix Command Handling
+    #region Prefix Command Handling - Temp disabled due to not being used
 
-    private async Task MessageReceived(SocketMessage msg)
-    {
-        if (msg.Author.IsBot)
-            return;
-
-        if (msg is not SocketUserMessage userMessage)
-            return;
-
-        try
-        {
-            await RunCommand(userMessage);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Command failed: ");
-        }
-    }
-
-    private async Task RunCommand(SocketUserMessage userMessage)
-    {
-        var prefix = await GetPrefix(userMessage.Channel);
-
-        var argPos = 0;
-        if (!userMessage.HasStringPrefix(prefix, ref argPos))
-        {
-            return;
-        }
-
-        {
-            await using var dbContext = await dbService.CreateDbContextAsync();
-
-            if (userMessage.Channel is SocketTextChannel textChannel)
-            {
-                var potentialTitle = userMessage.Content[argPos..];
-
-                var command = await dbContext.GetCustomCommand(
-                    textChannel.Guild.Id,
-                    potentialTitle
-                );
-
-                if (command != null)
-                {
-                    await textChannel.SendMessageAsync(command.Contents);
-                    return;
-                }
-            }
-        }
-
-        var context = new SocketCommandContext(client, userMessage);
-
-        await commandService.ExecuteAsync(context, argPos, services);
-    }
-
-    // TODO: Cache!!!
-    private async Task<string> GetPrefix(ISocketMessageChannel? channel)
-    {
-        var prefix = GuildConfig.DefaultPrefix;
-
-        if (channel is SocketTextChannel textChannel)
-        {
-            await using var context = await dbService.CreateDbContextAsync();
-            var config = await context.GetGuildConfig(textChannel.Guild.Id);
-
-            prefix = config.Prefix;
-        }
-
-        return prefix;
-    }
-
-    private async Task CommandExecuted(
-        Optional<CommandInfo> cmdInfoOpt,
-        ICommandContext ctx,
-        Discord.Commands.IResult res
-    )
-    {
-        var cmdInfo = cmdInfoOpt.IsSpecified ? cmdInfoOpt.Value : null;
-
-        if (res.IsSuccess)
-        {
-            //logger.LogTrace("Command {ModuleName}.{MethodName} successfully executed. Message contents: {contents}",
-            //    cmdInfo?.Module.Name, cmdInfo?.Name, ctx.Message.CleanContent);
-        }
-        else
-        {
-            if (res.Error == CommandError.UnknownCommand)
-                return;
-
-            if (res is Discord.Commands.ExecuteResult executeResult)
-            {
-                //logger.LogError(executeResult.Exception, "Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
-                //    cmdInfo?.Module?.Name, cmdInfo?.Name, executeResult.Error, executeResult.ErrorReason, ctx.Message.CleanContent);
-            }
-            else
-            {
-                //logger.LogError("Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
-                //    cmdInfo?.Module?.Name, cmdInfo?.Name, res.Error, res.ErrorReason, ctx.Message.CleanContent);
-            }
-
-            try
-            {
-                if (res is Discord.Commands.PreconditionResult precondResult)
-                {
-                    var messageBody =
-                        $"Condition to use the command not met. {precondResult.ErrorReason}";
-                    await ctx.Message.ReplyAsync(messageBody);
-                }
-                else
-                {
-                    await ctx.Message.AddReactionAsync(emotes.Error);
-                }
-            }
-            catch (Exception e)
-            {
-                logger.LogWarning(e, "Failed to add the error reaction!");
-            }
-        }
-    }
+    // private async Task MessageReceived(SocketMessage msg)
+    // {
+    //     if (msg.Author.IsBot)
+    //         return;
+    //
+    //     if (msg is not SocketUserMessage userMessage)
+    //         return;
+    //
+    //     try
+    //     {
+    //         await RunCommand(userMessage);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         logger.LogError(ex, "Command failed: ");
+    //     }
+    // }
+    //
+    // private async Task RunCommand(SocketUserMessage userMessage)
+    // {
+    //     var prefix = await GetPrefix(userMessage.Channel);
+    //
+    //     var argPos = 0;
+    //     if (!userMessage.HasStringPrefix(prefix, ref argPos))
+    //     {
+    //         return;
+    //     }
+    //
+    //     {
+    //         await using var dbContext = await dbService.CreateDbContextAsync();
+    //
+    //         if (userMessage.Channel is SocketTextChannel textChannel)
+    //         {
+    //             var potentialTitle = userMessage.Content[argPos..];
+    //
+    //             var command = await dbContext.GetCustomCommand(
+    //                 textChannel.Guild.Id,
+    //                 potentialTitle
+    //             );
+    //
+    //             if (command != null)
+    //             {
+    //                 await textChannel.SendMessageAsync(command.Contents);
+    //                 return;
+    //             }
+    //         }
+    //     }
+    //
+    //     var context = new SocketCommandContext(client, userMessage);
+    //
+    //     await commandService.ExecuteAsync(context, argPos, services);
+    // }
+    //
+    // private async Task<string> GetPrefix(ISocketMessageChannel? channel)
+    // {
+    //     var prefix = GuildConfig.DefaultPrefix;
+    //
+    //     if (channel is SocketTextChannel textChannel)
+    //     {
+    //         await using var context = await dbService.CreateDbContextAsync();
+    //         var config = await context.GetGuildConfig(textChannel.Guild.Id);
+    //
+    //         prefix = config.Prefix;
+    //     }
+    //
+    //     return prefix;
+    // }
+    //
+    // private async Task CommandExecuted(
+    //     Optional<CommandInfo> cmdInfoOpt,
+    //     ICommandContext ctx,
+    //     Discord.Commands.IResult res
+    // )
+    // {
+    //     var cmdInfo = cmdInfoOpt.IsSpecified ? cmdInfoOpt.Value : null;
+    //
+    //     if (res.IsSuccess)
+    //     {
+    //         //logger.LogTrace("Command {ModuleName}.{MethodName} successfully executed. Message contents: {contents}",
+    //         //    cmdInfo?.Module.Name, cmdInfo?.Name, ctx.Message.CleanContent);
+    //     }
+    //     else
+    //     {
+    //         if (res.Error == CommandError.UnknownCommand)
+    //             return;
+    //
+    //         if (res is Discord.Commands.ExecuteResult executeResult)
+    //         {
+    //             //logger.LogError(executeResult.Exception, "Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
+    //             //    cmdInfo?.Module?.Name, cmdInfo?.Name, executeResult.Error, executeResult.ErrorReason, ctx.Message.CleanContent);
+    //         }
+    //         else
+    //         {
+    //             //logger.LogError("Command {ModuleName}.{MethodName} failed. {Error}, {ErrorReason}. Message contents: {contents}",
+    //             //    cmdInfo?.Module?.Name, cmdInfo?.Name, res.Error, res.ErrorReason, ctx.Message.CleanContent);
+    //         }
+    //
+    //         try
+    //         {
+    //             if (res is Discord.Commands.PreconditionResult precondResult)
+    //             {
+    //                 var messageBody =
+    //                     $"Condition to use the command not met. {precondResult.ErrorReason}";
+    //                 await ctx.Message.ReplyAsync(messageBody);
+    //             }
+    //             else
+    //             {
+    //                 await ctx.Message.AddReactionAsync(emotes.Error);
+    //             }
+    //         }
+    //         catch (Exception e)
+    //         {
+    //             logger.LogWarning(e, "Failed to add the error reaction!");
+    //         }
+    //     }
+    // }
 
     #endregion
 
@@ -245,19 +244,19 @@ public class CommandHandler(
         interactionService.InteractionExecuted += InteractionExecuted;
     }
 
-    private async Task InitializeCommandService(params Assembly[] assemblies)
-    {
-        foreach (var assembly in assemblies)
-        {
-            var modules = await commandService.AddModulesAsync(assembly, services);
-
-            foreach (var moduleInfo in modules)
-            {
-                logger.LogTrace("Registered Prefix Module: {moduleName}", moduleInfo.Name);
-            }
-        }
-
-        client.MessageReceived += MessageReceived;
-        commandService.CommandExecuted += CommandExecuted;
-    }
+    // private async Task InitializeCommandService(params Assembly[] assemblies)
+    // {
+    //     foreach (var assembly in assemblies)
+    //     {
+    //         var modules = await commandService.AddModulesAsync(assembly, services);
+    //
+    //         foreach (var moduleInfo in modules)
+    //         {
+    //             logger.LogTrace("Registered Prefix Module: {moduleName}", moduleInfo.Name);
+    //         }
+    //     }
+    //
+    //     client.MessageReceived += MessageReceived;
+    //     commandService.CommandExecuted += CommandExecuted;
+    // }
 }
