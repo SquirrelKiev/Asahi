@@ -209,7 +209,11 @@ public static class Startup
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 
         serviceCollection.AddRefitClient<IAnimeThemesClient>(settings)
-            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.animethemes.moe/"));
+            .ConfigureHttpClient(x =>
+            {
+                x.BaseAddress = new Uri("https://api.animethemes.moe/");
+                x.Timeout = TimeSpan.FromSeconds(30);
+            });
 
         serviceCollection.AddRefitClient<ITatsuClient>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.tatsu.gg/v1"));

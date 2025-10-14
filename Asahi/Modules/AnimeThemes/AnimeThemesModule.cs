@@ -24,7 +24,17 @@ public class AnimeThemesModule(
         await RespondAsync($"{emotes.Loading} Please wait...",
             allowedMentions: AllowedMentions.None);
 
-        var searchRes = await atClient.SearchAsync(query, new IAnimeThemesClient.SearchQueryParams());
+        SearchResponse searchRes;
+        try
+        {
+            searchRes = await atClient.SearchAsync(query, new IAnimeThemesClient.SearchQueryParams());
+        }
+        catch (TimeoutException)
+        {
+            await ModifyOriginalResponseAsync(x =>
+                x.Content = "AnimeThemes took too long to respond, please try again later.");
+            return;
+        }
 
         if (searchRes.search.anime.Length == 0)
         {
@@ -119,7 +129,7 @@ public class AnimeThemesModule(
 
         await ChangeStep(state, paginator, interaction, newStep);
     }
-    
+
     [ComponentInteraction(ModulePrefixes.AnimeThemes.RefreshVideoId)]
     public async Task RefreshVideoButton()
     {
