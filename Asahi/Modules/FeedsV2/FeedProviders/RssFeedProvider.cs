@@ -20,6 +20,8 @@ public class RssFeedProvider(HttpClient client) : IFeedProvider
         }
     }
 
+    public ArticleIdScope ArticleIdScope => ArticleIdScope.FeedSource;
+
     protected Feed? genericFeed;
 
     // TODO: This should use FeedReader.ParseFeedUrlsFromHtml() or smth

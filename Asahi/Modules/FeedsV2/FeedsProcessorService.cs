@@ -14,6 +14,7 @@ public class FeedsProcessorService(
 {
     public async Task PollFeeds(FeedsStateTracker stateTracker, FeedListener[] feeds)
     {
+        stateTracker.ClearChannelArticleList();
         // might be good to parallelize this, but i need to figure out some solution to avoid rate-limits
         // TODO: separate feed requests and feed processing and message dispatching into separate tasks, so each can run separately
         foreach (var feed in feeds.GroupBy(x => x.FeedUrl)
@@ -44,13 +45,13 @@ public class FeedsProcessorService(
             return;
 
         var continuationToken = stateTracker.GetFeedSourceContinuationToken(feedSource);
-        
+
         if (!await feedProvider.Initialize(feedSource, continuationToken, cancellationToken: cancellationToken))
         {
             logger.LogWarning("Failed to initialize feed {feedSource}.", feedSource);
             return;
         }
-        
+
         stateTracker.SetFeedSourceContinuationToken(feedSource, feedProvider.GetContinuationToken());
 
         stateTracker.UpdateDefaultFeedTitleCache(feedSource, feedProvider.DefaultFeedTitle);
@@ -60,6 +61,7 @@ public class FeedsProcessorService(
             return;
         }
 
+        var scopeIncludesChannel = (feedProvider.ArticleIdScope & ArticleIdScope.ChannelForPoll) != 0;
         foreach (var articleId in feedProvider.ListArticleIds())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -80,6 +82,16 @@ public class FeedsProcessorService(
 
                     logger.LogTrace("Processing listener {listenerId}.", listener.Id);
 
+                    if (scopeIncludesChannel)
+                    {
+                        if (!stateTracker.IsNewArticle(listener.ChannelId, articleId))
+                        {
+                            logger.LogTrace("Already seen article {articleId} for channel {feedSource}.", articleId,
+                                listener.ChannelId);
+                            continue;
+                        }
+                    }
+
                     Debug.Assert(listener.FeedUrl == feedSource);
 
                     var articleMessages = feedProvider.GetArticleMessageContent(articleId,
@@ -87,6 +99,11 @@ public class FeedsProcessorService(
                         CancellationToken.None);
 
                     await messageDispatcher.SendMessages(listener, articleMessages);
+
+                    if (scopeIncludesChannel)
+                    {
+                        stateTracker.MarkArticleAsRead(listener.ChannelId, articleId);
+                    }
                 }
                 catch (Exception e)
                 {

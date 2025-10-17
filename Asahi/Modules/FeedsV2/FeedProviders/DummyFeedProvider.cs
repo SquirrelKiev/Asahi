@@ -12,7 +12,9 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         {
             get => "Dummy feed";
         }
-        
+
+        public ArticleIdScope ArticleIdScope => ArticleIdScope.FeedSource;
+
         public Task<bool> Initialize(string feedSource, object? continuationToken = null,
             CancellationToken cancellationToken = default)
         {

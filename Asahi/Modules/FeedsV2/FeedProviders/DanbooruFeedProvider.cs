@@ -10,6 +10,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
     {
         public string? FeedSource { get; private set; }
         public string DefaultFeedTitle { get; private set; } = "Danbooru";
+        public ArticleIdScope ArticleIdScope => ArticleIdScope.FeedSource | ArticleIdScope.ChannelForPoll;
 
         private DanbooruPost[]? posts;
 

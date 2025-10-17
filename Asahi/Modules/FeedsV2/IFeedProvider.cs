@@ -6,6 +6,8 @@ public interface IFeedProvider
 {
     public string? FeedSource { get; }
     public string DefaultFeedTitle { get; }
+    
+    public ArticleIdScope ArticleIdScope { get; }
 
     /// <summary>
     /// Gets the data from the provided feed.
@@ -40,4 +42,16 @@ public interface IFeedProvider
     [Pure]
     public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,
         string? feedTitle, CancellationToken cancellationToken = default);
+}
+
+[Flags]
+public enum ArticleIdScope
+{
+    FeedSource = 0,
+    /// <summary>
+    /// Articles are marked as read for the channel, but only for the current poll.
+    /// Useful for cases where multiple similar feeds in the same channel might return the same post.
+    /// A poll here means for the runtime of a single call to <see cref="FeedsProcessorService.PollFeeds"/>.
+    /// </summary>
+    ChannelForPoll = 1 << 0
 }

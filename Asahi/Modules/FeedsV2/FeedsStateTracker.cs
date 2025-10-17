@@ -8,6 +8,7 @@ namespace Asahi.Modules.FeedsV2;
 public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 {
     private readonly ConcurrentDictionary<int, HashSet<int>> seenArticleHashes = [];
+    private readonly ConcurrentDictionary<ulong, HashSet<int>> seenArticleHashesChannel = [];
     private readonly ConcurrentDictionary<int, string> feedSourceToTitleDictionary = [];
     private readonly ConcurrentDictionary<int, object> feedSourceToContinuationTokenDictionary = [];
 
@@ -21,6 +22,17 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
     public bool IsNewArticle(string feedSource, int articleId)
     {
         if (!seenArticleHashes.TryGetValue(feedSource.GetHashCode(), out var articleHashes))
+        {
+            return true;
+        }
+
+        return !articleHashes.Contains(articleId);
+    }
+    
+    [Pure]
+    public bool IsNewArticle(ulong channelId, int articleId)
+    {
+        if (!seenArticleHashesChannel.TryGetValue(channelId, out var articleHashes))
         {
             return true;
         }
@@ -64,6 +76,21 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
     public void UpdateDefaultFeedTitleCache(string feedSource, string title)
     {
         feedSourceToTitleDictionary[feedSource.GetHashCode()] = title;
+    }
+
+    public void MarkArticleAsRead(ulong channelId, int articleId)
+    {
+        var channelArticleHashes = seenArticleHashesChannel.GetOrAdd(channelId, _ => []);
+
+        if (channelArticleHashes.Add(articleId))
+        {
+            logger.LogTrace("Marked article {articleId} as read for channel {channelId}.", articleId, channelId);
+        }
+        else
+        {
+            logger.LogTrace("Already seen article {articleId} for channel {channelId}, not marking as read.", articleId,
+                channelId);
+        }
     }
 
     public void MarkArticleAsRead(string feedSource, int articleId)
@@ -123,5 +150,10 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
             feedSourceToTitleDictionary.Remove(feedHash, out _);
             feedSourceToContinuationTokenDictionary.Remove(feedHash, out _);
         }
+    }
+
+    public void ClearChannelArticleList()
+    {
+        seenArticleHashesChannel.Clear();
     }
 }

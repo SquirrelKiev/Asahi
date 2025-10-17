@@ -9,6 +9,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         public string? FeedSource { get; private set; }
 
         public string DefaultFeedTitle { get; private set; } = "Reddit Feed";
+        public ArticleIdScope ArticleIdScope => ArticleIdScope.FeedSource;
 
         private List<PostChild>? posts;
 
