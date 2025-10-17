@@ -36,8 +36,10 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             var lastReceivedPost = continuationToken as RedditContinuationToken?;
             lastReceivedPostPreviousRun = lastReceivedPost;
 
-            var res = await redditApi.GetSubredditPostsRaw(subreddit, before: lastReceivedPost?.LastReceivedId,
-                cancellationToken: cancellationToken);
+            // this breaks if the post is deleted :soulless:
+            // var res = await redditApi.GetSubredditPostsRaw(subreddit, before: lastReceivedPost?.LastReceivedId,
+            //     cancellationToken: cancellationToken);
+            var res = await redditApi.GetSubredditPostsRaw(subreddit, cancellationToken: cancellationToken);
             if (!res.IsSuccessful)
                 return false;
 
