@@ -29,7 +29,7 @@ public class AnimeThemesModule(
         {
             searchRes = await atClient.SearchAsync(query, new IAnimeThemesClient.SearchQueryParams());
         }
-        catch (TimeoutException)
+        catch (TaskCanceledException)
         {
             await ModifyOriginalResponseAsync(x =>
                 x.Content = "AnimeThemes took too long to respond, please try again later.");
