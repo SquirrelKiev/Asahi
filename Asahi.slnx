@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="Asahi.Analyzers/Asahi.Analyzers.csproj" />
+  <Project Path="Asahi.BotEmoteManagement.SourceGenerators/Asahi.BotEmoteManagement.SourceGenerators.csproj" />
+  <Project Path="Asahi.BotEmoteManagement/Asahi.BotEmoteManagement.csproj" />
+  <Project Path="Asahi.CodeFixers/Asahi.CodeFixers.csproj" />
+  <Project Path="Asahi.Database.Migrations.Postgres/Asahi.Database.Migrations.Postgres.csproj" />
+  <Project Path="Asahi.Database.Migrations.Sqlite/Asahi.Database.Migrations.Sqlite.csproj" />
+  <Project Path="Asahi.Database/Asahi.Database.csproj" />
+  <Project Path="Asahi.Tests/Asahi.Tests.csproj" />
+  <Project Path="Asahi/Asahi.csproj" />
+</Solution>
