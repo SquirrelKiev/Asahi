@@ -1,6 +1,6 @@
 ﻿using Asahi.BotEmoteManagement;
 using Discord;
-using FluentAssertions;
+using AwesomeAssertions;
 using NSubstitute;
 
 namespace Asahi.Tests;
@@ -248,8 +248,10 @@ public sealed class BotEmoteManagerServiceTests
         // assert
         await discordClient.Received(1).DeleteApplicationEmoteAsync(oldEmoteId);
         await discordClient.Received(1).CreateApplicationEmoteAsync(emoteKey, Arg.Any<Image>());
-        tracking.Should()
-            .ContainSingle(x => x.EmoteId == newEmoteId && x.EmoteDataIdentifier.SequenceEqual(newEmoteData));
+        
+        var item = tracking.Should().ContainSingle().Subject;
+        item.EmoteId.Should().Be(newEmoteId);
+        item.EmoteDataIdentifier.Should().BeEquivalentTo(newEmoteData);
     }
 
     [Fact]
@@ -289,10 +291,11 @@ public sealed class BotEmoteManagerServiceTests
 
         // assert
         await discordClient.Received(1).CreateApplicationEmoteAsync(emoteKey, Arg.Any<Image>());
-        tracking.Should().ContainSingle(e =>
-            e.EmoteKey == emoteKey &&
-            e.EmoteId == emoteId &&
-            e.EmoteDataIdentifier.SequenceEqual(emoteData));
+        
+        var item = tracking.Should().ContainSingle().Subject;
+        item.EmoteKey.Should().Be(emoteKey);
+        item.EmoteId.Should().Be(emoteId);
+        item.EmoteDataIdentifier.Should().BeEquivalentTo(emoteData);
 
         service.Emotes.Emote1.Should().Be(emote);
         service.Emotes.Emote2.Should().Be(emote);

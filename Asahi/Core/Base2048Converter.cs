@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.Text;
 
 namespace Asahi;
 
+// 1 to 1 port of https://github.com/qntm/base2048/blob/main/src/index.js
 /// <summary>
 /// Base2048 is a binary-to-text encoding optimized for transmitting data
 /// through Twitter.

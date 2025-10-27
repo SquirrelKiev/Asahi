@@ -1,6 +1,6 @@
 ﻿using Asahi.Database.Models;
 using Discord;
-using FluentAssertions;
+using AwesomeAssertions;
 
 namespace Asahi.Tests;
 
