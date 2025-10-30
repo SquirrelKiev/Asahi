@@ -115,6 +115,7 @@ public class CachedHighlightedMessageTests
         existingReactions.Should().BeEmpty();
     }
 
+    // especially need to re-do this, this isnt good practice
     [Fact]
     public void UpdateReactions_Gauntlet()
     {
@@ -146,13 +147,13 @@ public class CachedHighlightedMessageTests
         var emoteUserMap = new Dictionary<IEmote, HashSet<ulong>>
         {
             // updated reactions
-            { emojiWillChangeCount, new HashSet<ulong> { 1, 2 } }, // count 5 -> 2
-            { customEmoteCountStaysSame, new HashSet<ulong> { 1, 2, 3, 4 } }, // stays at 4
+            { emojiWillChangeCount, [1, 2] }, // count 5 -> 2
+            { customEmoteCountStaysSame, [1, 2, 3, 4] }, // stays at 4
 
             // new reactions
-            { emojiNewlyAdded, new HashSet<ulong> { 1, 2, 3, 4, 5 } }, // new with count 5
-            { customEmoteNewlyAdded, new HashSet<ulong> { 1, 2 } }, // new with count 2
-            { customEmoteAnimatedNewlyAdded, new HashSet<ulong> { 1, 2 } } // new with count 3
+            { emojiNewlyAdded, [1, 2, 3, 4, 5] }, // new with count 5
+            { customEmoteNewlyAdded, [1, 2] }, // new with count 2
+            { customEmoteAnimatedNewlyAdded, [1, 2] } // new with count 3
         };
 
         chm.CachedMessageReactions = newReactions;

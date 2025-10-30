@@ -7,21 +7,21 @@ namespace Asahi.Modules.FeedsV2;
 [Inject(ServiceLifetime.Singleton)]
 public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 {
-    private readonly ConcurrentDictionary<int, HashSet<int>> seenArticleHashes = [];
+    private readonly ConcurrentDictionary<string, HashSet<int>> seenArticleHashes = [];
     private readonly ConcurrentDictionary<ulong, HashSet<int>> seenArticleHashesChannel = [];
-    private readonly ConcurrentDictionary<int, string> feedSourceToTitleDictionary = [];
-    private readonly ConcurrentDictionary<int, object> feedSourceToContinuationTokenDictionary = [];
+    private readonly ConcurrentDictionary<string, string> feedSourceToTitleDictionary = [];
+    private readonly ConcurrentDictionary<string, object> feedSourceToContinuationTokenDictionary = [];
 
     [Pure]
     public bool IsFirstTimeSeeingFeedSource(string feedSource)
     {
-        return !seenArticleHashes.ContainsKey(feedSource.GetHashCode());
+        return !seenArticleHashes.ContainsKey(feedSource);
     }
 
     [Pure]
     public bool IsNewArticle(string feedSource, int articleId)
     {
-        if (!seenArticleHashes.TryGetValue(feedSource.GetHashCode(), out var articleHashes))
+        if (!seenArticleHashes.TryGetValue(feedSource, out var articleHashes))
         {
             return true;
         }
@@ -49,33 +49,33 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
     [Pure]
     public string? GetCachedDefaultFeedTitle(string feedSource)
     {
-        return feedSourceToTitleDictionary.TryGetValue(feedSource.GetHashCode(), out var title) ? title : null;
+        return feedSourceToTitleDictionary.TryGetValue(feedSource, out var title) ? title : null;
     }
 
-    /// <remarks>Provided for debugging purposes. Use <see cref="IsNewArticle"/> for all other cases.</remarks>
-    [Pure]
-    public IReadOnlyCollection<int>? GetSeenArticleIds(string feedSource)
-    {
-        return seenArticleHashes.TryGetValue(feedSource.GetHashCode(), out var articleHashes) ? articleHashes : null;
-    }
+    // /// <remarks>Provided for debugging purposes. Use <see cref="IsNewArticle"/> for all other cases.</remarks>
+    // [Pure]
+    // public IReadOnlyCollection<int>? GetSeenArticleIds(string feedSource)
+    // {
+    //     return seenArticleHashes.TryGetValue(feedSource.GetHashCode(), out var articleHashes) ? articleHashes : null;
+    // }
 
     [Pure]
     public object? GetFeedSourceContinuationToken(string feedSource)
     {
-        return feedSourceToContinuationTokenDictionary.GetValueOrDefault(feedSource.GetHashCode());
+        return feedSourceToContinuationTokenDictionary.GetValueOrDefault(feedSource);
     }
 
     public void SetFeedSourceContinuationToken(string feedSource, object? continuationToken)
     {
         if (continuationToken == null)
-            feedSourceToContinuationTokenDictionary.TryRemove(feedSource.GetHashCode(), out _);
+            feedSourceToContinuationTokenDictionary.TryRemove(feedSource, out _);
         else
-            feedSourceToContinuationTokenDictionary[feedSource.GetHashCode()] = continuationToken;
+            feedSourceToContinuationTokenDictionary[feedSource] = continuationToken;
     }
 
     public void UpdateDefaultFeedTitleCache(string feedSource, string title)
     {
-        feedSourceToTitleDictionary[feedSource.GetHashCode()] = title;
+        feedSourceToTitleDictionary[feedSource] = title;
     }
 
     public void MarkArticleAsRead(ulong channelId, int articleId)
@@ -95,9 +95,7 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 
     public void MarkArticleAsRead(string feedSource, int articleId)
     {
-        var feedSourceHashCode = feedSource.GetHashCode();
-
-        var articleHashes = seenArticleHashes.GetOrAdd(feedSourceHashCode, _ => []);
+        var articleHashes = seenArticleHashes.GetOrAdd(feedSource, _ => []);
 
         if (articleHashes.Add(articleId))
         {
@@ -114,17 +112,18 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
     {
         var feedSource = feedProvider.FeedSource;
 
-        if (feedSource == null || !seenArticleHashes.TryGetValue(feedSource.GetHashCode(), out var articleHashes))
+        if (feedSource == null || !seenArticleHashes.TryGetValue(feedSource, out var articleHashes))
         {
             return;
         }
 
-        var prunableHashes = feedProvider.ListArticleIds().Where(x => articleHashes.All(y => y != x)).ToArray();
+        var newHashes = feedProvider.ListArticleIds().ToList();
+        var prunableHashes = articleHashes.Where(x => !newHashes.Contains(x)).ToList();
 
-        if (prunableHashes.Length != 0)
+        if (prunableHashes.Count != 0)
         {
             logger.LogTrace("Pruning {prunableCount} articles from feed {feedSource} - {prunedArticles}",
-                prunableHashes.Length, feedSource, prunableHashes);
+                prunableHashes.Count, feedSource, prunableHashes);
         }
 
         foreach (var prunableHash in prunableHashes)
@@ -135,9 +134,9 @@ public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
 
     public void PruneMissingFeeds(IEnumerable<string> feedSources)
     {
-        var validFeedHashes = new HashSet<int>(feedSources.Select(fs => fs.GetHashCode()));
+        var validFeedSources = new HashSet<string>(feedSources.Select(fs => fs));
 
-        var obsoleteFeeds = seenArticleHashes.Keys.Where(feedHash => !validFeedHashes.Contains(feedHash)).ToList();
+        var obsoleteFeeds = seenArticleHashes.Keys.Where(feedHash => !validFeedSources.Contains(feedHash)).ToList();
 
         if (obsoleteFeeds.Count != 0)
         {

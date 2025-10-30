@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using Asahi.Database.Models.Rss;
-using Asahi.Modules.FeedsV2.FeedProviders;
 using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.FeedsV2;
