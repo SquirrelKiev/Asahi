@@ -412,7 +412,7 @@ public class BotManagementModule(
     [Group("feeds", "Feed management.")]
     public class FeedsStateTogglingModule(
         IDbContextFactory<BotDbContext> dbService,
-        FeedsStateTracker feedsStateTracker,
+        IFeedsStateTracker feedsStateTracker,
         IColorProviderService colorProviderService) : BotModule
     {
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]

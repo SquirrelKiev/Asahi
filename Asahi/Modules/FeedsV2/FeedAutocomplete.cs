@@ -16,7 +16,7 @@ public class FeedAutocomplete : AutocompleteHandler
             return AutocompletionResult.FromSuccess();
 
         await using var dbContext = services.GetRequiredService<BotDbContext>();
-        var state = services.GetRequiredService<FeedsStateTracker>();
+        var state = services.GetRequiredService<IFeedsStateTracker>();
 
         var input = (string)autocompleteInteraction.Data.Current.Value;
         
@@ -64,7 +64,7 @@ public class FeedAutocomplete : AutocompleteHandler
         return x => x.Id + (x.ChannelId == channelId ? 0xFFFFFFFF : 0);
     }
 
-    private static AutocompleteResult CreateAutocompleteResult(FeedListener x, FeedsStateTracker state, IReadOnlyCollection<ITextChannel> channels)
+    private static AutocompleteResult CreateAutocompleteResult(FeedListener x, IFeedsStateTracker state, IReadOnlyCollection<ITextChannel> channels)
     {
         string disabledPrefix;
         if (x.ForcedDisable)

@@ -10,7 +10,7 @@ public class FeedsTimerService(
     ILogger<FeedsTimerService> logger,
     FeedsProcessorService feedsProcessor,
     IDbContextFactory<BotDbContext> dbService,
-    FeedsStateTracker feedsStateTracker)
+    IFeedsStateTracker feedsStateTracker)
 {
     private Task? timerTask;
 

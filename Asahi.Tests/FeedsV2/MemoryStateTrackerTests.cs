@@ -6,22 +6,22 @@ using NSubstitute;
 
 namespace Asahi.Tests.FeedsV2;
 
-public class FeedsStateTrackerTests
+public class MemoryStateTrackerTests
 {
     private const string FeedSource = "foobar";
     private const int ArticleId = 123;
     private const ulong ChannelId = 456;
     
-    private static FeedsStateTracker CreateNewTracker()
+    private static MemoryStateTracker CreateNewTracker()
     {
-        return new FeedsStateTracker(NullLogger<FeedsStateTracker>.Instance);
+        return new MemoryStateTracker(NullLogger<MemoryStateTracker>.Instance);
     }
     
     [Fact]
     public void IsFirstTimeSeeingSource_SourceHasMarkedArticle_False()
     {
         // arrange
-        var stateTracker = new FeedsStateTracker(NullLogger<FeedsStateTracker>.Instance);
+        var stateTracker = new MemoryStateTracker(NullLogger<MemoryStateTracker>.Instance);
         
         stateTracker.MarkArticleAsRead(FeedSource, ArticleId);
         

@@ -171,6 +171,7 @@ public static class Startup
             .AddDbContextFactory<BotDbContext>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
             .AddTransient<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
+            .AddTransient<IFeedsStateTracker, MemoryStateTracker>()
             .AddSingleton<IColorProviderService, ColorProviderService>()
             .AddSingleton(new InteractiveConfig()
                 { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel })

@@ -22,7 +22,7 @@ public class FeedsModule(
     IFeedMessageDispatcher feedMessageDispatcher,
     IDbContextFactory<BotDbContext> dbService,
     InteractiveService interactive,
-    FeedsStateTracker stateTracker,
+    IFeedsStateTracker stateTracker,
     ILogger<FeedsModule> logger) : BotModule
 {
     [SlashCommand("add-feed", "Adds a feed.")]

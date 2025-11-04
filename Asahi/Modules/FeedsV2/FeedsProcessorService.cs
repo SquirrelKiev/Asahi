@@ -11,7 +11,7 @@ public class FeedsProcessorService(
     IFeedMessageDispatcher messageDispatcher,
     ILogger<FeedsProcessorService> logger)
 {
-    public async Task PollFeeds(FeedsStateTracker stateTracker, FeedListener[] feeds)
+    public async Task PollFeeds(IFeedsStateTracker stateTracker, FeedListener[] feeds)
     {
         stateTracker.ClearChannelArticleList();
         // might be good to parallelize this, but i need to figure out some solution to avoid rate-limits
@@ -35,7 +35,7 @@ public class FeedsProcessorService(
         logger.LogTrace("Finished processing all feeds.");
     }
 
-    private async Task ProcessFeed(string feedSource, FeedListener[] listeners, FeedsStateTracker stateTracker,
+    private async Task ProcessFeed(string feedSource, FeedListener[] listeners, IFeedsStateTracker stateTracker,
         CancellationToken cancellationToken = default)
     {
         var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
@@ -132,7 +132,7 @@ public class FeedsProcessorService(
     /// </summary>
     /// <returns>Whether it cached anything or not.</returns>
     public bool TryCacheInitialArticlesIfNecessary(string feedSource, IFeedProvider feedProvider,
-        FeedsStateTracker stateTracker)
+        IFeedsStateTracker stateTracker)
     {
         // this will eternally happen if the feed has no posts
         // probably not an issue tho

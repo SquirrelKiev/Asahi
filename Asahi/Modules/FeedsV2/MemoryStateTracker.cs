@@ -4,8 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules.FeedsV2;
 
-[Inject(ServiceLifetime.Singleton)]
-public class FeedsStateTracker(ILogger<FeedsStateTracker> logger)
+public class MemoryStateTracker(ILogger<MemoryStateTracker> logger) : IFeedsStateTracker
 {
     private readonly ConcurrentDictionary<string, HashSet<int>> seenArticleHashes = [];
     private readonly ConcurrentDictionary<ulong, HashSet<int>> seenArticleHashesChannel = [];
