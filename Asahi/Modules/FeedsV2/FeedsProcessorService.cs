@@ -115,14 +115,16 @@ public class FeedsProcessorService(
             stateTracker.MarkArticleAsRead(feedSource, articleId);
         }
 
-        if (feedProvider.ListArticleIds().Any())
-        {
-            stateTracker.PruneMissingArticles(feedProvider);
-        }
-        else
-        {
-            logger.LogTrace("Skipping pruning for {feedSource} due to empty article list.", feedSource);
-        }
+        // temp removing, realising this will cause issues if a post gets deleted or smth
+        // TODO: need to figure out a better way of dealing with article IDs that realistically we have no chance of seeing again and can safely forget
+        // if (feedProvider.ListArticleIds().Any())
+        // {
+        //     stateTracker.PruneMissingArticles(feedProvider);
+        // }
+        // else
+        // {
+        //     logger.LogTrace("Skipping pruning for {feedSource} due to empty article list.", feedSource);
+        // }
 
         logger.LogTrace("Finished processing feed {feedSource}.", feedSource);
     }
