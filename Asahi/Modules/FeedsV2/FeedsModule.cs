@@ -85,7 +85,7 @@ public class FeedsModule(
         {
             options.context.Remove(options.feedListener);
 
-            return Task.FromResult(new ConfigChangeResult(true, "Removed feed."));
+            return Task.FromResult(new ConfigChangeResult(true, $"Removed feed `{options.feedListener.FeedTitle}` [{options.feedListener.FeedUrl}]"));
         });
     }
 

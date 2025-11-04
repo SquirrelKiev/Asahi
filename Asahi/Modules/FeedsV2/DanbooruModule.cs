@@ -1,4 +1,5 @@
 ﻿using Discord.Interactions;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using ProtoBuf;
 
@@ -12,6 +13,7 @@ public class DanbooruModule(
     IDanbooruApi danbooruApi,
     ILogger<DanbooruModule> logger) : BotModule
 {
+    [UsedImplicitly]
     public class DeletionSetNoteModal : IModal
     {
         public string Title => "Deletion note";
