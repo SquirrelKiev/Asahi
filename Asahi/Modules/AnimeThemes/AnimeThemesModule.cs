@@ -163,7 +163,7 @@ public class AnimeThemesModule(
             return;
         }
 
-        videoDisplayState.CacheBustingMeasures = true;
+        videoDisplayState.CacheBustingId = Guid.NewGuid();
         await paginator.RenderPageAsync(interaction);
     }
 

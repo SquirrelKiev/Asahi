@@ -180,9 +180,9 @@ public static class AnimeThemesPaginatorGenerator
         AnimeThemesSelectionState.VideoDisplayState state, BotEmoteService emoteService)
     {
         var videoUrl = state.SelectedVideo.link;
-        if (state.CacheBustingMeasures)
+        if (state.CacheBustingId != Guid.Empty)
         {
-            videoUrl += $"?cache-bust={Guid.NewGuid()}";
+            videoUrl += $"?cache-bust={state.CacheBustingId}";
         }
 
         var videoEmbedComponents = new ComponentBuilderV2().WithComponents([
@@ -291,6 +291,6 @@ public class AnimeThemesSelectionState(SearchResponse searchResponse)
         VideoResource SelectedVideo) : ThemeSelectionState(SearchResponse, SelectedAnime)
     {
         public override int TotalPages => 1;
-        public bool CacheBustingMeasures = false;
+        public Guid CacheBustingId = Guid.Empty;
     }
 }
