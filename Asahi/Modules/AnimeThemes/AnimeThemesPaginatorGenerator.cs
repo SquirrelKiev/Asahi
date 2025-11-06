@@ -59,7 +59,8 @@ public static class AnimeThemesPaginatorGenerator
 
         container.WithSeparator(new SeparatorBuilder().WithIsDivider(true).WithSpacing(SeparatorSpacingSize.Small));
         container.WithActionRow(new ActionRowBuilder().WithComponents(chunk.Select((x, i) =>
-            new ButtonBuilder((i + 1).ToString(), StateSerializer.SerializeObject(x.id, ModulePrefixes.AnimeThemes.AnimeChoiceButtonId),
+            new ButtonBuilder((i + 1).ToString(),
+                StateSerializer.SerializeObject(x.id, ModulePrefixes.AnimeThemes.AnimeChoiceButtonId),
                 ButtonStyle.Success,
                 isDisabled: p.ShouldDisable()))));
 
@@ -82,7 +83,7 @@ public static class AnimeThemesPaginatorGenerator
     private static Page GenerateThemeSelectionPage(IComponentPaginator p,
         AnimeThemesSelectionState.ThemeSelectionState state, BotConfig config)
     {
-        var chunk = state.SelectedAnime.animethemes!.Order(new AnimeThemeResourceComparer())
+        var chunk = state.SelectedAnime.animethemes!.Order(AnimeThemeResourceComparer.Instance)
             .Chunk(AnimeThemesSelectionState.MaxThemesPerPage)
             .ElementAt(p.CurrentPageIndex);
 
@@ -91,44 +92,35 @@ public static class AnimeThemesPaginatorGenerator
         for (var i = 0; i < chunk.Length; i++)
         {
             var theme = chunk[i];
-            Debug.Assert(theme.animeThemeEntries != null);
 
             var titleText = ThemeToString(theme);
             var titleComponent = new TextDisplayBuilder(titleText);
 
-            var videos = theme.animeThemeEntries.First().videos;
-
-            Debug.Assert(videos != null);
-
-            var thumbnailVideo = AnimeThemesModule.SelectBestVideoSource(videos);
-            var thumbnailVideoLink = thumbnailVideo.link;
-
-            Debug.Assert(thumbnailVideoLink != null);
-
-            var titleSectionComponent = new SectionBuilder().WithTextDisplay(titleComponent)
-                .WithAccessory(
-                    new ThumbnailBuilder(
-                        new UnfurledMediaItemProperties(GetAnimeVideoThumbnailUrl(thumbnailVideoLink, config))));
-
-            container.WithSection(titleSectionComponent);
-
-            foreach (var entryChunk in
-                     theme.animeThemeEntries.Chunk(4)) // 4 buttons is where discord seems to wrap buttons
+            if (!TryAddThumbnail(config, theme, titleComponent, container))
             {
-                var actionRow = new ActionRowBuilder();
+                container.WithTextDisplay(titleComponent);
+            }
 
-                foreach (var entry in entryChunk)
+            if (theme.animeThemeEntries != null && theme.animeThemeEntries.Length != 0)
+            {
+                foreach (var entryChunk in
+                         theme.animeThemeEntries.Chunk(4)) // 4 buttons is where discord seems to wrap buttons
                 {
-                    var button = new ButtonBuilder(entry.ToString(),
-                        StateSerializer.SerializeObject(new ThemeAndEntrySelection
-                                { SelectedEntry = entry.id, SelectedTheme = theme.id },
-                            ModulePrefixes.AnimeThemes.ThemeChoiceButtonId),
-                        ButtonStyle.Success, isDisabled: p.ShouldDisable());
+                    var actionRow = new ActionRowBuilder();
 
-                    actionRow.WithButton(button);
+                    foreach (var entry in entryChunk)
+                    {
+                        var button = new ButtonBuilder(entry.ToString(),
+                            StateSerializer.SerializeObject(new ThemeAndEntrySelection
+                                    { SelectedEntry = entry.id, SelectedTheme = theme.id },
+                                ModulePrefixes.AnimeThemes.ThemeChoiceButtonId),
+                            ButtonStyle.Success, isDisabled: p.ShouldDisable());
+
+                        actionRow.WithButton(button);
+                    }
+
+                    container.WithActionRow(actionRow);
                 }
-
-                container.WithActionRow(actionRow);
             }
 
             var isLastElement = i == chunk.Length - 1;
@@ -152,6 +144,36 @@ public static class AnimeThemesPaginatorGenerator
         return new PageBuilder()
             .WithComponents(builtComponents)
             .Build();
+    }
+
+    private static bool TryAddThumbnail(BotConfig config, AnimeThemeResource theme, TextDisplayBuilder titleComponent,
+        ContainerBuilder container)
+    {
+        // we only care about the first version so we can get the thumbnail
+        var videos = theme.animeThemeEntries?.FirstOrDefault()?.videos;
+
+        if (videos == null)
+        {
+            return false;
+        }
+
+        var thumbnailVideo = AnimeThemesModule.SelectBestVideoSource(videos);
+        var thumbnailVideoLink = thumbnailVideo?.link;
+
+        if (thumbnailVideoLink == null)
+        {
+            return false;
+        }
+
+        var titleSectionComponent = new SectionBuilder().WithTextDisplay(titleComponent)
+            .WithAccessory(
+                new ThumbnailBuilder(
+                    new UnfurledMediaItemProperties(GetAnimeVideoThumbnailUrl(thumbnailVideoLink,
+                        config))));
+
+        container.WithSection(titleSectionComponent);
+
+        return true;
     }
 
     private static IPage GenerateVideoDisplayPage(IComponentPaginator p,

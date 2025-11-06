@@ -123,6 +123,12 @@ public class AnimeThemesModule(
 
         var selectedVideo = SelectBestVideoSource(selectedEntry.videos);
 
+        if (selectedVideo == null)
+        {
+            await ChangeStep(state, paginator, interaction, state.CurrentStep);
+            return;
+        }
+
         var newStep = new AnimeThemesSelectionState.VideoDisplayState(searchResponse, selectedAnime, selectedTheme,
             selectedEntry,
             selectedVideo);
@@ -203,12 +209,10 @@ public class AnimeThemesModule(
         await paginator.RenderPageAsync(interaction);
     }
 
-    public static VideoResource SelectBestVideoSource(VideoResource[] videos)
+    public static VideoResource? SelectBestVideoSource(VideoResource[] videos)
     {
         // TODO: take into account stuff like creditless
         var best = videos.MaxBy(x => x.resolution);
-
-        Debug.Assert(best != null);
 
         return best;
     }

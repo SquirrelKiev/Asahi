@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using Humanizer;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -299,6 +300,9 @@ public static class SongArtistResourceExtensions
 
 public class AnimeThemeResourceComparer : IComparer<AnimeThemeResource>
 {
+    public static readonly AnimeThemeResourceComparer Instance = new();
+    
+    [Pure]
     public int Compare(AnimeThemeResource? x, AnimeThemeResource? y)
     {
         if (x == null && y == null) return 0;
