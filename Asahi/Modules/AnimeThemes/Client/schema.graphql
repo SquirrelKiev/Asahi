@@ -1,0 +1,2472 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type PaginationInfo {
+  "Number of items in the current page."
+  count: Int!
+  "Number of total items selected by the query"
+  total: Int!
+  "Number of items returned per page"
+  perPage: Int!
+  "Current page of the cursor"
+  currentPage: Int!
+  "Number of the first item returned"
+  from: Int
+  "Number of the last item returned"
+  to: Int
+  "The last page (number of pages)"
+  lastPage: Int!
+  "Determines if cursor has more pages after the current page"
+  hasMorePages: Boolean!
+}
+
+enum TrashedFilter {
+  "Include soft-deleted models in the result set"
+  WITH
+  "Exclude soft-deleted models; only return active models"
+  WITHOUT
+  "Return only soft-deleted (trashed) models"
+  ONLY
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+enum ExternalEntryWatchStatus {
+  WATCHING
+  COMPLETED
+  PAUSED
+  DROPPED
+  PLAN_TO_WATCH
+  REWATCHING
+}
+
+enum ExternalProfileSite {
+  MAL
+  ANILIST
+  KITSU
+}
+
+enum ExternalProfileVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum PlaylistVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum NotificationType {
+  PROFILE_SYNCED
+}
+
+enum AnimeMediaFormat {
+  UNKNOWN
+  TV
+  TV_SHORT
+  OVA
+  MOVIE
+  SPECIAL
+  ONA
+}
+
+enum AnimeSeason {
+  WINTER
+  SPRING
+  SUMMER
+  FALL
+}
+
+enum AnimeSynonymType {
+  OTHER
+  NATIVE
+  ENGLISH
+  SHORT
+}
+
+enum ImageFacet {
+  SMALL_COVER
+  LARGE_COVER
+  GRILL
+  DOCUMENT
+  AVATAR
+  BANNER
+}
+
+enum ResourceSite {
+  OFFICIAL_SITE
+  X
+  ANIDB
+  ANILIST
+  ANIME_PLANET
+  ANN
+  KITSU
+  MAL
+  LIVECHART
+  WIKI
+  SPOTIFY
+  YOUTUBE_MUSIC
+  YOUTUBE
+  APPLE_MUSIC
+  AMAZON_MUSIC
+  CRUNCHYROLL
+  HIDIVE
+  NETFLIX
+  DISNEY_PLUS
+  HULU
+  AMAZON_PRIME_VIDEO
+}
+
+enum ThemeType {
+  "Opening"
+  OP
+  "Ending"
+  ED
+  "Insert Song\n\nNote: Not retrieved by default, include it in the type_in argument to do so."
+  IN
+}
+
+enum VideoOverlap {
+  NONE
+  TRANS
+  OVER
+}
+
+enum VideoSource {
+  WEB
+  RAW
+  BD
+  DVD
+  VHS
+  LD
+}
+
+"Represents a site-wide message to be broadcasted on the homepage."
+type Announcement {
+  "The primary key of the resource"
+  id: Int!
+  "The announcement text"
+  content: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+}
+
+"Represents a database dump of selected tables at a given point in time.\n\nFor example, the animethemes-db-dump-wiki-1663559663946.sql dump represents the database dump of wiki tables performed at 2022-09-19."
+type Dump {
+  "The primary key of the resource"
+  id: Int!
+  "The path of the file in storage"
+  path: String!
+  "The URL to download the file from storage"
+  link: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+}
+
+"Represents a feature flag that enable\/disable site functionalities.\n\nFor example, the 'allow_discord_notifications' feature enables\/disables discord notifications for the configured bot."
+type Feature {
+  "The primary key of the resource"
+  id: Int!
+  "The title of the resource"
+  name: String!
+  "The value of the resource"
+  value: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+}
+
+"Represents a video to be featured on the homepage of the site for a specified amount of time."
+type FeaturedTheme {
+  "The primary key of the resource"
+  id: Int!
+  "The start date of the resource"
+  startAt(format: String! = "Y-m-d H:i:s"): String!
+  "The end date of the resource"
+  endAt(format: String! = "Y-m-d H:i:s"): String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  animethemeentry(trashed: TrashedFilter = WITHOUT): AnimeThemeEntry!
+  video(trashed: TrashedFilter = WITHOUT): Video!
+  user: User
+}
+
+"Represents the currently authenticated user."
+type Me {
+  "The primary key of the resource"
+  id: Int!
+  "The username of authenticated user"
+  name: String!
+  "The email of the user"
+  email: String!
+  "The date the user verified their email"
+  emailVerifiedAt(format: String! = "Y-m-d H:i:s"): String!
+  "The date the user confirmed their two-factor authentication"
+  twoFactorConfirmedAt(format: String! = "Y-m-d H:i:s"): String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  notifications(first: Int! = 1000000 page: Int): [Notification!]!
+  playlists(id: String id_like: String name: String name_like: String description: String description_like: String visibility: PlaylistVisibility visibility_in: [PlaylistVisibility!] visibility_not_in: [PlaylistVisibility!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [PlaylistSortableColumns!]): [Playlist!]!
+  roles(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String color: String color_like: String default: String default_like: String guardName: String guardName_like: String priority: Int priority_in: [Int!] priority_not_in: [Int!] priority_lesser: Int priority_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [RoleSortableColumns!]): RoleConnection!
+  permissions(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String guardName: String guardName_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [PermissionSortableColumns!]): PermissionConnection!
+  likedentries(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int episodes: String episodes_like: String notes: String notes_like: String nsfw: Boolean spoiler: Boolean version: Int version_in: [Int!] version_not_in: [Int!] version_lesser: Int version_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeThemeEntrySortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeThemeEntryConnection!
+  likedplaylists(id: String id_like: String name: String name_like: String description: String description_like: String visibility: PlaylistVisibility visibility_in: [PlaylistVisibility!] visibility_not_in: [PlaylistVisibility!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [PlaylistSortableColumns!]): PlaylistConnection!
+}
+
+"Represents an assignable label for users that provides a configured group of permissions."
+type Role {
+  "The primary key of the resource"
+  id: Int!
+  "The label of the resource"
+  name: String!
+  "The hex representation of the color used to distinguish the resource"
+  color: String!
+  "Is the role assigned on account verification?"
+  default: String!
+  "The authentication guard of the resource"
+  guardName: String!
+  "The weight assigned to the resource, where higher values correspond to higher priority"
+  priority: Int!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  permissions(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String guardName: String guardName_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [PermissionSortableColumns!]): PermissionConnection!
+}
+
+"Represents an assignable label for users and roles that authorizes a particular action in AnimeThemes."
+type Permission {
+  "The primary key of the resource"
+  id: Int!
+  "The label of the resource"
+  name: String!
+  "The authentication guard of the resource"
+  guardName: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+}
+
+"Represents an AnimeThemes account."
+type User {
+  "The primary key of the resource"
+  id: Int!
+  "The username of the resource"
+  name: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  playlists(id: String id_like: String name: String name_like: String description: String description_like: String visibility: PlaylistVisibility visibility_in: [PlaylistVisibility!] visibility_not_in: [PlaylistVisibility!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [PlaylistSortableColumns!]): [Playlist!]!
+}
+
+"Represents a static markdown page used for guides and other documentation.\n\nFor example, the 'encoding\/audio_normalization' page represents the documentation for audio normalization."
+type Page {
+  "The primary key of the resource"
+  id: Int!
+  "The primary title of the page"
+  name: String!
+  "The URL slug & route key of the resource"
+  slug: String!
+  "The body content of the resource"
+  body: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+}
+
+"Represents a user profile on the external site like MAL."
+type ExternalProfile {
+  "The primary key of the resource"
+  id: Int!
+  "The title of the profile"
+  name: String!
+  "The site the profile belongs to"
+  site: ExternalProfileSite!
+  "The formatted string value of the site field"
+  siteLocalized: String!
+  "The state of who can see the profile"
+  visibility: ExternalProfileVisibility!
+  "The formatted string value of the visibility field"
+  visibilityLocalized: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  externalentries(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int score: Float score_in: [Float!] score_not_in: [Float!] score_lesser: Float score_greater: Float isFavorite: Boolean watchStatus: ExternalEntryWatchStatus watchStatus_in: [ExternalEntryWatchStatus!] watchStatus_not_in: [ExternalEntryWatchStatus!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [ExternalEntrySortableColumns!]): [ExternalEntry!]!
+  user: User
+}
+
+"Represents an anime entry on the external profile.\n\nFor example, Hibike Euphonium! is marked as completed on the profile AnimeThemes."
+type ExternalEntry {
+  "The primary key of the resource"
+  id: Int!
+  "The score of the entry on the external site"
+  score: Float
+  "The favorite state of the entry on the external site"
+  isFavorite: Boolean
+  "The watch status of the entry on the external site"
+  watchStatus: ExternalEntryWatchStatus!
+  "The formatted string value of the watchStatus field"
+  watchStatusLocalized: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  externalprofile: ExternalProfile!
+  anime(trashed: TrashedFilter = WITHOUT): Anime!
+}
+
+"Represents a list of ordered tracks intended for continuous playback.\n\nFor example, a \"\/r\/anime's Best OPs and EDs of 2022\" playlist may contain a collection of tracks allowing the continuous playback of Best OP and ED nominations for the \/r\/anime Awards."
+type Playlist {
+  "The primary key of the resource"
+  id: String!
+  "The title of the playlist"
+  name: String!
+  "The description of the playlist"
+  description: String
+  "The state of who can see the playlist"
+  visibility: PlaylistVisibility!
+  "The formatted string value of the visibility field"
+  visibilityLocalized: String!
+  "The number of tracks belonging to the resource"
+  tracksCount: Int!
+  "The existence of tracks belonging to the resource"
+  tracksExists: Boolean!
+  "The number of likes recorded for the resource"
+  likesCount: Int!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  first: PlaylistTrack
+  last: PlaylistTrack
+  user: User!
+  tracks(id: String id_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String first: Int! = 1000000 page: Int sort: [PlaylistTrackSortableColumns!]): [PlaylistTrack!]!
+  images(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int facet: ImageFacet facet_in: [ImageFacet!] facet_not_in: [ImageFacet!] path: String path_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ImageSortableColumns!] trashed: TrashedFilter = WITHOUT): PlaylistImageConnection!
+}
+
+"Represents an entry in a playlist.\n\nFor example, a \"\/r\/anime's Best OPs and EDs of 2022\" playlist may contain a track for the ParipiKoumei-OP1.webm video."
+type PlaylistTrack {
+  "The primary key of the resource"
+  id: String!
+  "The entry id of the track"
+  entryId: Int!
+  "The video id of the track"
+  videoId: Int!
+  next: PlaylistTrack
+  previous: PlaylistTrack
+  playlist: Playlist!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  animethemeentry(trashed: TrashedFilter = WITHOUT): AnimeThemeEntry!
+  video(trashed: TrashedFilter = WITHOUT): Video!
+}
+
+"Represents a notification that is sent to the user when a profile is synced."
+type ExternalProfileSyncedNotification {
+  "The type of the notification"
+  type: NotificationType!
+  "The id of the profile"
+  profileId: Int!
+  "The name of the profile"
+  profileName(format: String! = "Y-m-d H:i:s"): String!
+  "The date that the user read the notification"
+  readAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  profile: ExternalProfile!
+}
+
+"Represents a production with at least one opening or ending sequence.\n\nFor example, Bakemonogatari is an anime production with five opening sequences and one ending sequence."
+type Anime {
+  "The primary key of the resource"
+  id: Int!
+  "The primary title of the anime"
+  name: String!
+  "The media format of the anime"
+  mediaFormat: AnimeMediaFormat
+  "The formatted string value of the mediaFormat field"
+  mediaFormatLocalized: String
+  "The premiere season of the anime"
+  season: AnimeSeason
+  "The formatted string value of the season field"
+  seasonLocalized: String
+  "The URL slug & route key of the resource"
+  slug: String!
+  "The brief summary of the anime"
+  synopsis: String
+  "The premiere year of the anime"
+  year: Int
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  animesynonyms(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int text: String text_like: String type: AnimeSynonymType type_in: [AnimeSynonymType!] type_not_in: [AnimeSynonymType!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeSynonymSortableColumns!] trashed: TrashedFilter = WITHOUT): [AnimeSynonym!]!
+  animethemes(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int type: ThemeType type_in: [ThemeType!] = [ 0, 1 ] type_not_in: [ThemeType!] sequence: Int sequence_in: [Int!] sequence_not_in: [Int!] sequence_lesser: Int sequence_greater: Int slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeThemeSortableColumns!] trashed: TrashedFilter = WITHOUT): [AnimeTheme!]!
+  resources(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int externalId: Int externalId_in: [Int!] externalId_not_in: [Int!] externalId_lesser: Int externalId_greater: Int link: String link_like: String site: ResourceSite site_in: [ResourceSite!] site_not_in: [ResourceSite!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ExternalResourceSortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeExternalResourceConnection!
+  images(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int facet: ImageFacet facet_in: [ImageFacet!] facet_not_in: [ImageFacet!] path: String path_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ImageSortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeImageConnection!
+  series(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [SeriesSortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeSeriesConnection!
+  studios(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [StudioSortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeStudioConnection!
+}
+
+"Represents an alternate title or common abbreviation for an anime.\n\nFor example, the anime Bakemonogatari has the anime synonym \"Monstory\"."
+type AnimeSynonym {
+  "The primary key of the resource"
+  id: Int!
+  "The alternate title or common abbreviations"
+  text: String!
+  "The type of the synonym"
+  type: AnimeSynonymType
+  "The formatted string value of the type field"
+  typeLocalized: String
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  anime(trashed: TrashedFilter = WITHOUT): Anime!
+}
+
+"Represents an OP or ED sequence for an anime.\n\nFor example, the anime Bakemonogatari has five OP anime themes and one ED anime theme."
+type AnimeTheme {
+  "The primary key of the resource"
+  id: Int!
+  "The type of the sequence"
+  type: ThemeType!
+  "The formatted string value of the type field"
+  typeLocalized: String!
+  "The numeric ordering of the theme"
+  sequence: Int
+  "The slug that represents the anime theme."
+  slug: String
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  anime(trashed: TrashedFilter = WITHOUT): Anime!
+  animethemeentries(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int episodes: String episodes_like: String notes: String notes_like: String nsfw: Boolean spoiler: Boolean version: Int version_in: [Int!] version_not_in: [Int!] version_lesser: Int version_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeThemeEntrySortableColumns!] trashed: TrashedFilter = WITHOUT): [AnimeThemeEntry!]!
+  group(trashed: TrashedFilter = WITHOUT): ThemeGroup
+  song(trashed: TrashedFilter = WITHOUT): Song
+}
+
+"Represents a version of an anime theme.\n\nFor example, the ED theme of the Bakemonogatari anime has three anime theme entries to represent three versions."
+type AnimeThemeEntry {
+  "The primary key of the resource"
+  id: Int!
+  "The episodes that the theme is used for"
+  episodes: String
+  "Any additional information for this sequence"
+  notes: String
+  "Is not safe for work content included?"
+  nsfw: Boolean!
+  "Is content included that may spoil the viewer?"
+  spoiler: Boolean!
+  "The version number of the theme"
+  version: Int
+  "The number of likes recorded for the resource"
+  likesCount: Int!
+  "The number of tracks belonging to the resource"
+  tracksCount: Int!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  animetheme(trashed: TrashedFilter = WITHOUT): AnimeTheme!
+  videos(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int basename: String basename_like: String filename: String filename_like: String lyrics: Boolean mimetype: String mimetype_like: String nc: Boolean overlap: VideoOverlap overlap_in: [VideoOverlap!] overlap_not_in: [VideoOverlap!] path: String path_like: String resolution: Int resolution_in: [Int!] resolution_not_in: [Int!] resolution_lesser: Int resolution_greater: Int size: Int size_in: [Int!] size_not_in: [Int!] size_lesser: Int size_greater: Int source: VideoSource source_in: [VideoSource!] source_not_in: [VideoSource!] subbed: Boolean uncen: Boolean tags: String tags_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [VideoSortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeThemeEntryVideoConnection!
+  resources(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int externalId: Int externalId_in: [Int!] externalId_not_in: [Int!] externalId_lesser: Int externalId_greater: Int link: String link_like: String site: ResourceSite site_in: [ResourceSite!] site_not_in: [ResourceSite!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ExternalResourceSortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeThemeEntryExternalResourceConnection!
+}
+
+"Represents a musical performer of anime sequences.\n\nFor example, Chiwa Saitou is the musical performer of the Bakemonogatari OP1 theme, among many others."
+type Artist {
+  "The primary key of the resource"
+  id: Int!
+  "The primary title of the artist"
+  name: String!
+  "The URL slug & route key of the resource"
+  slug: String!
+  "The brief information of the resource"
+  information: String
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  groups(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String information: String information_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ArtistSortableColumns!] trashed: TrashedFilter = WITHOUT): ArtistArtistConnection!
+  members(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String information: String information_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ArtistSortableColumns!] trashed: TrashedFilter = WITHOUT): ArtistArtistConnection!
+  images(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int facet: ImageFacet facet_in: [ImageFacet!] facet_not_in: [ImageFacet!] path: String path_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ImageSortableColumns!] trashed: TrashedFilter = WITHOUT): ArtistImageConnection!
+  resources(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int externalId: Int externalId_in: [Int!] externalId_not_in: [Int!] externalId_lesser: Int externalId_greater: Int link: String link_like: String site: ResourceSite site_in: [ResourceSite!] site_not_in: [ResourceSite!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ExternalResourceSortableColumns!] trashed: TrashedFilter = WITHOUT): ArtistExternalResourceConnection!
+  groupships(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int alias: String alias_like: String as: String as_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [MembershipSortableColumns!] trashed: TrashedFilter = WITHOUT): [Membership!]!
+  memberships(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int alias: String alias_like: String as: String as_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [MembershipSortableColumns!] trashed: TrashedFilter = WITHOUT): [Membership!]!
+  performances(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int alias: String alias_like: String as: String as_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [PerformanceSortableColumns!] trashed: TrashedFilter = WITHOUT): [Performance!]!
+}
+
+"Represents the audio track of a video.\n\nFor example, the audio Bakemonogatari-OP1.ogg represents the audio track of the Bakemonogatari-OP1.webm video."
+type Audio {
+  "The primary key of the resource"
+  id: Int!
+  "The basename of the file in storage"
+  basename: String!
+  "The filename of the file in storage"
+  filename: String!
+  "The media type of the file in storage"
+  mimetype: String!
+  "The size of the file in storage in Bytes"
+  size: Int!
+  "The path of the file in storage"
+  path: String!
+  "The URL to stream the file from storage"
+  link: String!
+  "The number of views recorded for the resource"
+  viewsCount: Int! @deprecated(reason: "We are no longer tracking views.")
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  videos(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int basename: String basename_like: String filename: String filename_like: String lyrics: Boolean mimetype: String mimetype_like: String nc: Boolean overlap: VideoOverlap overlap_in: [VideoOverlap!] overlap_not_in: [VideoOverlap!] path: String path_like: String resolution: Int resolution_in: [Int!] resolution_not_in: [Int!] resolution_lesser: Int resolution_greater: Int size: Int size_in: [Int!] size_not_in: [Int!] size_lesser: Int size_greater: Int source: VideoSource source_in: [VideoSource!] source_not_in: [VideoSource!] subbed: Boolean uncen: Boolean tags: String tags_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [VideoSortableColumns!] trashed: TrashedFilter = WITHOUT): [Video!]!
+}
+
+"Represents a site with supplementary information for another resource such as an anime or artist.\n\nFor example, the Bakemonogatari anime has MyAnimeList, AniList and AniDB resources."
+type ExternalResource {
+  "The primary key of the resource"
+  id: Int!
+  "The primary key of the resource in the external site"
+  externalId: Int
+  "The URL of the external site"
+  link: String!
+  "The external site that the resource belongs to"
+  site: ResourceSite!
+  "The formatted string value of the site field"
+  siteLocalized: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  anime(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String mediaFormat: AnimeMediaFormat mediaFormat_in: [AnimeMediaFormat!] mediaFormat_not_in: [AnimeMediaFormat!] season: AnimeSeason season_in: [AnimeSeason!] season_not_in: [AnimeSeason!] slug: String slug_like: String synopsis: String synopsis_like: String year: Int year_in: [Int!] year_not_in: [Int!] year_lesser: Int year_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeSortableColumns!] trashed: TrashedFilter = WITHOUT): ExternalResourceAnimeConnection!
+  artists(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String information: String information_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ArtistSortableColumns!] trashed: TrashedFilter = WITHOUT): ExternalResourceArtistConnection!
+  songs(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int title: String title_like: String titleNative: String titleNative_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [SongSortableColumns!] trashed: TrashedFilter = WITHOUT): ExternalResourceSongConnection!
+  studios(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [StudioSortableColumns!] trashed: TrashedFilter = WITHOUT): ExternalResourceStudioConnection!
+}
+
+"Represents a visual component for another resource such as an anime or artist.\n\nFor example, the Bakemonogatari anime has two images to represent small and large cover images."
+type Image {
+  "The primary key of the resource"
+  id: Int!
+  "The component that the resource is intended for"
+  facet: ImageFacet!
+  "The formatted string value of the facet field"
+  facetLocalized: String!
+  "The path of the file in storage"
+  path: String!
+  "The URL to stream the file from storage"
+  link: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  anime(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String mediaFormat: AnimeMediaFormat mediaFormat_in: [AnimeMediaFormat!] mediaFormat_not_in: [AnimeMediaFormat!] season: AnimeSeason season_in: [AnimeSeason!] season_not_in: [AnimeSeason!] slug: String slug_like: String synopsis: String synopsis_like: String year: Int year_in: [Int!] year_not_in: [Int!] year_lesser: Int year_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeSortableColumns!] trashed: TrashedFilter = WITHOUT): ImageAnimeConnection!
+  artists(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String information: String information_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ArtistSortableColumns!] trashed: TrashedFilter = WITHOUT): ImageArtistConnection!
+  studios(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [StudioSortableColumns!] trashed: TrashedFilter = WITHOUT): ImageStudioConnection!
+}
+
+"Represents the link between an artist and a group related to the song credits.\n\nFor example, Sayuri Date is a member of Liella and has performed using the membership."
+type Membership {
+  "The primary key of the resource"
+  id: Int!
+  "The alias the artist is using for this membership"
+  alias: String
+  "The character the artist is performing as"
+  as: String
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  group(trashed: TrashedFilter = WITHOUT): Artist!
+  member(trashed: TrashedFilter = WITHOUT): Artist!
+  performances(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int alias: String alias_like: String as: String as_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [PerformanceSortableColumns!] trashed: TrashedFilter = WITHOUT): [Performance!]!
+}
+
+"Represents the link between a song and an artist or membership.\n\nFor example, Liella has performed using memberships, with its members credited."
+type Performance {
+  "The primary key of the resource"
+  id: Int!
+  "The alias the artist is using for this performance"
+  alias: String
+  "The character the artist is performing as"
+  as: String
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  song(trashed: TrashedFilter = WITHOUT): Song!
+  artist: PerformanceArtistUnion!
+}
+
+"Represents a collection of related anime.\n\nFor example, the Monogatari series is the collection of the Bakemonogatari anime and its related productions."
+type Series {
+  "The primary key of the resource"
+  id: Int!
+  "The primary title of the series"
+  name: String!
+  "The URL slug & route key of the resource"
+  slug: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  anime(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String mediaFormat: AnimeMediaFormat mediaFormat_in: [AnimeMediaFormat!] mediaFormat_not_in: [AnimeMediaFormat!] season: AnimeSeason season_in: [AnimeSeason!] season_not_in: [AnimeSeason!] slug: String slug_like: String synopsis: String synopsis_like: String year: Int year_in: [Int!] year_not_in: [Int!] year_lesser: Int year_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeSortableColumns!] trashed: TrashedFilter = WITHOUT): SeriesAnimeConnection!
+}
+
+"Represents the composition that accompanies an AnimeTheme.\n\nFor example, Staple Stable is the song for the Bakemonogatari OP1 AnimeTheme."
+type Song {
+  "The primary key of the resource"
+  id: Int!
+  "The name of the composition"
+  title: String
+  "The native name of the composition"
+  titleNative: String
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  animethemes(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int type: ThemeType type_in: [ThemeType!] = [ 0, 1 ] type_not_in: [ThemeType!] sequence: Int sequence_in: [Int!] sequence_not_in: [Int!] sequence_lesser: Int sequence_greater: Int slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeThemeSortableColumns!] trashed: TrashedFilter = WITHOUT): [AnimeTheme!]!
+  performances(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int alias: String alias_like: String as: String as_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [PerformanceSortableColumns!] trashed: TrashedFilter = WITHOUT): [Performance!]!
+  resources(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int externalId: Int externalId_in: [Int!] externalId_not_in: [Int!] externalId_lesser: Int externalId_greater: Int link: String link_like: String site: ResourceSite site_in: [ResourceSite!] site_not_in: [ResourceSite!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ExternalResourceSortableColumns!] trashed: TrashedFilter = WITHOUT): SongExternalResourceConnection!
+}
+
+"Represents a company that produces anime.\n\nFor example, Shaft is the studio that produced the anime Bakemonogatari."
+type Studio {
+  "The primary key of the resource"
+  id: Int!
+  "The primary title of the Studio"
+  name: String!
+  "The URL slug & route key of the resource"
+  slug: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  anime(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String mediaFormat: AnimeMediaFormat mediaFormat_in: [AnimeMediaFormat!] mediaFormat_not_in: [AnimeMediaFormat!] season: AnimeSeason season_in: [AnimeSeason!] season_not_in: [AnimeSeason!] slug: String slug_like: String synopsis: String synopsis_like: String year: Int year_in: [Int!] year_not_in: [Int!] year_lesser: Int year_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeSortableColumns!] trashed: TrashedFilter = WITHOUT): StudioAnimeConnection!
+  images(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int facet: ImageFacet facet_in: [ImageFacet!] facet_not_in: [ImageFacet!] path: String path_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ImageSortableColumns!] trashed: TrashedFilter = WITHOUT): StudioImageConnection!
+  resources(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int externalId: Int externalId_in: [Int!] externalId_not_in: [Int!] externalId_lesser: Int externalId_greater: Int link: String link_like: String site: ResourceSite site_in: [ResourceSite!] site_not_in: [ResourceSite!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [ExternalResourceSortableColumns!] trashed: TrashedFilter = WITHOUT): StudioExternalResourceConnection!
+}
+
+"Represents the group that accompanies a Theme.\n\nFor example, English Version is the group for english dubbed Theme."
+type ThemeGroup {
+  "The primary key of the resource"
+  id: Int!
+  "The name of the group"
+  name: String!
+  "The slug of the group"
+  slug: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  animethemes(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int type: ThemeType type_in: [ThemeType!] = [ 0, 1 ] type_not_in: [ThemeType!] sequence: Int sequence_in: [Int!] sequence_not_in: [Int!] sequence_lesser: Int sequence_greater: Int slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeThemeSortableColumns!] trashed: TrashedFilter = WITHOUT): [AnimeTheme!]!
+}
+
+"Represents a WebM of an anime theme.\n\nFor example, the video Bakemonogatari-OP1.webm represents the WebM of the Bakemonogatari OP1 theme."
+type Video {
+  "The primary key of the resource"
+  id: Int!
+  "The basename of the file in storage"
+  basename: String!
+  "The filename of the file in storage"
+  filename: String!
+  "Does the video include subtitles of song lyrics?"
+  lyrics: Boolean!
+  "The media type of the file in storage"
+  mimetype: String
+  "Is the video creditless?"
+  nc: Boolean!
+  "The degree to which the sequence and episode content overlap"
+  overlap: VideoOverlap
+  "The formatted string value of the overlap field"
+  overlapLocalized: String
+  "The path of the file in storage"
+  path: String!
+  "The frame height of the file in storage"
+  resolution: Int
+  "The size of the file in storage in Bytes"
+  size: Int
+  "Where did this video come from?"
+  source: VideoSource
+  "The formatted string value of the source field"
+  sourceLocalized: String
+  "Does the video include subtitles of dialogue?"
+  subbed: Boolean!
+  "Is the video an uncensored version of a censored sequence?"
+  uncen: Boolean!
+  "The attributes used to distinguish the file within the context of a theme"
+  tags: String
+  "The URL to stream the file from storage"
+  link: String!
+  "The number of views recorded for the resource"
+  viewsCount: Int! @deprecated(reason: "We are no longer tracking views. Use likesCount instead")
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  audio(trashed: TrashedFilter = WITHOUT): Audio
+  animethemeentries(id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int episodes: String episodes_like: String notes: String notes_like: String nsfw: Boolean spoiler: Boolean version: Int version_in: [Int!] version_not_in: [Int!] version_lesser: Int version_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String first: Int! = 1000000 page: Int sort: [AnimeThemeEntrySortableColumns!] trashed: TrashedFilter = WITHOUT): VideoAnimeThemeEntryConnection!
+  videoscript(trashed: TrashedFilter = WITHOUT): VideoScript
+}
+
+"Represents an encoding script used to produce a video.\n\nFor example, the 2009\/Summer\/Bakemonogatari-OP1.txt video script represents the encoding script of the Bakemonogatari-OP1.webm video."
+type VideoScript {
+  "The primary key of the resource"
+  id: Int!
+  "The path of the file in storage"
+  path: String!
+  "The URL to download the file from storage"
+  link: String!
+  "The date that the resource was created"
+  createdAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was updated"
+  updatedAt(format: String! = "Y-m-d H:i:s"): String
+  "The date that the resource was deleted"
+  deletedAt(format: String! = "Y-m-d H:i:s"): String
+  video(trashed: TrashedFilter = WITHOUT): Video!
+}
+
+"The anime year season type."
+type AnimeYearSeasons {
+  "The season of the anime year"
+  season: AnimeSeason!
+  "The formatted string value of the season field"
+  seasonLocalized: String!
+  "The animes of the season year filtered"
+  anime(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String mediaFormat: AnimeMediaFormat mediaFormat_in: [AnimeMediaFormat!] mediaFormat_not_in: [AnimeMediaFormat!] season: AnimeSeason season_in: [AnimeSeason!] season_not_in: [AnimeSeason!] slug: String slug_like: String synopsis: String synopsis_like: String year: Int year_in: [Int!] year_not_in: [Int!] year_lesser: Int year_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [AnimeSortableColumns!] trashed: TrashedFilter = WITHOUT search: String): AnimePagination!
+}
+
+"The anime year season type."
+type AnimeYearSeason {
+  "The season of the anime year"
+  season: AnimeSeason!
+  "The formatted string value of the season field"
+  seasonLocalized: String!
+  "The animes of the season year filtered"
+  anime(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String mediaFormat: AnimeMediaFormat mediaFormat_in: [AnimeMediaFormat!] mediaFormat_not_in: [AnimeMediaFormat!] season: AnimeSeason season_in: [AnimeSeason!] season_not_in: [AnimeSeason!] slug: String slug_like: String synopsis: String synopsis_like: String year: Int year_in: [Int!] year_not_in: [Int!] year_lesser: Int year_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [AnimeSortableColumns!] trashed: TrashedFilter = WITHOUT search: String): AnimePagination!
+}
+
+"The anime year response type, grouped by season."
+type AnimeYear {
+  "The year of the AnimeYear type"
+  year: Int!
+  "Object that references the season year queried"
+  season(season: AnimeSeason!): AnimeYearSeason
+  "The available seasons of the year"
+  seasons: [AnimeYearSeasons!]
+}
+
+"Represents a response containing a message."
+type MessageResponse {
+  message: String!
+}
+
+"Returns a listing of resources that match a given search term."
+type Search {
+  "The anime results of the search"
+  anime: [Anime!]!
+  "The artist results of the search"
+  artists: [Artist!]!
+  "The theme results of the search"
+  animethemes: [AnimeTheme!]!
+  "The playlist results of the search"
+  playlists: [Playlist!]!
+  "The series results of the search"
+  series: [Series!]!
+  "The song results of the search"
+  songs: [Song!]!
+  "The studio results of the search"
+  studios: [Studio!]!
+  "The video results of the search"
+  videos: [Video!]!
+}
+
+"Represents the types that have images"
+union Imageable = Anime | Artist | Studio
+
+"Represents the resources that can be liked"
+union Liked = AnimeThemeEntry | Playlist
+
+"Represents the notification types."
+union Notification = ExternalProfileSyncedNotification
+
+"Represents the resource type performing"
+union PerformanceArtistUnion = Artist | Membership
+
+"Represents the types that have resources"
+union Resourceable = Anime | Artist | Song | Studio
+
+enum AnnouncementSortableColumns {
+  ID
+  ID_DESC
+  CONTENT
+  CONTENT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  RANDOM
+}
+
+enum DumpSortableColumns {
+  ID
+  ID_DESC
+  PATH
+  PATH_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  RANDOM
+}
+
+enum FeatureSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  VALUE
+  VALUE_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  RANDOM
+}
+
+enum FeaturedThemeSortableColumns {
+  ID
+  ID_DESC
+  START_AT
+  START_AT_DESC
+  END_AT
+  END_AT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  ANIMETHEMEENTRY_ID
+  ANIMETHEMEENTRY_ID_DESC
+  ANIMETHEMEENTRY_EPISODES
+  ANIMETHEMEENTRY_EPISODES_DESC
+  ANIMETHEMEENTRY_NOTES
+  ANIMETHEMEENTRY_NOTES_DESC
+  ANIMETHEMEENTRY_NSFW
+  ANIMETHEMEENTRY_NSFW_DESC
+  ANIMETHEMEENTRY_SPOILER
+  ANIMETHEMEENTRY_SPOILER_DESC
+  ANIMETHEMEENTRY_VERSION
+  ANIMETHEMEENTRY_VERSION_DESC
+  ANIMETHEMEENTRY_LIKES_COUNT
+  ANIMETHEMEENTRY_LIKES_COUNT_DESC
+  ANIMETHEMEENTRY_TRACKS_COUNT
+  ANIMETHEMEENTRY_TRACKS_COUNT_DESC
+  ANIMETHEMEENTRY_CREATED_AT
+  ANIMETHEMEENTRY_CREATED_AT_DESC
+  ANIMETHEMEENTRY_UPDATED_AT
+  ANIMETHEMEENTRY_UPDATED_AT_DESC
+  ANIMETHEMEENTRY_DELETED_AT
+  ANIMETHEMEENTRY_DELETED_AT_DESC
+  VIDEO_ID
+  VIDEO_ID_DESC
+  VIDEO_BASENAME
+  VIDEO_BASENAME_DESC
+  VIDEO_FILENAME
+  VIDEO_FILENAME_DESC
+  VIDEO_LYRICS
+  VIDEO_LYRICS_DESC
+  VIDEO_MIMETYPE
+  VIDEO_MIMETYPE_DESC
+  VIDEO_NC
+  VIDEO_NC_DESC
+  VIDEO_OVERLAP
+  VIDEO_OVERLAP_DESC
+  VIDEO_PATH
+  VIDEO_PATH_DESC
+  VIDEO_RESOLUTION
+  VIDEO_RESOLUTION_DESC
+  VIDEO_SIZE
+  VIDEO_SIZE_DESC
+  VIDEO_SOURCE
+  VIDEO_SOURCE_DESC
+  VIDEO_SUBBED
+  VIDEO_SUBBED_DESC
+  VIDEO_UNCEN
+  VIDEO_UNCEN_DESC
+  VIDEO_TAGS
+  VIDEO_TAGS_DESC
+  VIDEO_VIEWS_COUNT
+  VIDEO_VIEWS_COUNT_DESC
+  VIDEO_CREATED_AT
+  VIDEO_CREATED_AT_DESC
+  VIDEO_UPDATED_AT
+  VIDEO_UPDATED_AT_DESC
+  VIDEO_DELETED_AT
+  VIDEO_DELETED_AT_DESC
+  USER_ID
+  USER_ID_DESC
+  USER_NAME
+  USER_NAME_DESC
+  USER_CREATED_AT
+  USER_CREATED_AT_DESC
+  USER_UPDATED_AT
+  USER_UPDATED_AT_DESC
+  RANDOM
+}
+
+type RoleEdge {
+  node: Role!
+}
+
+type RoleConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Role edges."
+  edges: [RoleEdge!]!
+  "A list of Role resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Role!]!
+}
+
+type PermissionEdge {
+  node: Permission!
+}
+
+type PermissionConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Permission edges."
+  edges: [PermissionEdge!]!
+  "A list of Permission resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Permission!]!
+}
+
+type AnimeThemeEntryEdge {
+  node: AnimeThemeEntry!
+}
+
+type AnimeThemeEntryConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of AnimeThemeEntry edges."
+  edges: [AnimeThemeEntryEdge!]!
+  "A list of AnimeThemeEntry resources. Use this if you don\\'t care about pivot fields."
+  nodes: [AnimeThemeEntry!]!
+}
+
+type PlaylistEdge {
+  node: Playlist!
+}
+
+type PlaylistConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Playlist edges."
+  edges: [PlaylistEdge!]!
+  "A list of Playlist resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Playlist!]!
+}
+
+enum MeSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  EMAIL
+  EMAIL_DESC
+  EMAIL_VERIFIED_AT
+  EMAIL_VERIFIED_AT_DESC
+  TWO_FACTOR_CONFIRMED_AT
+  TWO_FACTOR_CONFIRMED_AT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  RANDOM
+}
+
+enum RoleSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  COLOR
+  COLOR_DESC
+  DEFAULT
+  DEFAULT_DESC
+  GUARD_NAME
+  GUARD_NAME_DESC
+  PRIORITY
+  PRIORITY_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  RANDOM
+}
+
+enum PermissionSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  GUARD_NAME
+  GUARD_NAME_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  RANDOM
+}
+
+enum UserSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  RANDOM
+}
+
+enum PageSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  SLUG
+  SLUG_DESC
+  BODY
+  BODY_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+enum ExternalProfileSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  SITE
+  SITE_DESC
+  VISIBILITY
+  VISIBILITY_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  USER_ID
+  USER_ID_DESC
+  USER_NAME
+  USER_NAME_DESC
+  USER_CREATED_AT
+  USER_CREATED_AT_DESC
+  USER_UPDATED_AT
+  USER_UPDATED_AT_DESC
+  RANDOM
+}
+
+enum ExternalEntrySortableColumns {
+  ID
+  ID_DESC
+  SCORE
+  SCORE_DESC
+  IS_FAVORITE
+  IS_FAVORITE_DESC
+  WATCH_STATUS
+  WATCH_STATUS_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  EXTERNALPROFILE_ID
+  EXTERNALPROFILE_ID_DESC
+  EXTERNALPROFILE_NAME
+  EXTERNALPROFILE_NAME_DESC
+  EXTERNALPROFILE_SITE
+  EXTERNALPROFILE_SITE_DESC
+  EXTERNALPROFILE_VISIBILITY
+  EXTERNALPROFILE_VISIBILITY_DESC
+  EXTERNALPROFILE_CREATED_AT
+  EXTERNALPROFILE_CREATED_AT_DESC
+  EXTERNALPROFILE_UPDATED_AT
+  EXTERNALPROFILE_UPDATED_AT_DESC
+  ANIME_ID
+  ANIME_ID_DESC
+  ANIME_NAME
+  ANIME_NAME_DESC
+  ANIME_MEDIA_FORMAT
+  ANIME_MEDIA_FORMAT_DESC
+  ANIME_SEASON
+  ANIME_SEASON_DESC
+  ANIME_SLUG
+  ANIME_SLUG_DESC
+  ANIME_SYNOPSIS
+  ANIME_SYNOPSIS_DESC
+  ANIME_YEAR
+  ANIME_YEAR_DESC
+  ANIME_CREATED_AT
+  ANIME_CREATED_AT_DESC
+  ANIME_UPDATED_AT
+  ANIME_UPDATED_AT_DESC
+  ANIME_DELETED_AT
+  ANIME_DELETED_AT_DESC
+  RANDOM
+}
+
+type PlaylistImageEdge {
+  node: Image!
+  "Used to sort the images"
+  depth: Int
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type PlaylistImageConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Image edges."
+  edges: [PlaylistImageEdge!]!
+  "A list of Image resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Image!]!
+}
+
+enum PlaylistSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  DESCRIPTION
+  DESCRIPTION_DESC
+  VISIBILITY
+  VISIBILITY_DESC
+  TRACKS_COUNT
+  TRACKS_COUNT_DESC
+  LIKES_COUNT
+  LIKES_COUNT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  FIRST_ID
+  FIRST_ID_DESC
+  FIRST_CREATED_AT
+  FIRST_CREATED_AT_DESC
+  FIRST_UPDATED_AT
+  FIRST_UPDATED_AT_DESC
+  LAST_ID
+  LAST_ID_DESC
+  LAST_CREATED_AT
+  LAST_CREATED_AT_DESC
+  LAST_UPDATED_AT
+  LAST_UPDATED_AT_DESC
+  USER_ID
+  USER_ID_DESC
+  USER_NAME
+  USER_NAME_DESC
+  USER_CREATED_AT
+  USER_CREATED_AT_DESC
+  USER_UPDATED_AT
+  USER_UPDATED_AT_DESC
+  RANDOM
+}
+
+enum PlaylistTrackSortableColumns {
+  ID
+  ID_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  PLAYLIST_ID
+  PLAYLIST_ID_DESC
+  PLAYLIST_NAME
+  PLAYLIST_NAME_DESC
+  PLAYLIST_DESCRIPTION
+  PLAYLIST_DESCRIPTION_DESC
+  PLAYLIST_VISIBILITY
+  PLAYLIST_VISIBILITY_DESC
+  PLAYLIST_TRACKS_COUNT
+  PLAYLIST_TRACKS_COUNT_DESC
+  PLAYLIST_LIKES_COUNT
+  PLAYLIST_LIKES_COUNT_DESC
+  PLAYLIST_CREATED_AT
+  PLAYLIST_CREATED_AT_DESC
+  PLAYLIST_UPDATED_AT
+  PLAYLIST_UPDATED_AT_DESC
+  ANIMETHEMEENTRY_ID
+  ANIMETHEMEENTRY_ID_DESC
+  ANIMETHEMEENTRY_EPISODES
+  ANIMETHEMEENTRY_EPISODES_DESC
+  ANIMETHEMEENTRY_NOTES
+  ANIMETHEMEENTRY_NOTES_DESC
+  ANIMETHEMEENTRY_NSFW
+  ANIMETHEMEENTRY_NSFW_DESC
+  ANIMETHEMEENTRY_SPOILER
+  ANIMETHEMEENTRY_SPOILER_DESC
+  ANIMETHEMEENTRY_VERSION
+  ANIMETHEMEENTRY_VERSION_DESC
+  ANIMETHEMEENTRY_LIKES_COUNT
+  ANIMETHEMEENTRY_LIKES_COUNT_DESC
+  ANIMETHEMEENTRY_TRACKS_COUNT
+  ANIMETHEMEENTRY_TRACKS_COUNT_DESC
+  ANIMETHEMEENTRY_CREATED_AT
+  ANIMETHEMEENTRY_CREATED_AT_DESC
+  ANIMETHEMEENTRY_UPDATED_AT
+  ANIMETHEMEENTRY_UPDATED_AT_DESC
+  ANIMETHEMEENTRY_DELETED_AT
+  ANIMETHEMEENTRY_DELETED_AT_DESC
+  VIDEO_ID
+  VIDEO_ID_DESC
+  VIDEO_BASENAME
+  VIDEO_BASENAME_DESC
+  VIDEO_FILENAME
+  VIDEO_FILENAME_DESC
+  VIDEO_LYRICS
+  VIDEO_LYRICS_DESC
+  VIDEO_MIMETYPE
+  VIDEO_MIMETYPE_DESC
+  VIDEO_NC
+  VIDEO_NC_DESC
+  VIDEO_OVERLAP
+  VIDEO_OVERLAP_DESC
+  VIDEO_PATH
+  VIDEO_PATH_DESC
+  VIDEO_RESOLUTION
+  VIDEO_RESOLUTION_DESC
+  VIDEO_SIZE
+  VIDEO_SIZE_DESC
+  VIDEO_SOURCE
+  VIDEO_SOURCE_DESC
+  VIDEO_SUBBED
+  VIDEO_SUBBED_DESC
+  VIDEO_UNCEN
+  VIDEO_UNCEN_DESC
+  VIDEO_TAGS
+  VIDEO_TAGS_DESC
+  VIDEO_VIEWS_COUNT
+  VIDEO_VIEWS_COUNT_DESC
+  VIDEO_CREATED_AT
+  VIDEO_CREATED_AT_DESC
+  VIDEO_UPDATED_AT
+  VIDEO_UPDATED_AT_DESC
+  VIDEO_DELETED_AT
+  VIDEO_DELETED_AT_DESC
+  NEXT_ID
+  NEXT_ID_DESC
+  NEXT_CREATED_AT
+  NEXT_CREATED_AT_DESC
+  NEXT_UPDATED_AT
+  NEXT_UPDATED_AT_DESC
+  PREVIOUS_ID
+  PREVIOUS_ID_DESC
+  PREVIOUS_CREATED_AT
+  PREVIOUS_CREATED_AT_DESC
+  PREVIOUS_UPDATED_AT
+  PREVIOUS_UPDATED_AT_DESC
+  RANDOM
+}
+
+enum ExternalProfileSyncedNotificationSortableColumns {
+  TYPE
+  TYPE_DESC
+  PROFILE_ID
+  PROFILE_ID_DESC
+  PROFILE_NAME
+  PROFILE_NAME_DESC
+  READ_AT
+  READ_AT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  PROFILE_SITE
+  PROFILE_SITE_DESC
+  PROFILE_VISIBILITY
+  PROFILE_VISIBILITY_DESC
+  PROFILE_CREATED_AT
+  PROFILE_CREATED_AT_DESC
+  PROFILE_UPDATED_AT
+  PROFILE_UPDATED_AT_DESC
+  RANDOM
+}
+
+type AnimeExternalResourceEdge {
+  node: ExternalResource!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type AnimeExternalResourceConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of ExternalResource edges."
+  edges: [AnimeExternalResourceEdge!]!
+  "A list of ExternalResource resources. Use this if you don\\'t care about pivot fields."
+  nodes: [ExternalResource!]!
+}
+
+type AnimeImageEdge {
+  node: Image!
+  "Used to sort the images"
+  depth: Int
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type AnimeImageConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Image edges."
+  edges: [AnimeImageEdge!]!
+  "A list of Image resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Image!]!
+}
+
+type AnimeSeriesEdge {
+  node: Series!
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type AnimeSeriesConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Series edges."
+  edges: [AnimeSeriesEdge!]!
+  "A list of Series resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Series!]!
+}
+
+type AnimeStudioEdge {
+  node: Studio!
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type AnimeStudioConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Studio edges."
+  edges: [AnimeStudioEdge!]!
+  "A list of Studio resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Studio!]!
+}
+
+enum AnimeSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  MEDIA_FORMAT
+  MEDIA_FORMAT_DESC
+  SEASON
+  SEASON_DESC
+  SLUG
+  SLUG_DESC
+  SYNOPSIS
+  SYNOPSIS_DESC
+  YEAR
+  YEAR_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+enum AnimeSynonymSortableColumns {
+  ID
+  ID_DESC
+  TEXT
+  TEXT_DESC
+  TYPE
+  TYPE_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  ANIME_ID
+  ANIME_ID_DESC
+  ANIME_NAME
+  ANIME_NAME_DESC
+  ANIME_MEDIA_FORMAT
+  ANIME_MEDIA_FORMAT_DESC
+  ANIME_SEASON
+  ANIME_SEASON_DESC
+  ANIME_SLUG
+  ANIME_SLUG_DESC
+  ANIME_SYNOPSIS
+  ANIME_SYNOPSIS_DESC
+  ANIME_YEAR
+  ANIME_YEAR_DESC
+  ANIME_CREATED_AT
+  ANIME_CREATED_AT_DESC
+  ANIME_UPDATED_AT
+  ANIME_UPDATED_AT_DESC
+  ANIME_DELETED_AT
+  ANIME_DELETED_AT_DESC
+  RANDOM
+}
+
+enum AnimeThemeSortableColumns {
+  ID
+  ID_DESC
+  TYPE
+  TYPE_DESC
+  SEQUENCE
+  SEQUENCE_DESC
+  SLUG
+  SLUG_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  ANIME_ID
+  ANIME_ID_DESC
+  ANIME_NAME
+  ANIME_NAME_DESC
+  ANIME_MEDIA_FORMAT
+  ANIME_MEDIA_FORMAT_DESC
+  ANIME_SEASON
+  ANIME_SEASON_DESC
+  ANIME_SLUG
+  ANIME_SLUG_DESC
+  ANIME_SYNOPSIS
+  ANIME_SYNOPSIS_DESC
+  ANIME_YEAR
+  ANIME_YEAR_DESC
+  ANIME_CREATED_AT
+  ANIME_CREATED_AT_DESC
+  ANIME_UPDATED_AT
+  ANIME_UPDATED_AT_DESC
+  ANIME_DELETED_AT
+  ANIME_DELETED_AT_DESC
+  GROUP_ID
+  GROUP_ID_DESC
+  GROUP_NAME
+  GROUP_NAME_DESC
+  GROUP_SLUG
+  GROUP_SLUG_DESC
+  GROUP_CREATED_AT
+  GROUP_CREATED_AT_DESC
+  GROUP_UPDATED_AT
+  GROUP_UPDATED_AT_DESC
+  GROUP_DELETED_AT
+  GROUP_DELETED_AT_DESC
+  SONG_ID
+  SONG_ID_DESC
+  SONG_TITLE
+  SONG_TITLE_DESC
+  SONG_TITLE_NATIVE
+  SONG_TITLE_NATIVE_DESC
+  SONG_CREATED_AT
+  SONG_CREATED_AT_DESC
+  SONG_UPDATED_AT
+  SONG_UPDATED_AT_DESC
+  SONG_DELETED_AT
+  SONG_DELETED_AT_DESC
+  RANDOM
+}
+
+type AnimeThemeEntryVideoEdge {
+  node: Video!
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type AnimeThemeEntryVideoConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Video edges."
+  edges: [AnimeThemeEntryVideoEdge!]!
+  "A list of Video resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Video!]!
+}
+
+type AnimeThemeEntryExternalResourceEdge {
+  node: ExternalResource!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type AnimeThemeEntryExternalResourceConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of ExternalResource edges."
+  edges: [AnimeThemeEntryExternalResourceEdge!]!
+  "A list of ExternalResource resources. Use this if you don\\'t care about pivot fields."
+  nodes: [ExternalResource!]!
+}
+
+enum AnimeThemeEntrySortableColumns {
+  ID
+  ID_DESC
+  EPISODES
+  EPISODES_DESC
+  NOTES
+  NOTES_DESC
+  NSFW
+  NSFW_DESC
+  SPOILER
+  SPOILER_DESC
+  VERSION
+  VERSION_DESC
+  LIKES_COUNT
+  LIKES_COUNT_DESC
+  TRACKS_COUNT
+  TRACKS_COUNT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  ANIMETHEME_ID
+  ANIMETHEME_ID_DESC
+  ANIMETHEME_TYPE
+  ANIMETHEME_TYPE_DESC
+  ANIMETHEME_SEQUENCE
+  ANIMETHEME_SEQUENCE_DESC
+  ANIMETHEME_SLUG
+  ANIMETHEME_SLUG_DESC
+  ANIMETHEME_CREATED_AT
+  ANIMETHEME_CREATED_AT_DESC
+  ANIMETHEME_UPDATED_AT
+  ANIMETHEME_UPDATED_AT_DESC
+  ANIMETHEME_DELETED_AT
+  ANIMETHEME_DELETED_AT_DESC
+  RANDOM
+}
+
+type ArtistArtistEdge {
+  node: Artist!
+  "Used to distinguish member by alias"
+  alias: String
+  "Used to distinguish member by character"
+  as: String
+  "Used to extra annotation, like member role"
+  notes: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ArtistArtistConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Artist edges."
+  edges: [ArtistArtistEdge!]!
+  "A list of Artist resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Artist!]!
+}
+
+type ArtistImageEdge {
+  node: Image!
+  "Used to sort the images"
+  depth: Int
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ArtistImageConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Image edges."
+  edges: [ArtistImageEdge!]!
+  "A list of Image resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Image!]!
+}
+
+type ArtistExternalResourceEdge {
+  node: ExternalResource!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ArtistExternalResourceConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of ExternalResource edges."
+  edges: [ArtistExternalResourceEdge!]!
+  "A list of ExternalResource resources. Use this if you don\\'t care about pivot fields."
+  nodes: [ExternalResource!]!
+}
+
+enum ArtistSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  SLUG
+  SLUG_DESC
+  INFORMATION
+  INFORMATION_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+enum AudioSortableColumns {
+  ID
+  ID_DESC
+  BASENAME
+  BASENAME_DESC
+  FILENAME
+  FILENAME_DESC
+  MIMETYPE
+  MIMETYPE_DESC
+  SIZE
+  SIZE_DESC
+  PATH
+  PATH_DESC
+  VIEWS_COUNT
+  VIEWS_COUNT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+type ExternalResourceAnimeEdge {
+  node: Anime!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ExternalResourceAnimeConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Anime edges."
+  edges: [ExternalResourceAnimeEdge!]!
+  "A list of Anime resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Anime!]!
+}
+
+type ExternalResourceArtistEdge {
+  node: Artist!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ExternalResourceArtistConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Artist edges."
+  edges: [ExternalResourceArtistEdge!]!
+  "A list of Artist resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Artist!]!
+}
+
+type ExternalResourceSongEdge {
+  node: Song!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ExternalResourceSongConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Song edges."
+  edges: [ExternalResourceSongEdge!]!
+  "A list of Song resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Song!]!
+}
+
+type ExternalResourceStudioEdge {
+  node: Studio!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ExternalResourceStudioConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Studio edges."
+  edges: [ExternalResourceStudioEdge!]!
+  "A list of Studio resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Studio!]!
+}
+
+enum ExternalResourceSortableColumns {
+  ID
+  ID_DESC
+  EXTERNAL_ID
+  EXTERNAL_ID_DESC
+  LINK
+  LINK_DESC
+  SITE
+  SITE_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+type ImageAnimeEdge {
+  node: Anime!
+  "Used to sort the images"
+  depth: Int
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ImageAnimeConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Anime edges."
+  edges: [ImageAnimeEdge!]!
+  "A list of Anime resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Anime!]!
+}
+
+type ImageArtistEdge {
+  node: Artist!
+  "Used to sort the images"
+  depth: Int
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ImageArtistConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Artist edges."
+  edges: [ImageArtistEdge!]!
+  "A list of Artist resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Artist!]!
+}
+
+type ImageStudioEdge {
+  node: Studio!
+  "Used to sort the images"
+  depth: Int
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type ImageStudioConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Studio edges."
+  edges: [ImageStudioEdge!]!
+  "A list of Studio resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Studio!]!
+}
+
+enum ImageSortableColumns {
+  ID
+  ID_DESC
+  FACET
+  FACET_DESC
+  PATH
+  PATH_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+enum MembershipSortableColumns {
+  ID
+  ID_DESC
+  ALIAS
+  ALIAS_DESC
+  AS
+  AS_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  GROUP_ID
+  GROUP_ID_DESC
+  GROUP_NAME
+  GROUP_NAME_DESC
+  GROUP_SLUG
+  GROUP_SLUG_DESC
+  GROUP_INFORMATION
+  GROUP_INFORMATION_DESC
+  GROUP_CREATED_AT
+  GROUP_CREATED_AT_DESC
+  GROUP_UPDATED_AT
+  GROUP_UPDATED_AT_DESC
+  GROUP_DELETED_AT
+  GROUP_DELETED_AT_DESC
+  MEMBER_ID
+  MEMBER_ID_DESC
+  MEMBER_NAME
+  MEMBER_NAME_DESC
+  MEMBER_SLUG
+  MEMBER_SLUG_DESC
+  MEMBER_INFORMATION
+  MEMBER_INFORMATION_DESC
+  MEMBER_CREATED_AT
+  MEMBER_CREATED_AT_DESC
+  MEMBER_UPDATED_AT
+  MEMBER_UPDATED_AT_DESC
+  MEMBER_DELETED_AT
+  MEMBER_DELETED_AT_DESC
+  RANDOM
+}
+
+enum PerformanceSortableColumns {
+  ID
+  ID_DESC
+  ALIAS
+  ALIAS_DESC
+  AS
+  AS_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  SONG_ID
+  SONG_ID_DESC
+  SONG_TITLE
+  SONG_TITLE_DESC
+  SONG_TITLE_NATIVE
+  SONG_TITLE_NATIVE_DESC
+  SONG_CREATED_AT
+  SONG_CREATED_AT_DESC
+  SONG_UPDATED_AT
+  SONG_UPDATED_AT_DESC
+  SONG_DELETED_AT
+  SONG_DELETED_AT_DESC
+  RANDOM
+}
+
+type SeriesAnimeEdge {
+  node: Anime!
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type SeriesAnimeConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Anime edges."
+  edges: [SeriesAnimeEdge!]!
+  "A list of Anime resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Anime!]!
+}
+
+enum SeriesSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  SLUG
+  SLUG_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+type SongExternalResourceEdge {
+  node: ExternalResource!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type SongExternalResourceConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of ExternalResource edges."
+  edges: [SongExternalResourceEdge!]!
+  "A list of ExternalResource resources. Use this if you don\\'t care about pivot fields."
+  nodes: [ExternalResource!]!
+}
+
+enum SongSortableColumns {
+  ID
+  ID_DESC
+  TITLE
+  TITLE_DESC
+  TITLE_NATIVE
+  TITLE_NATIVE_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+type StudioAnimeEdge {
+  node: Anime!
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type StudioAnimeConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Anime edges."
+  edges: [StudioAnimeEdge!]!
+  "A list of Anime resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Anime!]!
+}
+
+type StudioImageEdge {
+  node: Image!
+  "Used to sort the images"
+  depth: Int
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type StudioImageConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of Image edges."
+  edges: [StudioImageEdge!]!
+  "A list of Image resources. Use this if you don\\'t care about pivot fields."
+  nodes: [Image!]!
+}
+
+type StudioExternalResourceEdge {
+  node: ExternalResource!
+  "Used to distinguish resources that map to the same resourceable"
+  as: String
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type StudioExternalResourceConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of ExternalResource edges."
+  edges: [StudioExternalResourceEdge!]!
+  "A list of ExternalResource resources. Use this if you don\\'t care about pivot fields."
+  nodes: [ExternalResource!]!
+}
+
+enum StudioSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  SLUG
+  SLUG_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+enum ThemeGroupSortableColumns {
+  ID
+  ID_DESC
+  NAME
+  NAME_DESC
+  SLUG
+  SLUG_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+type VideoAnimeThemeEntryEdge {
+  node: AnimeThemeEntry!
+  "The date that the resource was created"
+  createdAt: String
+  "The date that the resource was updated"
+  updatedAt: String
+}
+
+type VideoAnimeThemeEntryConnection {
+  "Pagination information about the list of edges."
+  pageInfo: PaginationInfo!
+  "A list of AnimeThemeEntry edges."
+  edges: [VideoAnimeThemeEntryEdge!]!
+  "A list of AnimeThemeEntry resources. Use this if you don\\'t care about pivot fields."
+  nodes: [AnimeThemeEntry!]!
+}
+
+enum VideoSortableColumns {
+  ID
+  ID_DESC
+  BASENAME
+  BASENAME_DESC
+  FILENAME
+  FILENAME_DESC
+  LYRICS
+  LYRICS_DESC
+  MIMETYPE
+  MIMETYPE_DESC
+  NC
+  NC_DESC
+  OVERLAP
+  OVERLAP_DESC
+  PATH
+  PATH_DESC
+  RESOLUTION
+  RESOLUTION_DESC
+  SIZE
+  SIZE_DESC
+  SOURCE
+  SOURCE_DESC
+  SUBBED
+  SUBBED_DESC
+  UNCEN
+  UNCEN_DESC
+  TAGS
+  TAGS_DESC
+  VIEWS_COUNT
+  VIEWS_COUNT_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  AUDIO_ID
+  AUDIO_ID_DESC
+  AUDIO_BASENAME
+  AUDIO_BASENAME_DESC
+  AUDIO_FILENAME
+  AUDIO_FILENAME_DESC
+  AUDIO_MIMETYPE
+  AUDIO_MIMETYPE_DESC
+  AUDIO_SIZE
+  AUDIO_SIZE_DESC
+  AUDIO_PATH
+  AUDIO_PATH_DESC
+  AUDIO_VIEWS_COUNT
+  AUDIO_VIEWS_COUNT_DESC
+  AUDIO_CREATED_AT
+  AUDIO_CREATED_AT_DESC
+  AUDIO_UPDATED_AT
+  AUDIO_UPDATED_AT_DESC
+  AUDIO_DELETED_AT
+  AUDIO_DELETED_AT_DESC
+  RANDOM
+}
+
+enum VideoScriptSortableColumns {
+  ID
+  ID_DESC
+  PATH
+  PATH_DESC
+  LINK
+  LINK_DESC
+  CREATED_AT
+  CREATED_AT_DESC
+  UPDATED_AT
+  UPDATED_AT_DESC
+  DELETED_AT
+  DELETED_AT_DESC
+  RANDOM
+}
+
+type AnnouncementPagination {
+  "List of items on the current page"
+  data: [Announcement!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type DumpPagination {
+  "List of items on the current page"
+  data: [Dump!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type FeaturePagination {
+  "List of items on the current page"
+  data: [Feature!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type FeaturedThemePagination {
+  "List of items on the current page"
+  data: [FeaturedTheme!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type PagePagination {
+  "List of items on the current page"
+  data: [Page!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type ExternalProfilePagination {
+  "List of items on the current page"
+  data: [ExternalProfile!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type PlaylistPagination {
+  "List of items on the current page"
+  data: [Playlist!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type PlaylistTrackPagination {
+  "List of items on the current page"
+  data: [PlaylistTrack!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type AnimePagination {
+  "List of items on the current page"
+  data: [Anime!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type AnimeSynonymPagination {
+  "List of items on the current page"
+  data: [AnimeSynonym!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type AnimeThemePagination {
+  "List of items on the current page"
+  data: [AnimeTheme!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type AnimeThemeEntryPagination {
+  "List of items on the current page"
+  data: [AnimeThemeEntry!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type ArtistPagination {
+  "List of items on the current page"
+  data: [Artist!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type AudioPagination {
+  "List of items on the current page"
+  data: [Audio!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type ExternalResourcePagination {
+  "List of items on the current page"
+  data: [ExternalResource!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type ImagePagination {
+  "List of items on the current page"
+  data: [Image!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type MembershipPagination {
+  "List of items on the current page"
+  data: [Membership!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type PerformancePagination {
+  "List of items on the current page"
+  data: [Performance!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type SeriesPagination {
+  "List of items on the current page"
+  data: [Series!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type SongPagination {
+  "List of items on the current page"
+  data: [Song!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type StudioPagination {
+  "List of items on the current page"
+  data: [Studio!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type ThemeGroupPagination {
+  "List of items on the current page"
+  data: [ThemeGroup!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type VideoPagination {
+  "List of items on the current page"
+  data: [Video!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type VideoScriptPagination {
+  "List of items on the current page"
+  data: [VideoScript!]!
+  "Pagination information about the list of items."
+  paginationInfo: PaginationInfo!
+}
+
+type Query {
+  "Returns a listing of announcement resources given fields."
+  announcementPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int content: String content_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String sort: [AnnouncementSortableColumns!]): AnnouncementPagination!
+  "Returns a listing of dump resources given fields."
+  dumpPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int path: String path_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String sort: [DumpSortableColumns!]): DumpPagination!
+  "Returns a listing of feature resources given fields."
+  featurePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String value: String value_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String sort: [FeatureSortableColumns!]): FeaturePagination!
+  "Returns a listing of featured theme resources given fields."
+  featuredthemePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int startAt: String startAt_lesser: String startAt_greater: String endAt: String endAt_lesser: String endAt_greater: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String sort: [FeaturedThemeSortableColumns!]): FeaturedThemePagination!
+  "Returns the first featured theme where the current date is between start_at and end_at dates."
+  currentfeaturedtheme: FeaturedTheme
+  "Returns the data of the currently authenticated user."
+  me: Me
+  "Returns a page resource."
+  page(slug: String!): Page!
+  "Returns a listing of page resources given fields."
+  pagePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String body: String body_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [PageSortableColumns!] trashed: TrashedFilter = WITHOUT): PagePagination!
+  "Returns a listing of external profile resources given fields."
+  externalprofilePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String site: ExternalProfileSite site_in: [ExternalProfileSite!] site_not_in: [ExternalProfileSite!] visibility: ExternalProfileVisibility visibility_in: [ExternalProfileVisibility!] visibility_not_in: [ExternalProfileVisibility!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String sort: [ExternalProfileSortableColumns!]): ExternalProfilePagination!
+  "Returns a playlist resource."
+  playlist(id: String!): Playlist!
+  "Returns a playlist track resource."
+  playlisttrack(id: String! playlist: String!): PlaylistTrack!
+  "Returns a listing of playlist resources given fields."
+  playlistPagination(first: Int! = 15 page: Int id: String id_like: String name: String name_like: String description: String description_like: String visibility: PlaylistVisibility visibility_in: [PlaylistVisibility!] visibility_not_in: [PlaylistVisibility!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String sort: [PlaylistSortableColumns!] search: String): PlaylistPagination!
+  "Returns a listing of tracks for the playlist."
+  playlisttrackPagination(first: Int! = 15 page: Int id: String id_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String sort: [PlaylistTrackSortableColumns!] playlist: String!): PlaylistTrackPagination!
+  "Returns an anime resource."
+  anime(slug: String!): Anime!
+  "Returns a listing of anime resources given fields."
+  animePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String mediaFormat: AnimeMediaFormat mediaFormat_in: [AnimeMediaFormat!] mediaFormat_not_in: [AnimeMediaFormat!] season: AnimeSeason season_in: [AnimeSeason!] season_not_in: [AnimeSeason!] slug: String slug_like: String synopsis: String synopsis_like: String year: Int year_in: [Int!] year_not_in: [Int!] year_lesser: Int year_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [AnimeSortableColumns!] trashed: TrashedFilter = WITHOUT search: String): AnimePagination!
+  "Returns a listing of anime synonyms resources given fields."
+  animesynonymPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int text: String text_like: String type: AnimeSynonymType type_in: [AnimeSynonymType!] type_not_in: [AnimeSynonymType!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [AnimeSynonymSortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeSynonymPagination!
+  "Returns a listing of anime themes resources given fields."
+  animethemePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int type: ThemeType type_in: [ThemeType!] = [ 0, 1 ] type_not_in: [ThemeType!] sequence: Int sequence_in: [Int!] sequence_not_in: [Int!] sequence_lesser: Int sequence_greater: Int slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [AnimeThemeSortableColumns!] trashed: TrashedFilter = WITHOUT search: String): AnimeThemePagination!
+  "Returns a listing of anime theme entries resources given fields."
+  animethemeentryPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int episodes: String episodes_like: String notes: String notes_like: String nsfw: Boolean spoiler: Boolean version: Int version_in: [Int!] version_not_in: [Int!] version_lesser: Int version_greater: Int createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [AnimeThemeEntrySortableColumns!] trashed: TrashedFilter = WITHOUT): AnimeThemeEntryPagination!
+  "Returns an artist resource."
+  artist(slug: String!): Artist!
+  "Returns a listing of artist resources given fields."
+  artistPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String information: String information_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [ArtistSortableColumns!] trashed: TrashedFilter = WITHOUT search: String): ArtistPagination!
+  "Returns a listing of audio resources given fields."
+  audioPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int basename: String basename_like: String filename: String filename_like: String mimetype: String mimetype_like: String size: Int size_in: [Int!] size_not_in: [Int!] size_lesser: Int size_greater: Int path: String path_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [AudioSortableColumns!] trashed: TrashedFilter = WITHOUT): AudioPagination!
+  "Returns a listing of resources given fields."
+  externalresourcePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int externalId: Int externalId_in: [Int!] externalId_not_in: [Int!] externalId_lesser: Int externalId_greater: Int link: String link_like: String site: ResourceSite site_in: [ResourceSite!] site_not_in: [ResourceSite!] createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [ExternalResourceSortableColumns!] trashed: TrashedFilter = WITHOUT): ExternalResourcePagination!
+  "Returns a listing of images resources given fields."
+  imagePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int facet: ImageFacet facet_in: [ImageFacet!] facet_not_in: [ImageFacet!] path: String path_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [ImageSortableColumns!] trashed: TrashedFilter = WITHOUT): ImagePagination!
+  "Returns a listing of memberships resources given fields."
+  membershipPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int alias: String alias_like: String as: String as_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [MembershipSortableColumns!] trashed: TrashedFilter = WITHOUT): MembershipPagination!
+  "Returns a listing of performances resources given fields."
+  performancePagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int alias: String alias_like: String as: String as_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [PerformanceSortableColumns!] trashed: TrashedFilter = WITHOUT): PerformancePagination!
+  "Returns a series resource."
+  series(slug: String!): Series!
+  "Returns a listing of series resources given fields."
+  seriesPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [SeriesSortableColumns!] trashed: TrashedFilter = WITHOUT search: String): SeriesPagination!
+  "Returns a listing of song resources given fields."
+  songPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int title: String title_like: String titleNative: String titleNative_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [SongSortableColumns!] trashed: TrashedFilter = WITHOUT): SongPagination!
+  "Returns a studio resource."
+  studio(slug: String!): Studio!
+  "Returns a listing of studio resources given fields."
+  studioPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [StudioSortableColumns!] trashed: TrashedFilter = WITHOUT search: String): StudioPagination!
+  "Returns a listing of theme groups resources given fields."
+  themegroupPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int name: String name_like: String slug: String slug_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [ThemeGroupSortableColumns!] trashed: TrashedFilter = WITHOUT): ThemeGroupPagination!
+  "Returns a listing of video resources given fields."
+  videoPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int basename: String basename_like: String filename: String filename_like: String lyrics: Boolean mimetype: String mimetype_like: String nc: Boolean overlap: VideoOverlap overlap_in: [VideoOverlap!] overlap_not_in: [VideoOverlap!] path: String path_like: String resolution: Int resolution_in: [Int!] resolution_not_in: [Int!] resolution_lesser: Int resolution_greater: Int size: Int size_in: [Int!] size_not_in: [Int!] size_lesser: Int size_greater: Int source: VideoSource source_in: [VideoSource!] source_not_in: [VideoSource!] subbed: Boolean uncen: Boolean tags: String tags_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [VideoSortableColumns!] trashed: TrashedFilter = WITHOUT): VideoPagination!
+  "Returns a listing of scripts resources given fields."
+  videoscriptPagination(first: Int! = 15 page: Int id: Int id_in: [Int!] id_not_in: [Int!] id_lesser: Int id_greater: Int path: String path_like: String link: String link_like: String createdAt: String createdAt_lesser: String createdAt_greater: String updatedAt: String updatedAt_lesser: String updatedAt_greater: String deletedAt: String deletedAt_lesser: String deletedAt_greater: String sort: [VideoScriptSortableColumns!] trashed: TrashedFilter = WITHOUT): VideoScriptPagination!
+  "Returns a list of years grouped by its seasons."
+  animeyears(year: [Int!]): [AnimeYear!]!
+  "Filter anime by its external id on given site."
+  findAnimeByExternalSite(site: ResourceSite! id: [Int!] link: String): [Anime!]!
+  "Returns a listing of resources that match a given search term."
+  search(search: String! first: Int! = 15 page: Int): Search!
+}
+
+type Mutation {
+  "Create playlist"
+  CreatePlaylist(name: String! description: String visibility: PlaylistVisibility!): Playlist!
+  "Update playlist"
+  UpdatePlaylist(id: String! name: String description: String visibility: PlaylistVisibility): Playlist!
+  "Delete playlist"
+  DeletePlaylist(id: String!): MessageResponse!
+  "Create playlist track"
+  CreatePlaylistTrack(playlist: String! entry_id: Int! video_id: Int! next: String previous: String): PlaylistTrack!
+  "Update playlist track"
+  UpdatePlaylistTrack(id: String! playlist: String! entry_id: Int video_id: Int next: String previous: String): PlaylistTrack!
+  "Delete playlist track"
+  DeletePlaylistTrack(id: String! playlist: String!): MessageResponse!
+}
+
+"Indicates that an Input Object is a OneOf Input Object (and thus requires exactly one of its fields be provided)."
+directive @oneOf on INPUT_OBJECT

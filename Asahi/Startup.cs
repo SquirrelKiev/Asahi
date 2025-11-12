@@ -182,7 +182,8 @@ public static class Startup
         var projectName = currentAssembly.GetCustomAttribute<AssemblyProductAttribute>()?.Product;
         var informationalVersion = currentAssembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
             ?.InformationalVersion;
-        var repositoryUrl = currentAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(x => x.Key == "RepositoryUrl")?.Value;
+        var repositoryUrl = currentAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(x => x.Key == "RepositoryUrl")?.Value;
         serviceCollection.ConfigureHttpClientDefaults(x =>
         {
             x.RemoveAllLoggers().ConfigureHttpClient(client =>
@@ -192,7 +193,7 @@ public static class Startup
                 client.Timeout = TimeSpan.FromSeconds(10);
             });
         });
-        
+
         serviceCollection.AddHttpClient("rss")
             .ConfigureHttpClient(x =>
             {
@@ -209,7 +210,7 @@ public static class Startup
         // new JsonApiSerializerSettings()
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 
-        serviceCollection.AddRefitClient<IAnimeThemesClient>(settings)
+        serviceCollection.AddRefitClient<ILegacyAnimeThemesClient>(settings)
             .ConfigureHttpClient(x =>
             {
                 x.BaseAddress = new Uri("https://api.animethemes.moe/");
@@ -224,6 +225,9 @@ public static class Startup
 
         serviceCollection.AddRefitClient<IDanbooruApi>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://danbooru.donmai.us"));
+
+        serviceCollection.AddAnimeThemesClient()
+            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://graphql.animethemes.moe"));
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>

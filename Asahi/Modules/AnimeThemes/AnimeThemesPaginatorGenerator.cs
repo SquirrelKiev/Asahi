@@ -1,8 +1,9 @@
 ﻿using System.Buffers.Text;
-using System.Diagnostics;
 using System.Text;
 using Fergun.Interactive;
 using Fergun.Interactive.Pagination;
+using Humanizer;
+using JetBrains.Annotations;
 
 namespace Asahi.Modules.AnimeThemes;
 
@@ -27,7 +28,7 @@ public static class AnimeThemesPaginatorGenerator
     private static Page GenerateAnimeSelectionPage(IComponentPaginator p,
         AnimeThemesSelectionState.AnimeSelectionState state)
     {
-        var chunk = state.SearchResponse.search.anime.Chunk(AnimeThemesSelectionState.MaxAnimePerPage)
+        var chunk = state.SearchResponse.AnimePagination.Data.Chunk(AnimeThemesSelectionState.MaxAnimePerPage)
             .ElementAt(p.CurrentPageIndex);
         var container = new ContainerBuilder();
 
@@ -35,11 +36,21 @@ public static class AnimeThemesPaginatorGenerator
         {
             var anime = chunk[i];
 
-            var totalThemes = anime.animethemes?.Length ?? 0;
+            var totalThemes = anime.Animethemes?.Count ?? 0;
 
             var titleComponent = new SectionBuilder();
+            var mediaFormat = anime.MediaFormat.GetValueOrDefault() switch
+            {
+                AnimeMediaFormat.Tv => "TV",
+                AnimeMediaFormat.TvShort => "TV Short",
+                AnimeMediaFormat.Ova => "OVA",
+                AnimeMediaFormat.Movie => "Movie",
+                AnimeMediaFormat.Special => "Special",
+                AnimeMediaFormat.Ona => "ONA",
+                _ => "N/A"
+            };
             titleComponent.WithTextDisplay(
-                $"### {i + 1}. {anime.name}\n{anime.media_format.GetValueOrDefault()} • {anime.season} {anime.year} • {totalThemes} {(totalThemes == 1 ? "theme" : "themes")}");
+                $"### {i + 1}. {anime.Name}\n{mediaFormat} • {anime.Season} {anime.Year} • {totalThemes} {(totalThemes == 1 ? "theme" : "themes")}");
 
             var image = GetAnimeThumbnail(anime);
             var media = new UnfurledMediaItemProperties(image);
@@ -60,7 +71,7 @@ public static class AnimeThemesPaginatorGenerator
         container.WithSeparator(new SeparatorBuilder().WithIsDivider(true).WithSpacing(SeparatorSpacingSize.Small));
         container.WithActionRow(new ActionRowBuilder().WithComponents(chunk.Select((x, i) =>
             new ButtonBuilder((i + 1).ToString(),
-                StateSerializer.SerializeObject(x.id, ModulePrefixes.AnimeThemes.AnimeChoiceButtonId),
+                StateSerializer.SerializeObject(x.Id, ModulePrefixes.AnimeThemes.AnimeChoiceButtonId),
                 ButtonStyle.Success,
                 isDisabled: p.ShouldDisable()))));
 
@@ -83,7 +94,8 @@ public static class AnimeThemesPaginatorGenerator
     private static Page GenerateThemeSelectionPage(IComponentPaginator p,
         AnimeThemesSelectionState.ThemeSelectionState state, BotConfig config)
     {
-        var chunk = state.SelectedAnime.animethemes!.Order(AnimeThemeResourceComparer.Instance)
+        var chunk = state.SelectedAnime.Animethemes.Order(AnimeThemeInfoComparer.Instance)
+            .Cast<IAnimeThemeInfoWithEntries>()
             .Chunk(AnimeThemesSelectionState.MaxThemesPerPage)
             .ElementAt(p.CurrentPageIndex);
 
@@ -101,18 +113,18 @@ public static class AnimeThemesPaginatorGenerator
                 container.WithTextDisplay(titleComponent);
             }
 
-            if (theme.animeThemeEntries != null && theme.animeThemeEntries.Length != 0)
+            if (theme.Animethemeentries.Count != 0)
             {
                 foreach (var entryChunk in
-                         theme.animeThemeEntries.Chunk(4)) // 4 buttons is where discord seems to wrap buttons
+                         theme.Animethemeentries.Chunk(4)) // 4 buttons is where discord seems to wrap buttons
                 {
                     var actionRow = new ActionRowBuilder();
 
                     foreach (var entry in entryChunk)
                     {
-                        var button = new ButtonBuilder(entry.ToString(),
+                        var button = new ButtonBuilder(entry.ToStringNice(),
                             StateSerializer.SerializeObject(new ThemeAndEntrySelection
-                                    { SelectedEntry = entry.id, SelectedTheme = theme.id },
+                                    { SelectedEntry = entry.Id, SelectedTheme = theme.Id },
                                 ModulePrefixes.AnimeThemes.ThemeChoiceButtonId),
                             ButtonStyle.Success, isDisabled: p.ShouldDisable());
 
@@ -146,40 +158,10 @@ public static class AnimeThemesPaginatorGenerator
             .Build();
     }
 
-    private static bool TryAddThumbnail(BotConfig config, AnimeThemeResource theme, TextDisplayBuilder titleComponent,
-        ContainerBuilder container)
-    {
-        // we only care about the first version so we can get the thumbnail
-        var videos = theme.animeThemeEntries?.FirstOrDefault()?.videos;
-
-        if (videos == null)
-        {
-            return false;
-        }
-
-        var thumbnailVideo = AnimeThemesModule.SelectBestVideoSource(videos);
-        var thumbnailVideoLink = thumbnailVideo?.link;
-
-        if (thumbnailVideoLink == null)
-        {
-            return false;
-        }
-
-        var titleSectionComponent = new SectionBuilder().WithTextDisplay(titleComponent)
-            .WithAccessory(
-                new ThumbnailBuilder(
-                    new UnfurledMediaItemProperties(GetAnimeVideoThumbnailUrl(thumbnailVideoLink,
-                        config))));
-
-        container.WithSection(titleSectionComponent);
-
-        return true;
-    }
-
     private static IPage GenerateVideoDisplayPage(IComponentPaginator p,
         AnimeThemesSelectionState.VideoDisplayState state, BotEmoteService emoteService)
     {
-        var videoUrl = state.SelectedVideo.link;
+        var videoUrl = state.SelectedVideo.Link;
         if (state.CacheBustingId != Guid.Empty)
         {
             videoUrl += $"?cache-bust={state.CacheBustingId}";
@@ -189,12 +171,12 @@ public static class AnimeThemesPaginatorGenerator
             new ContainerBuilder().WithComponents([
                 new MediaGalleryBuilder([
                     new MediaGalleryItemProperties(new UnfurledMediaItemProperties(videoUrl),
-                        isSpoiler: state.SelectedThemeEntry.spoiler.GetValueOrDefault())
+                        isSpoiler: state.SelectedThemeEntry.Spoiler)
                 ]),
                 new SectionBuilder()
                     .WithComponents([
                         new TextDisplayBuilder(
-                            $"{ThemeToString(state.SelectedTheme, $" • {state.SelectedThemeEntry}")}\nfrom *{state.SelectedAnime.name}*")
+                            $"{ThemeToString(state.SelectedTheme, $" • {state.SelectedThemeEntry.ToStringNice()}")}\nfrom *{state.SelectedAnime.Name}*")
                     ]).WithAccessory(
                         new ThumbnailBuilder(new UnfurledMediaItemProperties(GetAnimeThumbnail(state.SelectedAnime)))),
                 // new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
@@ -222,6 +204,37 @@ public static class AnimeThemesPaginatorGenerator
 
     #region Utility methods
 
+    private static bool TryAddThumbnail(BotConfig config, IAnimeThemeInfoWithEntries theme,
+        TextDisplayBuilder titleComponent,
+        ContainerBuilder container)
+    {
+        // we only care about the first version so we can get the thumbnail
+        var videos = theme.Animethemeentries.Count > 0 ? theme.Animethemeentries[0].Videos : null;
+
+        if (videos == null)
+        {
+            return false;
+        }
+
+        var thumbnailVideo = AnimeThemesModule.SelectBestVideoSource(videos);
+        var thumbnailVideoLink = thumbnailVideo?.Link;
+
+        if (thumbnailVideoLink == null)
+        {
+            return false;
+        }
+
+        var titleSectionComponent = new SectionBuilder().WithTextDisplay(titleComponent)
+            .WithAccessory(
+                new ThumbnailBuilder(
+                    new UnfurledMediaItemProperties(GetAnimeVideoThumbnailUrl(thumbnailVideoLink,
+                        config))));
+
+        container.WithSection(titleSectionComponent);
+
+        return true;
+    }
+
     private static string GetAnimeVideoThumbnailUrl(string url, BotConfig config)
     {
         var base64EncodedUrl = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(url));
@@ -229,28 +242,28 @@ public static class AnimeThemesPaginatorGenerator
         return $"{config.AsahiWebServicesBaseUrl}/api/thumb/{base64EncodedUrl}.png";
     }
 
-    private static string GetAnimeThumbnail(AnimeResource anime)
+    private static string GetAnimeThumbnail(IAnimeInfo anime)
     {
-        return anime.images?.FirstOrDefault(x => x.facet == ImageResource.Facet.SmallCover)?.link ??
+        return anime.Images?.Edges.FirstOrDefault(x => x.Node.Facet == ImageFacet.SmallCover)?.Node.Link ??
                "https://cubari.onk.moe/404.png";
     }
 
-    private static string ThemeToString(AnimeThemeResource theme, string entryInformation = "")
+    private static string ThemeToString(IAnimeThemeInfo theme, string entryInformation = "")
     {
         var songInfo = "";
 
-        if (theme.song != null)
+        if (theme.Song != null)
         {
             var artistInfo = "";
-            if (theme.song.artists != null && theme.song.artists.Length != 0)
+            if (theme.Song.Performances.Count != 0)
             {
-                artistInfo = $"\nby *{theme.song.artists.ToStringNice()}*";
+                artistInfo = $"\nby *{theme.Song.Performances.Select(x => x.ToStringNice()).Humanize()}*";
             }
 
-            songInfo = $"**{theme.song.title}**{artistInfo}";
+            songInfo = $"**{theme.Song.Title}**{artistInfo}";
         }
 
-        return $"-# {theme.slug}{entryInformation}\n{songInfo}";
+        return $"-# {theme.Slug}{entryInformation}\n{songInfo}";
     }
 
     [ProtoBuf.ProtoContract]
@@ -263,34 +276,195 @@ public static class AnimeThemesPaginatorGenerator
     #endregion
 }
 
-public class AnimeThemesSelectionState(SearchResponse searchResponse)
+public class AnimeThemesSelectionState(IGetThemesWithDataResult searchResponse)
 {
     public const int MaxAnimePerPage = 4;
     public const int MaxThemesPerPage = 3;
 
     public AnimeSelectionState CurrentStep = new(searchResponse);
 
-    public record AnimeSelectionState(SearchResponse SearchResponse)
+    public record AnimeSelectionState(IGetThemesWithDataResult SearchResponse)
     {
         public virtual int TotalPages =>
-            (int)Math.Ceiling((double)SearchResponse.search.anime.Length / MaxAnimePerPage);
+            (int)Math.Ceiling((double)SearchResponse.AnimePagination.Data.Count / MaxAnimePerPage);
     }
 
-    public record ThemeSelectionState(SearchResponse SearchResponse, AnimeResource SelectedAnime)
+    public record ThemeSelectionState(IGetThemesWithDataResult SearchResponse, IAnimeInfoWithThemes SelectedAnime)
         : AnimeSelectionState(SearchResponse)
     {
         public override int TotalPages =>
-            (int)Math.Ceiling((double)SelectedAnime!.animethemes!.Length / MaxThemesPerPage);
+            (int)Math.Ceiling((double)SelectedAnime!.Animethemes!.Count / MaxThemesPerPage);
     }
 
     public record VideoDisplayState(
-        SearchResponse SearchResponse,
-        AnimeResource SelectedAnime,
-        AnimeThemeResource SelectedTheme,
-        AnimeThemeEntryResource SelectedThemeEntry,
-        VideoResource SelectedVideo) : ThemeSelectionState(SearchResponse, SelectedAnime)
+        IGetThemesWithDataResult SearchResponse,
+        IAnimeInfoWithThemes SelectedAnime,
+        IAnimeThemeInfoWithEntries SelectedTheme,
+        IAnimeThemeEntryInfoWithVideos SelectedThemeEntry,
+        IAnimeThemeVideoInfo SelectedVideo) : ThemeSelectionState(SearchResponse, SelectedAnime)
     {
         public override int TotalPages => 1;
         public Guid CacheBustingId = Guid.Empty;
+    }
+}
+
+public class AnimeThemeInfoComparer : IComparer<IAnimeThemeInfo>
+{
+    public static readonly AnimeThemeInfoComparer Instance = new();
+
+    [Pure]
+    public int Compare(IAnimeThemeInfo? x, IAnimeThemeInfo? y)
+    {
+        if (x == null && y == null) return 0;
+        if (x == null) return -1;
+        if (y == null) return 1;
+
+        if (x.Type != y.Type)
+        {
+            return x.Type.CompareTo(y.Type);
+        }
+
+        if (x.Sequence != y.Sequence)
+        {
+            if (x.Sequence == null) return -1;
+            if (y.Sequence == null) return 1;
+            return x.Sequence.Value.CompareTo(y.Sequence.Value);
+        }
+
+        return 0;
+    }
+}
+
+public static class AnimeThemeModelExtensions
+{
+    public static string ToStringNice(this IAnimeThemeEntryInfoWithVideos themeEntryInfo)
+    {
+        List<string> labels = [];
+
+        if (themeEntryInfo.Nsfw)
+        {
+            labels.Add("NSFW");
+        }
+
+        if (themeEntryInfo.Spoiler)
+        {
+            labels.Add("Spoiler");
+        }
+
+        var warnings = "";
+
+        if (labels.Count != 0)
+        {
+            warnings = $"({labels.Humanize()}) ";
+        }
+
+        return $"{warnings}v{themeEntryInfo.Version ?? 1} • episodes {themeEntryInfo.Episodes ?? "??"}";
+    }
+
+    public static string ToStringNice(this IAnimeThemeInfoWithEntries themeInfo, bool includeSlug = true,
+        bool discordRichText = false)
+    {
+        List<string> labels = [];
+        if (themeInfo.Animethemeentries.All(x => x.Nsfw))
+        {
+            labels.Add("NSFW");
+        }
+        else if (themeInfo.Animethemeentries.Any(x => x.Nsfw))
+        {
+            labels.Add("May contain NSFW");
+        }
+
+        if (themeInfo.Animethemeentries.All(x => x.Spoiler))
+        {
+            labels.Add("spoilers");
+        }
+        else if (themeInfo.Animethemeentries.Any(x => x.Spoiler))
+        {
+            labels.Add("may contain spoilers");
+        }
+
+        var warnings = "";
+        if (labels.Count != 0)
+        {
+            warnings = $"({labels.Humanize()}) ";
+        }
+
+        var songInfo = "";
+
+        if (themeInfo.Song != null)
+        {
+            var artistInfo = "";
+            if (themeInfo.Song.Performances.Count != 0)
+            {
+                var formattedArtists = themeInfo.Song.Performances.Select(x => x.ToStringNice()).Humanize();
+                artistInfo = discordRichText ? $" by **{formattedArtists}**" : $" by {formattedArtists}";
+            }
+
+            songInfo = discordRichText
+                ? $"**{themeInfo.Song.Title}**{artistInfo}"
+                : $"{themeInfo.Song.Title}{artistInfo}";
+        }
+
+        return $"{warnings}{(includeSlug ? $"**{themeInfo.Slug}** • {songInfo}" : songInfo)}";
+    }
+
+    public static string ToStringNice(this IPerformanceInfo performanceInfo)
+    {
+        // const string linkBase = "https://animethemes.moe/artist";
+
+        var character = performanceInfo.As;
+        var stageName = performanceInfo.Alias;
+
+        switch (performanceInfo.Artist)
+        {
+            case IArtistInfo artistInfo:
+            {
+                var artistName = artistInfo.Name;
+
+                var displayName = stageName ?? artistName;
+                // var hyperlinkedDisplayName = $"[{displayName}]({linkBase}/{artistInfo.Slug})";
+                if (character != null)
+                {
+                    return $"{character} (CV: {displayName})";
+                }
+                else
+                {
+                    return displayName;
+                }
+            }
+            case IMembershipInfo membershipInfo:
+            {
+                string displayName;
+                // string hyperlinkedDisplayName;
+
+                if (stageName != null)
+                {
+                    // hyperlinkedDisplayName = $"[{stageName}]({linkBase}/{membershipInfo.Group.Slug})";
+                    displayName = stageName;
+                }
+                else
+                {
+                    var artistName = membershipInfo.Member.Name;
+                    // var hyperlinkedArtistName = $"[{artistName}]({linkBase}/{membershipInfo.Member.Slug})";
+                    var groupName = membershipInfo.Group.Name;
+                    // var hyperlinkedGroupName = $"[{groupName}]({linkBase}/{membershipInfo.Group.Slug})";
+
+                    displayName = $"{artistName}* from *{groupName}";
+                    // hyperlinkedDisplayName = $"{hyperlinkedArtistName} from {hyperlinkedGroupName}";
+                }
+                
+                if (character != null)
+                {
+                    return $"{character} (CV: {displayName})";
+                }
+                else
+                {
+                    return displayName;
+                }
+            }
+
+            default:
+                return character ?? stageName ?? "Unknown!";
+        }
     }
 }

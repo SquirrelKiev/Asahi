@@ -2,10 +2,15 @@
   "schema": "schema.graphql",
   "documents": "**/*.graphql",
   "extensions": {
+    "endpoints": {
+      "production": {
+        "url": "https://graphql.animethemes.moe"
+      }
+    },
     "strawberryShake": {
-      "name": "AnilistClient",
-      "namespace": "Asahi",
-      "url": "https://graphql.anilist.co",
+      "name": "AnimeThemesClient",
+      "namespace": "Asahi.Modules.AnimeThemes",
+      "url": "https://graphql.animethemes.moe/",
       "records": {
         "inputs": false,
         "entities": false

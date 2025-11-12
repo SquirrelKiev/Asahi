@@ -1,0 +1,40 @@
+﻿query GetThemesWithData($title: String!) {
+    animePagination(search: $title) {
+        data {
+            ...animeInfoWithThemes
+        }
+    }
+}
+
+fragment animeInfoWithThemes on Anime {
+    ...animeInfo
+    animethemes {
+        ...animeThemeInfoWithEntries
+    }
+}
+
+fragment animeThemeInfoWithEntries on AnimeTheme {
+    ...animeThemeInfo
+    animethemeentries {
+        ...animeThemeEntryInfoWithVideos
+    }
+}
+
+fragment animeThemeEntryInfoWithVideos on AnimeThemeEntry {
+    ...animeThemeEntryInfo
+    # cursed this is the only thing here with lots of pagination stuff THIS far down the chain
+    videos(first: 100) {
+        ...videosQueryInfo
+    }
+}
+
+fragment videosQueryInfo on AnimeThemeEntryVideoConnection {
+    pageInfo {
+        hasMorePages
+    }
+    edges {
+        node {
+            ...animeThemeVideoInfo
+        }
+    }
+}

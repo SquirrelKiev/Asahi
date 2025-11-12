@@ -3,6 +3,7 @@ using Discord.Interactions;
 using Fergun.Interactive;
 using Fergun.Interactive.Pagination;
 using Microsoft.Extensions.Logging;
+using StrawberryShake;
 
 namespace Asahi.Modules.AnimeThemes;
 
@@ -24,10 +25,10 @@ public class AnimeThemesModule(
         await RespondAsync($"{emotes.Loading} Please wait...",
             allowedMentions: AllowedMentions.None);
 
-        SearchResponse searchRes;
+        IOperationResult<IGetThemesWithDataResult> searchRes;
         try
         {
-            searchRes = await atClient.SearchAsync(query, new IAnimeThemesClient.SearchQueryParams());
+            searchRes = await atClient.GetThemesWithData.ExecuteAsync(query);
         }
         catch (TaskCanceledException)
         {
@@ -36,7 +37,10 @@ public class AnimeThemesModule(
             return;
         }
 
-        if (searchRes.search.anime.Length == 0)
+        searchRes.EnsureNoErrors();
+        Debug.Assert(searchRes.Data != null);
+        
+        if (searchRes.Data.AnimePagination.Data.Count == 0)
         {
             // not sure a good design for a ComponentsV2 version of this so
             await ModifyOriginalResponseAsync(x => x.Content = "No results found!");
@@ -44,7 +48,7 @@ public class AnimeThemesModule(
             return;
         }
 
-        var state = new AnimeThemesSelectionState(searchRes);
+        var state = new AnimeThemesSelectionState(searchRes.Data);
 
         var paginator = new ComponentPaginatorBuilder()
             .WithUsers(Context.User)
@@ -76,7 +80,7 @@ public class AnimeThemesModule(
 
         var newStep = new AnimeThemesSelectionState.ThemeSelectionState(
             state.CurrentStep.SearchResponse,
-            state.CurrentStep.SearchResponse.search.anime.First(x => x.id == animeId));
+            state.CurrentStep.SearchResponse.AnimePagination.Data.First(x => x.Id == animeId));
 
         await ChangeStep(state, paginator, interaction, newStep);
     }
@@ -111,17 +115,17 @@ public class AnimeThemesModule(
 
         var choice = StateSerializer.DeserializeObject<AnimeThemesPaginatorGenerator.ThemeAndEntrySelection>(choiceStr);
 
-        Debug.Assert(selectedAnime.animethemes != null);
+        Debug.Assert(selectedAnime.Animethemes != null);
 
-        var selectedTheme = selectedAnime.animethemes.First(x => x.id == choice.SelectedTheme);
+        var selectedTheme = selectedAnime.Animethemes.First(x => x.Id == choice.SelectedTheme);
 
-        Debug.Assert(selectedTheme.animeThemeEntries != null);
+        Debug.Assert(selectedTheme.Animethemeentries != null);
 
-        var selectedEntry = selectedTheme.animeThemeEntries.First(x => x.id == choice.SelectedEntry);
+        var selectedEntry = selectedTheme.Animethemeentries.First(x => x.Id == choice.SelectedEntry);
 
-        Debug.Assert(selectedEntry.videos != null);
+        Debug.Assert(selectedEntry.Videos != null);
 
-        var selectedVideo = SelectBestVideoSource(selectedEntry.videos);
+        var selectedVideo = SelectBestVideoSource(selectedEntry.Videos);
 
         if (selectedVideo == null)
         {
@@ -209,11 +213,11 @@ public class AnimeThemesModule(
         await paginator.RenderPageAsync(interaction);
     }
 
-    public static VideoResource? SelectBestVideoSource(VideoResource[] videos)
+    public static IAnimeThemeVideoInfo? SelectBestVideoSource(IVideosQueryInfo videos)
     {
         // TODO: take into account stuff like creditless
-        var best = videos.MaxBy(x => x.resolution);
+        var best = videos.Edges.MaxBy(x => x.Node.Resolution);
 
-        return best;
+        return best?.Node;
     }
 }

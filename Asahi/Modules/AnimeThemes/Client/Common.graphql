@@ -1,0 +1,86 @@
+﻿fragment animeInfo on Anime {
+    id
+    name
+    mediaFormat
+    season
+    year
+    images {
+        edges {
+            node {
+                facet
+                link
+            }
+        }
+    }
+}
+
+fragment animeThemeInfo on AnimeTheme {
+    id
+    slug
+    type
+    sequence
+    song {
+        id
+        title
+        performances(first: 100) {
+            ...performanceInfo
+        }
+    }
+    group {
+        name
+    }
+}
+
+fragment performanceInfo on Performance {
+    alias
+    as
+    artist {
+        ...performanceArtistUnionInfo
+    }
+}
+
+fragment performanceArtistUnionInfo on PerformanceArtistUnion {
+    __typename
+    ...artistInfo
+    ...membershipInfo
+}
+
+fragment artistInfo on Artist {
+    id
+    name
+    slug
+}
+
+fragment membershipInfo on Membership {
+    id
+    alias
+    as
+    member {
+        ...artistInfo
+    }
+    group {
+        ...artistInfo
+    }
+}
+
+fragment animeThemeEntryInfo on AnimeThemeEntry {
+    id
+    episodes
+    notes
+    nsfw
+    spoiler
+    version
+}
+
+fragment animeThemeVideoInfo on Video {
+    id
+    lyrics
+    nc
+    overlap
+    resolution
+    source
+    subbed
+    uncen
+    tags
+    link
+}

@@ -2,7 +2,7 @@
 
 namespace Asahi.Modules.AnimeThemes;
 
-public interface IAnimeThemesClient
+public interface ILegacyAnimeThemesClient
 {
     [Get("/search")]
     public Task<SearchResponse> SearchAsync([Query][AliasAs("q")] string query, [Query(delimiter: "")] SearchQueryParams queryParams);
