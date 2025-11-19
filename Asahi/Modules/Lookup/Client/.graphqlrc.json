@@ -1,0 +1,25 @@
+{
+  "schema": "schema.graphql",
+  "documents": "**/*.graphql",
+  "extensions": {
+    "endpoints": {
+      "production": {
+        "url": "https://graphql.anilist.co"
+      }
+    },
+    "strawberryShake": {
+      "name": "AniListClient",
+      "url": "https://graphql.anilist.co",
+      "records": {
+        "inputs": false,
+        "entities": false
+      },
+      "transportProfiles": [
+        {
+          "default": "Http",
+          "subscription": "WebSocket"
+        }
+      ]
+    }
+  }
+}

@@ -131,4 +131,16 @@
         </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <GraphQL Update="Modules\Lookup\Client\schema.graphql">
+        <Generator>MSBuild:GenerateGraphQLCode</Generator>
+      </GraphQL>
+      <GraphQL Update="Modules\Lookup\Client\schema.extensions.graphql">
+        <Generator>MSBuild:GenerateGraphQLCode</Generator>
+      </GraphQL>
+      <GraphQL Update="Modules\Lookup\Client\GetMedia.graphql">
+        <Generator>MSBuild:GenerateGraphQLCode</Generator>
+      </GraphQL>
+    </ItemGroup>
+
 </Project>

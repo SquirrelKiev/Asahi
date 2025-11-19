@@ -229,6 +229,9 @@ public static class Startup
         serviceCollection.AddAnimeThemesClient()
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://graphql.animethemes.moe"));
 
+        serviceCollection.AddAniListClient()
+            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://graphql.anilist.co"));
+
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
                 x.ServiceLifetime == ServiceLifetime.Singleton)

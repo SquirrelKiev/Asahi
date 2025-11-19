@@ -22,6 +22,15 @@ public static partial class ModulePrefixes
     {
     }
 
+    public static partial class Lookup
+    {
+        [GenerateHashedIds]
+        [HashedId("MediaChoiceButtonId")]
+        public static partial class AniList
+        {
+        }
+    }
+
     [GenerateHashedIds]
     // just making extra sure this stays constant
     [HashedId("MoreInfoButton", UnhashedValue = "Danbooru CV2 more info button")]

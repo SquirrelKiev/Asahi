@@ -1,0 +1,30 @@
+﻿query GetMedia($query: String!, $type: MediaType!) {
+    Page {
+        media(search: $query, type: $type) {
+            ...mediaInfo
+        }
+    }
+}
+
+fragment mediaInfo on Media {
+    id
+    siteUrl
+    title {
+        english
+        romaji
+        native
+    }
+    description
+    coverImage {
+        large
+    }
+    bannerImage
+    format
+    season
+    seasonYear
+    startDate {
+        year
+    }
+    meanScore
+    averageScore
+}
