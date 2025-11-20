@@ -133,7 +133,7 @@ public class MemoryStateTracker(ILogger<MemoryStateTracker> logger) : IFeedsStat
 
     public void PruneMissingFeeds(IEnumerable<string> feedSources)
     {
-        var validFeedSources = new HashSet<string>(feedSources.Select(fs => fs));
+        var validFeedSources = new HashSet<string>(feedSources);
 
         var obsoleteFeeds = seenArticleHashes.Keys.Where(feedHash => !validFeedSources.Contains(feedHash)).ToList();
 

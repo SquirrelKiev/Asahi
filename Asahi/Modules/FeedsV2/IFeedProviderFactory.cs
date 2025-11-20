@@ -11,5 +11,8 @@ namespace Asahi.Modules.FeedsV2
         /// <returns>The feed provider.</returns>
         [Pure]
         public IFeedProvider? GetFeedProvider(string feedSource);
+
+        [Pure]
+        public string? GetHyperlinkableFeedUrl(string feedSource);
     }
 }

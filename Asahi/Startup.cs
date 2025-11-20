@@ -170,8 +170,8 @@ public static class Startup
             .AddSingleton<BotEmoteService>()
             .AddDbContextFactory<BotDbContext>()
             .AddSingleton<IFeedProviderFactory, DefaultFeedProviderFactory>()
-            .AddTransient<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
-            .AddTransient<IFeedsStateTracker, MemoryStateTracker>()
+            .AddSingleton<IFeedMessageDispatcher, DiscordFeedMessageDispatcher>()
+            .AddSingleton<IFeedsStateTracker, MemoryStateTracker>()
             .AddSingleton<IColorProviderService, ColorProviderService>()
             .AddSingleton(new InteractiveConfig()
                 { ReturnAfterSendingPaginator = true, ProcessSinglePagePaginators = true, LogLevel = logLevel })
@@ -224,7 +224,16 @@ public static class Startup
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://www.reddit.com"));
 
         serviceCollection.AddRefitClient<IDanbooruApi>(settings)
-            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://danbooru.donmai.us"));
+            .ConfigureHttpClient(x =>
+            {
+                x.BaseAddress = new Uri("https://danbooru.donmai.us");
+
+                if (config.DanbooruApiCredentials != default)
+                {
+                    x.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
+                        config.DanbooruApiCredentials.BasicAuthenticationSecret);
+                }
+            });
 
         serviceCollection.AddAnimeThemesClient()
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://graphql.animethemes.moe"));

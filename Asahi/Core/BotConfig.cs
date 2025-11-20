@@ -1,14 +1,15 @@
-﻿using Asahi.Modules;
+﻿using System.Text;
+using Asahi.Modules;
 using Serilog;
 using Serilog.Events;
 using YamlDotNet.Serialization;
 
 namespace Asahi;
 
-public class BotConfig
+public record BotConfig
 {
     [YamlMember(Description = @"Your bot token from https://discord.com/developers/applications. Don't share!")]
-    public string BotToken { get; set; } = "BOT_TOKEN_HERE";
+    public string BotToken { get; set; } = DefaultBotToken;
 
     [YamlMember(Description = "The type of database to use.\n" +
                               "Options are \"Sqlite\" and \"Postgresql\".")]
@@ -43,7 +44,10 @@ public class BotConfig
     public string WolframAppId { get; set; } = "";
 
     [YamlMember(Description = "The token of the test bot. This is only used for /bot nuke-test-commands at present. Optional.")]
-    public string TestingBotToken { get; set; } = "BOT_TOKEN_HERE";
+    public string TestingBotToken { get; set; } = DefaultBotToken;
+    
+    [YamlMember(Description = "The username to use for Danbooru API requests.")]
+    public DanbooruApiCredentialsModel DanbooruApiCredentials { get; set; } = default;
 
     [YamlMember(Description = "Any users in this list are banned from ever making it to highlights.")]
     public HashSet<ulong> BannedHighlightsUsers { get; set; } = [];
@@ -63,6 +67,8 @@ public class BotConfig
     [YamlMember(Description = "The Asahi web services url to use as a base. Expects an instance of Asahi.WebServices.")]
     public string AsahiWebServicesBaseUrl { get; set; } = "https://asahi-services.onk.moe";
 
+    public const string DefaultBotToken = "BOT_TOKEN_HERE";
+    
     public bool IsValid()
     {
         try
@@ -77,12 +83,12 @@ public class BotConfig
         
         try
         {
-            if (TestingBotToken != "BOT_TOKEN_HERE")
+            if (TestingBotToken != DefaultBotToken)
                 TokenUtils.ValidateToken(TokenType.Bot, TestingBotToken);
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Supplied testing bot token is invalid. Set as BOT_TOKEN_HERE if unwanted.");
+            Log.Fatal(ex, "Supplied testing bot token is invalid. Set as {DefaultBotToken} if unwanted.", DefaultBotToken);
             return false;
         }
 
@@ -94,34 +100,11 @@ public class BotConfig
         Sqlite,
         Postgresql
     }
-    
-    public enum ProxyUrlEncodingFormat
+
+    public readonly record struct DanbooruApiCredentialsModel(string Username, string ApiKey)
     {
-        UrlEscaped,
-        Base64
-    }
-
-    public struct AboutField
-    {
-        /// <summary>
-        /// For any string here, the following will be replaced:
-        /// - {{guilds}} will be substituted with how many guilds (servers) the bot is in.
-        /// - {{botUsername}} will be substituted with the bot's username.
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// For any string here, the following will be replaced:
-        /// - {{guilds}} will be substituted with how many guilds (servers) the bot is in.
-        /// - {{botUsername}} will be substituted with the bot's username.
-        /// </summary>
-        public string Value { get; set; }
-
-        /// <summary>
-        /// For any string here, the following will be replaced:
-        /// - {{guilds}} will be substituted with how many guilds (servers) the bot is in.
-        /// - {{botUsername}} will be substituted with the bot's username.
-        /// </summary>
-        public bool Inline { get; set; }
+        public string Username { get; init; } = Username;
+        public string ApiKey { get; init; } = ApiKey;
+        public string BasicAuthenticationSecret => Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Username}:{ApiKey}"));
     }
 }

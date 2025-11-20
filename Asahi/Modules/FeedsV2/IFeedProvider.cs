@@ -9,6 +9,7 @@ public interface IFeedProvider
     
     public ArticleIdScope ArticleIdScope { get; }
 
+    // TODO: switch to a result type
     /// <summary>
     /// Gets the data from the provided feed.
     /// </summary>

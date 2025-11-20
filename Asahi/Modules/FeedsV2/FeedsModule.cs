@@ -238,12 +238,32 @@ public class FeedsModule(
         var pages = feeds
             .Select(x =>
             {
-                var feedTitle = x.FeedTitle ?? stateTracker.GetCachedDefaultFeedTitle(x.FeedUrl);
+                var feedTitle = string.IsNullOrWhiteSpace(x.FeedTitle) ? stateTracker.GetCachedDefaultFeedTitle(x.FeedUrl) : x.FeedTitle;
 
-                if (string.IsNullOrWhiteSpace(feedTitle))
-                    return $"* ({x.Id}) <#{x.ChannelId}> - {x.FeedUrl}";
+                var hyperlinkableFeedUrl = feedProviderFactory.GetHyperlinkableFeedUrl(x.FeedUrl);
+
+                if(hyperlinkableFeedUrl == null)
+                {
+                    if (string.IsNullOrWhiteSpace(feedTitle))
+                    {
+                        return $"* ({x.Id}) <#{x.ChannelId}> - {x.FeedUrl}";
+                    }
+                    else
+                    {
+                        return $"* ({x.Id}) <#{x.ChannelId}> - [`{feedTitle}`]({x.FeedUrl})";
+                    }
+                }
                 else
-                    return $"* ({x.Id}) <#{x.ChannelId}> - [{feedTitle}]({x.FeedUrl})";
+                {
+                    if (string.IsNullOrWhiteSpace(feedTitle))
+                    {
+                        return $"* ({x.Id}) <#{x.ChannelId}> - {hyperlinkableFeedUrl} (`{x.FeedUrl}`)";
+                    }
+                    else
+                    {
+                        return $"* ({x.Id}) <#{x.ChannelId}> - [`{feedTitle}`]({hyperlinkableFeedUrl}) (`{x.FeedUrl}`)";
+                    }
+                }
             })
             .Chunk(20).Select(x => new PageBuilder().WithColor(roleColor)
                 .WithDescription(string.Join('\n', x)));

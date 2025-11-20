@@ -383,7 +383,7 @@ public class BotManagementModule(
     {
         await DeferAsync();
 
-        if (config.TestingBotToken == "BOT_TOKEN_HERE")
+        if (config.TestingBotToken == BotConfig.DefaultBotToken)
         {
             await FollowupAsync("Test bot not configured.");
             return;

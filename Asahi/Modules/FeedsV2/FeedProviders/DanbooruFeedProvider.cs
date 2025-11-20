@@ -1,12 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Web;
 using Asahi.Modules.Models;
-using Newtonsoft.Json;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
 {
-    public class DanbooruFeedProvider(HttpClient httpClient, DanbooruUtility danbooruUtility) : IFeedProvider
+    public class DanbooruFeedProvider(IDanbooruApi danbooruApi, DanbooruUtility danbooruUtility) : IFeedProvider
     {
         public string? FeedSource { get; private set; }
         public string DefaultFeedTitle { get; private set; } = "Danbooru";
@@ -18,20 +16,19 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             CancellationToken cancellationToken = default)
         {
             FeedSource = feedSource;
-            
-            var uri = new Uri(FeedSource);
+            var regexMatch = CompiledRegex.DanbooruFeedRegex().Match(feedSource);
+            var tags = regexMatch.Groups["tags"].Value;
 
-            httpClient.MaxResponseContentBufferSize = 8000000;
-            using var req = await httpClient.GetAsync(uri, cancellationToken);
-            var json = await req.Content.ReadAsStringAsync(cancellationToken);
+            var req = await danbooruApi.GetPosts(tags, cancellationToken);
 
-            // TODO: Validate
-            posts = JsonConvert.DeserializeObject<DanbooruPost[]>(json);
+            if (!req.IsSuccessful)
+            {
+                throw req.Error;
+            }
 
-            var query = HttpUtility.ParseQueryString(uri.Query);
+            posts = req.Content;
 
-            var tags = query["tags"];
-            DefaultFeedTitle = tags == null ? "Danbooru Feed" : $"Danbooru: {tags}".Truncate(64, false);
+            DefaultFeedTitle = string.IsNullOrWhiteSpace(tags) ? "Danbooru Feed" : $"Danbooru: {tags}".Truncate(64, false);
 
             return true;
         }
