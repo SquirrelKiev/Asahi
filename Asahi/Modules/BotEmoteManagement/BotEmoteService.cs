@@ -37,6 +37,15 @@ public record BotEmotesSpecification
     public IEmoteSpecification Bilibili { get; init; } = new InternalCustomEmoteSpecification("BilibiliLogo");
     public IEmoteSpecification Lofter { get; init; } = new InternalCustomEmoteSpecification("LofterLogo");
     public IEmoteSpecification YouTube { get; init; } = new InternalCustomEmoteSpecification("YouTubeLogo");
+    
+    // Health check
+    public IEmoteSpecification DiscordLogo { get; init; } = new InternalCustomEmoteSpecification("DiscordLogo");
+    public IEmoteSpecification WebServicesIcon { get; init; } = new InternalCustomEmoteSpecification("WebServicesIcon");
+    public IEmoteSpecification DatabaseIcon { get; init; } = new InternalCustomEmoteSpecification("DatabaseIcon");
+    public IEmoteSpecification HealthyIcon { get; init; } = new InternalCustomEmoteSpecification("HealthyIcon");
+    public IEmoteSpecification DegradedIcon { get; init; } = new InternalCustomEmoteSpecification("DegradedIcon");
+    public IEmoteSpecification UnhealthyIcon { get; init; } = new InternalCustomEmoteSpecification("UnhealthyIcon");
+    
 }
 
 [GenerateEmoteManager(typeof(BotEmotesSpecification))]

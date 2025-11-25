@@ -1,14 +1,17 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using Asahi.HealthChecks;
 using Discord.WebSocket;
 using Humanizer;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Asahi.Modules.About;
 
 [Inject(ServiceLifetime.Singleton)]
 public class AboutService
 {
-    private readonly Lazy<ProjectInfo> projectInfo;
-    private Lazy<Task<MessageComponent>> component;
+    private Lazy<ProjectInfo> projectInfo;
+    private Lazy<Task<ProfileInfo>> profileInfo;
 
     private readonly DiscordSocketClient discordClient;
     private readonly BotEmoteService emotes;
@@ -19,47 +22,76 @@ public class AboutService
         this.emotes = emotes;
 
         projectInfo = new Lazy<ProjectInfo>(GetProjectInfo);
-        component = new Lazy<Task<MessageComponent>>(BuildComponent);
+        profileInfo = new Lazy<Task<ProfileInfo>>(GetProfileInfo);
     }
 
-    public Task<MessageComponent> GetComponent()
-    {
-        return component.Value;
-    }
-
+    public Task<MessageComponent> GetComponent(HealthReport? healthReport) => BuildComponent(healthReport);
+    
     public void NukeCache()
     {
-        component = new Lazy<Task<MessageComponent>>(BuildComponent);
+        projectInfo = new Lazy<ProjectInfo>(GetProjectInfo);
+        profileInfo = new Lazy<Task<ProfileInfo>>(GetProfileInfo);
     }
 
-    private async Task<MessageComponent> BuildComponent()
+    private async Task<MessageComponent> BuildComponent(HealthReport? healthReport)
     {
         var components = new ComponentBuilderV2();
 
-        var self = discordClient.Rest.CurrentUser;
-
-        await self.UpdateAsync();
-
-        var banner = self.GetBannerUrl(ImageFormat.Auto, 4096);
-        var avatar = self.GetAvatarUrl(ImageFormat.Auto, 4096);
+        var profile = await profileInfo.Value;
 
         var container = new ContainerBuilder();
-        if (banner != null)
-            container.WithMediaGallery([banner]);
+        if (profile.Banner != null)
+            container.WithMediaGallery([profile.Banner]);
 
         var project = projectInfo.Value;
         var versionString = GetFriendlyVersionString(project);
 
-        var text = $"## {emotes.BotIcon} {self.Username}\n" +
+        var text = $"## {emotes.BotIcon} {profile.Username}\n" +
                    $"Also known as {emotes.AsahiIcon} {project.ProjectName}!\n" +
                    $"**Version** {versionString}\n" +
                    $"**By** {project.AuthorDiscordIds?.Split(',').Select(x => $"<@{x}>").Humanize() ?? project.Author}";
 
-        container.WithSection(new SectionBuilder(new ThumbnailBuilder(avatar), new TextDisplayBuilder(text)));
+        container.WithSection(new SectionBuilder(new ThumbnailBuilder(profile.Avatar), new TextDisplayBuilder(text)));
+
+        {
+            string healthReportText;
+
+            if (healthReport == null)
+            {
+                healthReportText = emotes.Loading.ToString()!;
+            }
+            else
+            {
+                var overallHealthCheckResult = healthReport.Status;
+                var discordHealthCheckResult = healthReport.Entries[nameof(DiscordHealthCheck)].Status;
+                var databaseHealthCheckResult = healthReport.Entries[nameof(DatabaseHealthCheck)].Status;
+                var webServicesHealthCheckResult = healthReport.Entries[nameof(WebServicesHealthCheck)].Status;
+
+                healthReportText = $"{emotes.BotIcon}{GetHealthStatusEmote(overallHealthCheckResult)} " +
+                                   $"{emotes.DiscordLogo}{GetHealthStatusEmote(discordHealthCheckResult, true)} " +
+                                   $"{emotes.DatabaseIcon}{GetHealthStatusEmote(databaseHealthCheckResult, true)} " +
+                                   $"{emotes.WebServicesIcon}{GetHealthStatusEmote(webServicesHealthCheckResult, true)}";
+            }
+
+            container.WithSeparator(SeparatorSpacingSize.Small, false);
+
+            container.WithTextDisplay(healthReportText);
+        }
 
         components.WithContainer(container);
 
         return components.Build();
+    }
+
+    private IEmote GetHealthStatusEmote(HealthStatus status, bool degradedMeansUnhealthy = false)
+    {
+        return status switch
+        {
+            HealthStatus.Unhealthy => emotes.UnhealthyIcon,
+            HealthStatus.Degraded => degradedMeansUnhealthy ? emotes.UnhealthyIcon : emotes.DegradedIcon,
+            HealthStatus.Healthy => emotes.HealthyIcon,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+        };
     }
 
     private static string GetFriendlyVersionString(ProjectInfo projectInfo)
@@ -87,6 +119,19 @@ public class AboutService
         }
 
         return versionString;
+    }
+
+    private async Task<ProfileInfo> GetProfileInfo()
+    {
+        var self = discordClient.Rest.CurrentUser;
+
+        await self.UpdateAsync();
+
+        var username = self.Username;
+        var banner = self.GetBannerUrl(ImageFormat.Auto, 4096);
+        var avatar = self.GetAvatarUrl(ImageFormat.Auto, 4096);
+        
+        return new ProfileInfo(username, banner, avatar);
     }
 
     private static ProjectInfo GetProjectInfo()
@@ -119,3 +164,6 @@ public readonly record struct ProjectInfo(
     ulong CommitDate,
     string? Author,
     string? AuthorDiscordIds);
+
+
+public readonly record struct ProfileInfo(string Username, string? Banner, string Avatar);

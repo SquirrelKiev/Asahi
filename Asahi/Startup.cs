@@ -4,11 +4,11 @@ using System.Reflection;
 using System.Text;
 using Asahi.BotEmoteManagement;
 using Asahi.Database;
+using Asahi.HealthChecks;
 using Asahi.Modules;
 using Asahi.Modules.AnimeThemes;
 using Asahi.Modules.FeedsV2;
 using Asahi.Modules.Tatsu;
-using Discord.Commands;
 using Discord.Interactions;
 using Discord.Rest;
 using Discord.WebSocket;
@@ -16,6 +16,7 @@ using Fergun.Interactive;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NodaTime;
@@ -237,6 +238,11 @@ public static class Startup
 
         serviceCollection.AddAnimeThemesClient()
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://graphql.animethemes.moe"));
+
+        serviceCollection.AddHealthChecks()
+            .AddCheck<DatabaseHealthCheck>(nameof(DatabaseHealthCheck))
+            .AddCheck<DiscordHealthCheck>(nameof(DiscordHealthCheck))
+            .AddCheck<WebServicesHealthCheck>(nameof(WebServicesHealthCheck), HealthStatus.Degraded);
 
         serviceCollection.Scan(scan => scan.FromAssemblyOf<BotService>()
             .AddClasses(classes => classes.WithAttribute<InjectAttribute>(x =>
