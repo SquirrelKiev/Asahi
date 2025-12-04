@@ -3,6 +3,11 @@ using System.Diagnostics.Contracts;
 using System.Text;
 using Asahi.Database.Models;
 using Discord.WebSocket;
+using Markdig;
+using Markdig.Parsers;
+using Markdig.Parsers.Inlines;
+using Markdig.Syntax;
+using Markdig.Syntax.Inlines;
 using Microsoft.Extensions.Logging;
 
 namespace Asahi.Modules;
@@ -103,6 +108,42 @@ public static class QuotingHelpers
         bool attachedImage = false;
         logger.LogTrace("There are {embedCount} embeds in this message.", message.Embeds.Count);
 
+        bool embedsShouldSpoiler = false;
+        if (message.Content != null && embeds.Count > 0)
+        {
+            var pipelineBuilder = new MarkdownPipelineBuilder();
+            
+            pipelineBuilder.BlockParsers.Clear();
+            pipelineBuilder.InlineParsers.Clear();
+
+            var emphasis = new EmphasisInlineParser();
+            emphasis.EmphasisDescriptors.Clear();
+            emphasis.EmphasisDescriptors.Add(new EmphasisDescriptor('|', 2, 2, true));
+            
+            pipelineBuilder.InlineParsers.Add(emphasis);
+
+            pipelineBuilder.BlockParsers.Add(new ParagraphBlockParser());
+            
+            var pipeline = pipelineBuilder.Build();
+
+            // HACK: commonmark doesn't count emphasis with spaces after the delimiter as emphasis. e.g. ** hello ** is not a valid emphasis.
+            // discord however does not care about commonmark and counts it anyway.
+            // afaik they use this parser for spoilers, which means naturally spoilers also don't care about spaces.
+            // doing some replacing to make the message something that is happy to be parsed
+            var fixedUpContent = CompiledRegex.HackDiscordSpoilerReplacer().Replace(message.Content, "||");
+            var res = Markdown.Parse(fixedUpContent, pipeline);
+
+            foreach (var descendant in res.Descendants<EmphasisInline>())
+            {
+                if (descendant.Descendants<LiteralInline>()
+                    .Any(x => CompiledRegex.BadLinkFinder().IsMatch(x.Content.AsSpan())))
+                {
+                    embedsShouldSpoiler = true;
+                    break;
+                }
+            }
+        }
+
         int spoilerRichEmbeds = 0;
         bool addedSpoilerMessage = false;
         foreach (var embed in message.Embeds)
@@ -114,7 +155,7 @@ public static class QuotingHelpers
                 case EmbedType.Image:
                     logger.LogTrace("Adding image embed.");
 
-                    if (spoilerAll)
+                    if (spoilerAll || embedsShouldSpoiler)
                     {
                         if (!addedSpoilerMessage)
                         {
@@ -133,7 +174,7 @@ public static class QuotingHelpers
                 case EmbedType.Video:
                 case EmbedType.Gifv:
                     logger.LogTrace("Queued video link message.");
-                    if (spoilerAll)
+                    if (spoilerAll || embedsShouldSpoiler)
                     {
                         if (!addedSpoilerMessage)
                         {
@@ -153,10 +194,10 @@ public static class QuotingHelpers
                 case EmbedType.Article:
                 case EmbedType.Rich:
                     logger.LogTrace("Adding rich embed.");
-                    if (!spoilerAll)
-                        embeds.Add(embed.ToEmbedBuilderForce());
-                    else
+                    if (spoilerAll || embedsShouldSpoiler)
                         spoilerRichEmbeds++;
+                    else
+                        embeds.Add(embed.ToEmbedBuilderForce());
                     break;
                 default:
                     logger.LogTrace("skipping unknown embed type {embedType}", embed.Type);

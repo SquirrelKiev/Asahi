@@ -51,6 +51,12 @@ public static partial class CompiledRegex
     [GeneratedRegex(@"^https:\/\/misskey\.io\/notes\/([a-z0-9]+)\/?$")]
     public static partial Regex MisskeyNoteRegex();
 
+    [GeneratedRegex(@" ?\|\| ?")]
+    public static partial Regex HackDiscordSpoilerReplacer();
+    
+    [GeneratedRegex(@"https?:\/\/\S*")]
+    public static partial Regex BadLinkFinder();
+
     [Pure]
     public static MessageIdInfo? ParseMessageLink(string messageLink)
     {
