@@ -138,6 +138,7 @@ public static class QuotingHelpers
                 if (descendant.Descendants<LiteralInline>()
                     .Any(x => CompiledRegex.BadLinkFinder().IsMatch(x.Content.AsSpan())))
                 {
+                    logger.LogTrace("Message contains spoiler-tagged link, marking all embeds as spoilers.");
                     embedsShouldSpoiler = true;
                     break;
                 }
