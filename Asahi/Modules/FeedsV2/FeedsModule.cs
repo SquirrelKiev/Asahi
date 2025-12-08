@@ -245,33 +245,33 @@ public class FeedsModule(
                 string disabledStr = string.Empty;
                 if (x.ForcedDisable)
                 {
-                    disabledStr = "(FD) ";
+                    disabledStr = " (FD)";
                 }
                 else if (!x.Enabled)
                 {
-                    disabledStr = "(D) ";
+                    disabledStr = " (D)";
                 }
                     
                 if(hyperlinkableFeedUrl == null)
                 {
                     if (string.IsNullOrWhiteSpace(feedTitle))
                     {
-                        return $"* {disabledStr}({x.Id}) <#{x.ChannelId}> - {x.FeedUrl}";
+                        return $"* ({x.Id}){disabledStr} <#{x.ChannelId}> - {x.FeedUrl}";
                     }
                     else
                     {
-                        return $"* {disabledStr}({x.Id}) <#{x.ChannelId}> - [`{feedTitle}`]({x.FeedUrl})";
+                        return $"* ({x.Id}){disabledStr} <#{x.ChannelId}> - [`{feedTitle}`]({x.FeedUrl})";
                     }
                 }
                 else
                 {
                     if (string.IsNullOrWhiteSpace(feedTitle))
                     {
-                        return $"* {disabledStr}({x.Id}) <#{x.ChannelId}> - {hyperlinkableFeedUrl} (`{x.FeedUrl}`)";
+                        return $"* ({x.Id}){disabledStr} <#{x.ChannelId}> - {hyperlinkableFeedUrl} (`{x.FeedUrl}`)";
                     }
                     else
                     {
-                        return $"* {disabledStr}({x.Id}) <#{x.ChannelId}> - [`{feedTitle}`]({hyperlinkableFeedUrl}) (`{x.FeedUrl}`)";
+                        return $"* ({x.Id}){disabledStr} <#{x.ChannelId}> - [`{feedTitle}`]({hyperlinkableFeedUrl}) (`{x.FeedUrl}`)";
                     }
                 }
             })
