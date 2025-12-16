@@ -38,6 +38,8 @@ public class FeedsProcessorService(
     private async Task ProcessFeed(string feedSource, FeedListener[] listeners, IFeedsStateTracker stateTracker,
         CancellationToken cancellationToken = default)
     {
+        logger.LogTrace("Started processing feed {feedSource}.", feedSource);
+        
         var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
 
         if (feedProvider == null)
