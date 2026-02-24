@@ -24,7 +24,7 @@ namespace Asahi.Modules.BotManagement;
 
 [Group("bot", "Commands relating to configuring the bot.")]
 [CommandContextType(InteractionContextType.Guild, InteractionContextType.BotDm, InteractionContextType.PrivateChannel)]
-[IntegrationType(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall)]
+[IntegrationType(ApplicationIntegrationType.GuildInstall)]
 [DefaultMemberPermissions(GuildPermission.ManageGuild)]
 public class BotManagementModule(
     IDbContextFactory<BotDbContext> dbService,
