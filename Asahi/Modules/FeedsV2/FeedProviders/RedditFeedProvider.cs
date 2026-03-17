@@ -97,9 +97,9 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         private static MessageContents GetArticleMessageContent(Post post)
         {
             if (post.Spoiler)
-                return new MessageContents($"|| https://www.vxreddit.com{post.Permalink} ||");
+                return new MessageContents($"|| https://www.rxddit.com{post.Permalink} ||");
             else
-                return new MessageContents($"https://www.vxreddit.com{post.Permalink}");
+                return new MessageContents($"https://www.rxddit.com{post.Permalink}");
         }
 
         // tracking timestamp to get around a reddit API bug where it randomly decides to send old JSON sometimes.
