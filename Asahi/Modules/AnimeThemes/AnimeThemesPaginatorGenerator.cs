@@ -244,7 +244,7 @@ public static class AnimeThemesPaginatorGenerator
 
     private static string GetAnimeThumbnail(IAnimeInfo anime)
     {
-        return anime.Images?.Edges.FirstOrDefault(x => x.Node.Facet == ImageFacet.SmallCover)?.Node.Link ??
+        return anime.Images?.Edges.FirstOrDefault(x => x.Node.Facet is ImageFacet.LargeCover or ImageFacet.SmallCover)?.Node.Link ??
                "https://cubari.onk.moe/404.png";
     }
 
