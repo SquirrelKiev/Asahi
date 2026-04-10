@@ -35,32 +35,18 @@ fragment performanceInfo on Performance {
     alias
     as
     artist {
-        ...performanceArtistUnionInfo
+        ...artistInfo
     }
-}
-
-fragment performanceArtistUnionInfo on PerformanceArtistUnion {
-    __typename
-    ...artistInfo
-    ...membershipInfo
+    member {
+        ...artistInfo
+    }
+    memberAlias
 }
 
 fragment artistInfo on Artist {
     id
     name
     slug
-}
-
-fragment membershipInfo on Membership {
-    id
-    alias
-    as
-    member {
-        ...artistInfo
-    }
-    group {
-        ...artistInfo
-    }
 }
 
 fragment animeThemeEntryInfo on AnimeThemeEntry {

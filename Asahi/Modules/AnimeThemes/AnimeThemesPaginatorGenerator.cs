@@ -244,7 +244,8 @@ public static class AnimeThemesPaginatorGenerator
 
     private static string GetAnimeThumbnail(IAnimeInfo anime)
     {
-        return anime.Images?.Edges.FirstOrDefault(x => x.Node.Facet is ImageFacet.LargeCover or ImageFacet.SmallCover)?.Node.Link ??
+        return anime.Images?.Edges.FirstOrDefault(x => x.Node.Facet is ImageFacet.LargeCover or ImageFacet.SmallCover)
+                   ?.Node.Link ??
                "https://cubari.onk.moe/404.png";
     }
 
@@ -358,7 +359,7 @@ public static class AnimeThemeModelExtensions
             warnings = $"({labels.Humanize()}) ";
         }
 
-        return $"{warnings}v{themeEntryInfo.Version ?? 1} • episodes {themeEntryInfo.Episodes ?? "??"}";
+        return $"{warnings}v{themeEntryInfo.Version} • episodes {themeEntryInfo.Episodes ?? "??"}";
     }
 
     public static string ToStringNice(this IAnimeThemeInfoWithEntries themeInfo, bool includeSlug = true,
@@ -410,61 +411,23 @@ public static class AnimeThemeModelExtensions
 
     public static string ToStringNice(this IPerformanceInfo performanceInfo)
     {
-        // const string linkBase = "https://animethemes.moe/artist";
+        string displayName;
+
+        if (performanceInfo.Alias != null)
+        {
+            displayName = performanceInfo.Alias;
+        }
+        else if (performanceInfo.Member != null)
+        {
+            displayName = $"{performanceInfo.Member.Name}* from *{performanceInfo.Artist.Name}";
+        }
+        else
+        {
+            displayName = performanceInfo.Artist.Name;
+        }
 
         var character = performanceInfo.As;
-        var stageName = performanceInfo.Alias;
 
-        switch (performanceInfo.Artist)
-        {
-            case IArtistInfo artistInfo:
-            {
-                var artistName = artistInfo.Name;
-
-                var displayName = stageName ?? artistName;
-                // var hyperlinkedDisplayName = $"[{displayName}]({linkBase}/{artistInfo.Slug})";
-                if (character != null)
-                {
-                    return $"{character} (CV: {displayName})";
-                }
-                else
-                {
-                    return displayName;
-                }
-            }
-            case IMembershipInfo membershipInfo:
-            {
-                string displayName;
-                // string hyperlinkedDisplayName;
-
-                if (stageName != null)
-                {
-                    // hyperlinkedDisplayName = $"[{stageName}]({linkBase}/{membershipInfo.Group.Slug})";
-                    displayName = stageName;
-                }
-                else
-                {
-                    var artistName = membershipInfo.Member.Name;
-                    // var hyperlinkedArtistName = $"[{artistName}]({linkBase}/{membershipInfo.Member.Slug})";
-                    var groupName = membershipInfo.Group.Name;
-                    // var hyperlinkedGroupName = $"[{groupName}]({linkBase}/{membershipInfo.Group.Slug})";
-
-                    displayName = $"{artistName}* from *{groupName}";
-                    // hyperlinkedDisplayName = $"{hyperlinkedArtistName} from {hyperlinkedGroupName}";
-                }
-                
-                if (character != null)
-                {
-                    return $"{character} (CV: {displayName})";
-                }
-                else
-                {
-                    return displayName;
-                }
-            }
-
-            default:
-                return character ?? stageName ?? "Unknown!";
-        }
+        return character != null ? $"{character} (CV: {displayName})" : displayName;
     }
 }
