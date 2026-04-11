@@ -372,7 +372,7 @@ public static class AnimeThemeModelExtensions
         }
         else if (themeInfo.Animethemeentries.Any(x => x.Nsfw))
         {
-            labels.Add("May contain NSFW");
+            labels.Add("May be NSFW");
         }
 
         if (themeInfo.Animethemeentries.All(x => x.Spoiler))
