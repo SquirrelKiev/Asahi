@@ -78,7 +78,7 @@ public class FeedsProcessorService(
                 // Part of me wants to check the cancellation token here, but I feel it's important to let the messages send no matter what
                 try
                 {
-                    if (!listener.Enabled)
+                    if (!listener.Enabled || listener.ForcedDisable)
                         continue;
 
                     logger.LogTrace("Processing listener {listenerId}.", listener.Id);
