@@ -556,7 +556,7 @@ public class BotManagementModule(
             await using var context = await dbService.CreateDbContextAsync();
 
             var feeds = await context.RssFeedListeners
-                .Where(x => Regex.IsMatch(x.FeedUrl, regex) && x.ForcedDisable)
+                .Where(x => Regex.IsMatch(x.FeedUrl, regex) && !x.ForcedDisable)
                 .ToListAsync();
 
             foreach (var feed in feeds)
