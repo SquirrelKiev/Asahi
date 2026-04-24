@@ -29,9 +29,7 @@ fragment animeThemeEntryInfoWithVideos on AnimeThemeEntry {
 }
 
 fragment videosQueryInfo on AnimeThemeEntryVideoConnection {
-    pageInfo {
-        hasMorePages
-    }
+    # not added pagination stuff here as its not used
     edges {
         node {
             ...animeThemeVideoInfo

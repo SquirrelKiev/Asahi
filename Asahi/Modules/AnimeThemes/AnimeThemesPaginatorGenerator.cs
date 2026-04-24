@@ -39,14 +39,14 @@ public static class AnimeThemesPaginatorGenerator
             var totalThemes = anime.Animethemes?.Count ?? 0;
 
             var titleComponent = new SectionBuilder();
-            var mediaFormat = anime.MediaFormat.GetValueOrDefault() switch
+            var mediaFormat = anime.Format.GetValueOrDefault() switch
             {
-                AnimeMediaFormat.Tv => "TV",
-                AnimeMediaFormat.TvShort => "TV Short",
-                AnimeMediaFormat.Ova => "OVA",
-                AnimeMediaFormat.Movie => "Movie",
-                AnimeMediaFormat.Special => "Special",
-                AnimeMediaFormat.Ona => "ONA",
+                AnimeFormat.Tv => "TV",
+                AnimeFormat.TvShort => "TV Short",
+                AnimeFormat.Ova => "OVA",
+                AnimeFormat.Movie => "Movie",
+                AnimeFormat.Special => "Special",
+                AnimeFormat.Ona => "ONA",
                 _ => "N/A"
             };
             titleComponent.WithTextDisplay(
