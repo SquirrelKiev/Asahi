@@ -4,8 +4,6 @@ using System.Composition;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Interactions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -74,9 +72,9 @@ public class BotModuleCodeFixProvider : CodeFixProvider
 
         foreach (var attribute in classSymbol.GetAttributes())
         {
-            if (attribute.AttributeClass?.Name == nameof(CommandContextTypeAttribute))
+            if (attribute.AttributeClass?.Name == "CommandContextTypeAttribute")
                 hasCommandContextType = true;
-            else if (attribute.AttributeClass?.Name == nameof(IntegrationTypeAttribute))
+            else if (attribute.AttributeClass?.Name == "IntegrationTypeAttribute")
                 hasIntegrationType = true;
         }
 
@@ -93,8 +91,8 @@ public class BotModuleCodeFixProvider : CodeFixProvider
                 SyntaxFactory.AttributeArgument(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName(nameof(InteractionContextType)),
-                        SyntaxFactory.IdentifierName(nameof(InteractionContextType.Guild)))));
+                        SyntaxFactory.IdentifierName("InteractionContextType"),
+                        SyntaxFactory.IdentifierName("Guild"))));
         }
         
         if (includeUser)
@@ -103,20 +101,20 @@ public class BotModuleCodeFixProvider : CodeFixProvider
                 SyntaxFactory.AttributeArgument(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName(nameof(InteractionContextType)),
-                        SyntaxFactory.IdentifierName(nameof(InteractionContextType.BotDm)))));
+                        SyntaxFactory.IdentifierName("InteractionContextType"),
+                        SyntaxFactory.IdentifierName("BotDm"))));
                         
             contextArguments.Add(
                 SyntaxFactory.AttributeArgument(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName(nameof(InteractionContextType)),
-                        SyntaxFactory.IdentifierName(nameof(InteractionContextType.PrivateChannel)))));
+                        SyntaxFactory.IdentifierName("InteractionContextType"),
+                        SyntaxFactory.IdentifierName("PrivateChannel"))));
         }
 
         var commandContextAttr = SyntaxFactory.AttributeList(
             SyntaxFactory.SingletonSeparatedList(
-                SyntaxFactory.Attribute(SyntaxFactory.IdentifierName(nameof(CommandContextTypeAttribute)))
+                SyntaxFactory.Attribute(SyntaxFactory.IdentifierName("CommandContextTypeAttribute"))
                 .WithArgumentList(
                     SyntaxFactory.AttributeArgumentList(
                         SyntaxFactory.SeparatedList(contextArguments)))));
@@ -134,8 +132,8 @@ public class BotModuleCodeFixProvider : CodeFixProvider
                 SyntaxFactory.AttributeArgument(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName(nameof(ApplicationIntegrationType)),
-                        SyntaxFactory.IdentifierName(nameof(ApplicationIntegrationType.GuildInstall)))));
+                        SyntaxFactory.IdentifierName("ApplicationIntegrationType"),
+                        SyntaxFactory.IdentifierName("GuildInstall"))));
         }
         
         if (includeUser)
@@ -144,13 +142,13 @@ public class BotModuleCodeFixProvider : CodeFixProvider
                 SyntaxFactory.AttributeArgument(
                     SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.IdentifierName(nameof(ApplicationIntegrationType)),
-                        SyntaxFactory.IdentifierName(nameof(ApplicationIntegrationType.UserInstall)))));
+                        SyntaxFactory.IdentifierName("ApplicationIntegrationType"),
+                        SyntaxFactory.IdentifierName("UserInstall"))));
         }
 
         var integrationAttr = SyntaxFactory.AttributeList(
             SyntaxFactory.SingletonSeparatedList(
-                SyntaxFactory.Attribute(SyntaxFactory.IdentifierName(nameof(IntegrationTypeAttribute)))
+                SyntaxFactory.Attribute(SyntaxFactory.IdentifierName("IntegrationTypeAttribute"))
                 .WithArgumentList(
                     SyntaxFactory.AttributeArgumentList(
                         SyntaxFactory.SeparatedList(integrationArguments)))));

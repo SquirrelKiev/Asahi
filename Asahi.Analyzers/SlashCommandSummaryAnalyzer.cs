@@ -1,6 +1,5 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
-using Discord.Interactions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -39,7 +38,7 @@ public class SlashCommandSummaryAnalyzer : DiagnosticAnalyzer
 
         var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclaration)!;
         var methodAttributes = methodSymbol.GetAttributes();
-        if (!methodAttributes.Any(a => a.AttributeClass?.Name == nameof(SlashCommandAttribute)))
+        if (!methodAttributes.Any(a => a.AttributeClass?.Name == "SlashCommandAttribute"))
         {
             return;
         }
@@ -48,7 +47,7 @@ public class SlashCommandSummaryAnalyzer : DiagnosticAnalyzer
         {
             var parameterSymbol = context.SemanticModel.GetDeclaredSymbol(parameter);
             var summaryAttribute = parameterSymbol!.GetAttributes()
-                .FirstOrDefault(a => a.AttributeClass!.Name.ToString() == nameof(SummaryAttribute));
+                .FirstOrDefault(a => a.AttributeClass!.Name.ToString() == "SummaryAttribute");
 
             if (summaryAttribute is null)
             {

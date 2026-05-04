@@ -125,17 +125,19 @@ public class DiscordEmoteResolverService(IDiscordClient discordClient, IInternal
     private async Task UpdateChangedEmotesAsync(IList<InternalCustomEmoteTracking> internalEmoteTracking,
         List<InternalCustomEmoteSpecification> emotesToAdd)
     {
-        var emotesWithIncorrectIdentifiers =
-            internalEmoteTracking.ToAsyncEnumerable().WhereAwait(async x =>
-            {
-                if (emotesToAdd.Any(y => y.EmoteKey == x.EmoteKey))
-                    return false;
+        var emotesWithIncorrectIdentifiers = new List<InternalCustomEmoteTracking>(internalEmoteTracking.Count);
+        
+        foreach (var internalEmote in internalEmoteTracking)
+        {
+            if (emotesToAdd.Any(y => y.EmoteKey == internalEmote.EmoteKey))
+                continue;
 
-                var newIdentifier = await internalEmoteSource.GetEmoteDataIdentifierAsync(x.EmoteKey);
-                return newIdentifier.SequenceEqual(x.EmoteDataIdentifier) == false;
-            });
+            var newIdentifier = await internalEmoteSource.GetEmoteDataIdentifierAsync(internalEmote.EmoteKey);
+            if(!newIdentifier.SequenceEqual(internalEmote.EmoteDataIdentifier))
+                emotesWithIncorrectIdentifiers.Add(internalEmote);
+        }
 
-        foreach (var emoteWithIncorrectHash in await emotesWithIncorrectIdentifiers.ToArrayAsync())
+        foreach (var emoteWithIncorrectHash in emotesWithIncorrectIdentifiers)
         {
             await discordClient.DeleteApplicationEmoteAsync(emoteWithIncorrectHash.EmoteId);
 

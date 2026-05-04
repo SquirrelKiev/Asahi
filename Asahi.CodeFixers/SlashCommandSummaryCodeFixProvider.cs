@@ -3,7 +3,6 @@ using System.Composition;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Discord.Interactions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -47,7 +46,7 @@ public class SlashCommandSummaryCodeFixProvider : CodeFixProvider
         var attributeList = SyntaxFactory.AttributeList(
             SyntaxFactory.SingletonSeparatedList(
                 SyntaxFactory.Attribute(
-                    SyntaxFactory.IdentifierName(nameof(SummaryAttribute)),
+                    SyntaxFactory.IdentifierName("SummaryAttribute"),
                     SyntaxFactory.AttributeArgumentList(
                         SyntaxFactory.SingletonSeparatedList(
                             SyntaxFactory.AttributeArgument(

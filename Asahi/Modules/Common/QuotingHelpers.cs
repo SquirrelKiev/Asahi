@@ -432,7 +432,7 @@ public static class QuotingHelpers
     {
         return embedAuthor?.RoleIds.Select(x => embedAuthor.Guild.GetRole(x))
             .OrderByDescending(x => x.Position)
-            .FirstOrDefault(x => x.Color != Color.Default)?.Color ?? fallbackColor;
+            .FirstOrDefault(x => x.Colors.PrimaryColor != Color.Default)?.Colors.PrimaryColor ?? fallbackColor;
     }
 
     // TODO: Spoiler handling

@@ -22,10 +22,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
 
         <!-- Generator deps -->
-        <PackageReference Include="System.IO.Hashing" Version="9.0.10" GeneratePathProperty="true" PrivateAssets="all" />
+        <PackageReference Include="System.IO.Hashing" Version="10.0.7" GeneratePathProperty="true" PrivateAssets="all" />
     </ItemGroup>
 
     <PropertyGroup>

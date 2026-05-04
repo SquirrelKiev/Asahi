@@ -1,6 +1,5 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
-using Discord.Interactions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -37,7 +36,7 @@ public class BotModuleAnalyzer : DiagnosticAnalyzer
     {
         while (type != null)
         {
-            if (type.Name == nameof(InteractionModuleBase))
+            if (type.Name == "InteractionModuleBase")
             {
                 return true;
             }
@@ -55,7 +54,7 @@ public class BotModuleAnalyzer : DiagnosticAnalyzer
             {
                 foreach (var attribute in method.GetAttributes())
                 {
-                    if (attribute.AttributeClass?.Name == nameof(SlashCommandAttribute))
+                    if (attribute.AttributeClass?.Name == "SlashCommandAttribute")
                     {
                         return true;
                     }
@@ -103,11 +102,11 @@ public class BotModuleAnalyzer : DiagnosticAnalyzer
             var attributeClass = attribute.AttributeClass;
             if (attributeClass == null) continue;
 
-            if (attributeClass.Name == nameof(CommandContextTypeAttribute))
+            if (attributeClass.Name == "CommandContextTypeAttribute")
             {
                 hasCommandContextType = true;
             }
-            else if (attributeClass.Name == nameof(IntegrationTypeAttribute))
+            else if (attributeClass.Name == "IntegrationTypeAttribute")
             {
                 hasIntegrationType = true;
             }
@@ -118,7 +117,7 @@ public class BotModuleAnalyzer : DiagnosticAnalyzer
             var missingAttributes = new System.Text.StringBuilder();
             if (!hasCommandContextType)
             {
-                missingAttributes.Append(nameof(CommandContextTypeAttribute));
+                missingAttributes.Append("CommandContextTypeAttribute");
             }
 
             if (!hasIntegrationType)
@@ -128,7 +127,7 @@ public class BotModuleAnalyzer : DiagnosticAnalyzer
                     missingAttributes.Append(" and ");
                 }
 
-                missingAttributes.Append(nameof(IntegrationTypeAttribute));
+                missingAttributes.Append("IntegrationTypeAttribute");
             }
 
             var diagnostic = Diagnostic.Create(
