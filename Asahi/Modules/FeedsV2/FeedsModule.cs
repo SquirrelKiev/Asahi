@@ -34,40 +34,45 @@ public class FeedsModule(
     {
         await CommonConfig(async (context, eb) =>
         {
+            var normalizedFeedSource = feedProviderFactory.NormalizeFeedSource(feedSource);
+            
+            if(normalizedFeedSource == null)
+                return new ConfigChangeResult(false, "No feed handler supports that source.");
+            
             channel ??= Context.Channel;
 
             if (await context.RssFeedListeners.AnyAsync(x => x.GuildId == Context.Guild.Id &&
                                                              x.ChannelId == channel.Id &&
-                                                             x.FeedUrl == feedSource))
+                                                             x.FeedUrl == normalizedFeedSource))
             {
                 return new ConfigChangeResult(false, "You already have this feed added for this channel!");
             }
 
-            var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
+            var feedProvider = feedProviderFactory.GetFeedProvider(normalizedFeedSource);
 
             if (feedProvider == null)
                 return new ConfigChangeResult(false, "No feed handler supports that source.");
 
             try
             {
-                if (!await feedProvider.Initialize(feedSource))
+                if (!await feedProvider.Initialize(normalizedFeedSource))
                 {
                     throw new Exception("Feed failed to initialize.");
                 }
             }
             catch (Exception e)
             {
-                logger.LogWarning(e, "Failed to initialize feed {feedSource}.", feedSource);
+                logger.LogWarning(e, "Failed to initialize feed {feedSource}.", normalizedFeedSource);
                 return new ConfigChangeResult(false, "Failed to retrieve feed.");
             }
 
-            feedsProcessor.TryCacheInitialArticlesIfNecessary(feedSource, feedProvider, stateTracker);
+            feedsProcessor.TryCacheInitialArticlesIfNecessary(normalizedFeedSource, feedProvider, stateTracker);
 
             context.Add(new FeedListener()
             {
                 GuildId = Context.Guild.Id,
                 ChannelId = channel.Id,
-                FeedUrl = feedSource
+                FeedUrl = normalizedFeedSource
             });
 
             eb.WithTitle(feedProvider.DefaultFeedTitle);
@@ -114,28 +119,33 @@ public class FeedsModule(
     {
         await CommonFeedConfig(id, async options =>
         {
-            var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
+            var normalizedFeedSource = feedProviderFactory.NormalizeFeedSource(feedSource);
+            
+            if (normalizedFeedSource == null)
+                return new ConfigChangeResult(false, "No feed handler supports that source.");
+            
+            var feedProvider = feedProviderFactory.GetFeedProvider(normalizedFeedSource);
 
             if (feedProvider == null)
                 return new ConfigChangeResult(false, "No feed handler supports that source.");
 
             try
             {
-                if (!await feedProvider.Initialize(feedSource))
+                if (!await feedProvider.Initialize(normalizedFeedSource))
                 {
                     throw new Exception("Feed failed to initialize.");
                 }
             }
             catch (Exception e)
             {
-                logger.LogWarning(e, "Failed to initialize feed {feedSource}.", feedSource);
+                logger.LogWarning(e, "Failed to initialize feed {feedSource}.", normalizedFeedSource);
                 return new ConfigChangeResult(false, "Failed to retrieve feed.");
             }
 
-            options.feedListener.FeedUrl = feedSource;
+            options.feedListener.FeedUrl = normalizedFeedSource;
             options.embedBuilder.WithTitle(feedProvider.DefaultFeedTitle);
 
-            return new ConfigChangeResult(true, $"Successfully set feed URL to {feedSource}.");
+            return new ConfigChangeResult(true, $"Successfully set feed URL to {normalizedFeedSource}.");
         });
     }
 
@@ -301,8 +311,17 @@ public class FeedsModule(
         int entriesToSend = 1)
     {
         await DeferAsync();
+        
+        var normalizedFeedSource = feedProviderFactory.NormalizeFeedSource(feedSource);
 
-        var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
+        if (normalizedFeedSource == null)
+        {
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
+                new EmbedBuilder(), new ConfigChangeResult(false, "No feed handler supports that source.")));
+            return;
+        }
+
+        var feedProvider = feedProviderFactory.GetFeedProvider(normalizedFeedSource);
 
         var currentUser = await Context.Guild.GetCurrentUserAsync();
         if (feedProvider == null)
@@ -314,7 +333,7 @@ public class FeedsModule(
 
         try
         {
-            if (!await feedProvider.Initialize(feedSource))
+            if (!await feedProvider.Initialize(normalizedFeedSource))
             {
                 throw new Exception("Feed failed to initialize.");
             }

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Web;
 using Asahi.Modules.FeedsV2.FeedProviders;
 
 namespace Asahi.Modules.FeedsV2
@@ -22,6 +23,49 @@ namespace Asahi.Modules.FeedsV2
             // TODO: SSRF bad!
             if (feedSource.StartsWith("http://") || feedSource.StartsWith("https://"))
                 return new RssFeedProvider(httpClientFactory.CreateClient("rss"));
+                
+            return null;
+        }
+
+        public string? NormalizeFeedSource(string feedSource)
+        {
+            if (feedSource == "dummy:")
+                return "dummy:";
+
+            var danbooruRegex = CompiledRegex.DanbooruFeedRegex().Match(feedSource);
+            if (danbooruRegex.Success)
+                return $"danbooru: {danbooruRegex.Groups["tags"].Value.Trim()}";
+            
+            var redditRegex = CompiledRegex.RedditFeedRegex().Match(feedSource);
+            if (redditRegex.Success)
+                return $"reddit: r/{redditRegex.Groups["subreddit"].Value.Trim()}";
+
+            if (Uri.TryCreate(feedSource, UriKind.Absolute, out var uri))
+            {
+                if (uri is { Host: "danbooru.donmai.us", AbsolutePath: "/posts" or "/posts.json" })
+                {
+                    var query = HttpUtility.ParseQueryString(uri.Query);
+
+                    var tags = query.Get("tags");
+
+                    if (tags != null)
+                    {
+                        return $"danbooru: {tags.Trim().ToLowerInvariant()}";
+                    }
+                }
+                else if (uri.Host is "reddit.com" or "www.reddit.com" or "old.reddit.com")
+                {
+                    var match = CompiledRegex.RedditSubredditPathRegex().Match(uri.AbsolutePath);
+
+                    if (match.Success)
+                    {
+                        return $"reddit: r/{match.Groups[1].Value.ToLowerInvariant()}";
+                    }
+                }
+            }
+
+            if (feedSource.StartsWith("http://") || feedSource.StartsWith("https://"))
+                return feedSource;
                 
             return null;
         }

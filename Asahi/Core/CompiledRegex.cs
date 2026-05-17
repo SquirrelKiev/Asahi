@@ -9,8 +9,11 @@ public static partial class CompiledRegex
     //[GeneratedRegex(@"https?:\/\/(?:www\.)?reddit\.com\/r\/([0-9A-Za-z_]+)(?:\/[a-z]*)?\.json")]
     [GeneratedRegex(@"^reddit: ?(?<type>.)(?:\/(?<subreddit>[0-9A-Za-z_]+))$")]
     public static partial Regex RedditFeedRegex();
+
+    [GeneratedRegex(@"^/r/([a-zA-Z0-9][_a-zA-Z0-9]{2,20})/?(?:new)?(?:\.rss|\.json)?$", RegexOptions.IgnoreCase)]
+    public static partial Regex RedditSubredditPathRegex();
     
-    [GeneratedRegex(@"^danbooru: (?<tags>.*)$")]
+    [GeneratedRegex(@"^danbooru: ?(?<tags>.*)$", RegexOptions.IgnoreCase)]
     public static partial Regex DanbooruFeedRegex();
 
     [GeneratedRegex(@"^[\w-]+$")]

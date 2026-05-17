@@ -14,5 +14,8 @@ namespace Asahi.Modules.FeedsV2
 
         [Pure]
         public string? GetHyperlinkableFeedUrl(string feedSource);
+
+        [Pure]
+        public string? NormalizeFeedSource(string feedSource);
     }
 }
