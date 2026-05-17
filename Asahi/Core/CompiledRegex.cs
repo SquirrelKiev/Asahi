@@ -56,6 +56,9 @@ public static partial class CompiledRegex
     
     [GeneratedRegex(@"https?:\/\/\S*")]
     public static partial Regex BadLinkFinder();
+    
+    [GeneratedRegex(@"^\s*<t\:([0-9]+)(?:\:[a-zA-Z])?>\s*$")]
+    public static partial Regex DiscordTimestampToUnixTimestamp();
 
     [Pure]
     public static MessageIdInfo? ParseMessageLink(string messageLink)

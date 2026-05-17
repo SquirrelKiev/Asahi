@@ -10,6 +10,7 @@ public class MemoryStateTracker(ILogger<MemoryStateTracker> logger) : IFeedsStat
     private readonly ConcurrentDictionary<ulong, HashSet<int>> seenArticleHashesChannel = [];
     private readonly ConcurrentDictionary<string, string> feedSourceToTitleDictionary = [];
     private readonly ConcurrentDictionary<string, object> feedSourceToContinuationTokenDictionary = [];
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> feedSourceToSemaphoreDictionary = [];
 
     [Pure]
     public bool IsFirstTimeSeeingFeedSource(string feedSource)
@@ -104,6 +105,53 @@ public class MemoryStateTracker(ILogger<MemoryStateTracker> logger) : IFeedsStat
         {
             logger.LogTrace("Already seen article {articleId} for feed {feedSource}, not marking as read.", articleId,
                 feedSource);
+        }
+    }
+
+    public void RemoveArticles(string feedSource, IEnumerable<int> articleIds)
+    {
+        var articleHashes = seenArticleHashes.GetOrAdd(feedSource, _ => []);
+
+        foreach (var articleId in articleIds)
+        {
+            if (articleHashes.Remove(articleId))
+            {
+                logger.LogTrace("Marked article {articleId} as unread for feed {feedSource}.", articleId, feedSource);
+            }
+            else
+            {
+                logger.LogTrace(
+                    "Article {articleId} for feed {feedSource} has already not been seen, not marking as unread.",
+                    articleId, feedSource);
+            }
+        }
+    }
+
+    public void RemoveArticles(ulong channelId, IEnumerable<int> articleIds)
+    {
+        var articleHashes = seenArticleHashesChannel.GetOrAdd(channelId, _ => []);
+
+        foreach (var articleId in articleIds)
+        {
+            if (articleHashes.Remove(articleId))
+            {
+                logger.LogTrace("Marked article {articleId} as unread for channel {channelId}.", articleId, channelId);
+            }
+            else
+            {
+                logger.LogTrace(
+                    "Article {articleId} for channel {channelId} has already not been seen, not marking as unread.",
+                    articleId, channelId);
+            }
+        }
+    }
+
+    public SemaphoreSlim GetSemaphoreSlim(string feedSource)
+    {
+        // get or add isn't atomic
+        lock (feedSourceToSemaphoreDictionary)
+        {
+            return feedSourceToSemaphoreDictionary.GetOrAdd(feedSource, _ => new SemaphoreSlim(1));
         }
     }
 

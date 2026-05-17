@@ -15,5 +15,8 @@
         void PruneMissingArticles(IFeedProvider feedProvider);
         void PruneMissingFeeds(IEnumerable<string> feedSources);
         void ClearChannelArticleList();
+        void RemoveArticles(string feedSource, IEnumerable<int> articleIds);
+        void RemoveArticles(ulong channelId, IEnumerable<int> articleIds);
+        SemaphoreSlim GetSemaphoreSlim(string feedSource);
     }
 }

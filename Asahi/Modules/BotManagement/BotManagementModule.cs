@@ -19,6 +19,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NodaTime;
 
 namespace Asahi.Modules.BotManagement;
 
@@ -413,7 +414,9 @@ public class BotManagementModule(
     public class FeedsStateTogglingModule(
         IDbContextFactory<BotDbContext> dbService,
         IFeedsStateTracker feedsStateTracker,
-        IColorProviderService colorProviderService) : BotModule
+        IColorProviderService colorProviderService,
+        IFeedProviderFactory feedProviderFactory
+    ) : BotModule
     {
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
         [SlashCommand("enable-with-id", "Removes force disable from the specified feed.")]
@@ -578,6 +581,79 @@ public class BotManagementModule(
             await FollowupAsync(embed: new EmbedBuilder()
                 .WithDescription($"`{feeds.Count}` feeds disabled.")
                 .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+        }
+
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("reset-seen-for-period", "Marks articles that appeared within a time period as unread.")]
+        public async Task ResetSeenForTimePeriodSlash(
+            [Summary(description: "The starting timestamp. (supports Discord timestamps, or Unix timestamps)")]
+            Instant from,
+            [Summary(description: "the ending timestamp. (supports Discord timestamps, or Unix timestamps)")]
+            Instant to)
+        {
+            if (from > to)
+            {
+                await RespondAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
+                    new EmbedBuilder(),
+                    new ConfigChangeResult(false, "The starting timestamp cannot be later than the ending timestamp.")));
+                return;
+            }
+            
+            await DeferAsync();
+
+            await using var context = await dbService.CreateDbContextAsync();
+
+            var feeds = await context.RssFeedListeners.ToArrayAsync();
+
+            var feedCount = 0;
+            var articleCount = 0;
+            foreach (var feed in feeds.GroupBy(x => x.FeedUrl)
+                         .Where(x => x.Any(y => y is { Enabled: true, ForcedDisable: false })))
+            {
+                var feedSource = feed.Key;
+                var semaphore = feedsStateTracker.GetSemaphoreSlim(feedSource);
+                await semaphore.WaitAsync();
+
+                try
+                {
+                    var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);
+
+                    if (feedProvider == null)
+                        continue;
+
+                    if (!await feedProvider.Initialize(feedSource, null))
+                    {
+                        continue;
+                    }
+
+                    var articleIds = feedProvider.ListArticleIdsForTimePeriod(from, to).ToArray();
+
+                    var scopeIncludesChannel = (feedProvider.ArticleIdScope & ArticleIdScope.ChannelForPoll) != 0;
+                    foreach (var listener in feed)
+                    {
+                        if (scopeIncludesChannel)
+                        {
+                            feedsStateTracker.RemoveArticles(listener.ChannelId, articleIds);
+                        }
+                    }
+
+                    feedsStateTracker.RemoveArticles(feedSource, articleIds);
+
+                    if (articleIds.Length > 0)
+                    {
+                        feedCount++;
+                    }
+                    articleCount += articleIds.Length;
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }
+            
+            await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
+                new EmbedBuilder(),
+                new ConfigChangeResult(true, $"Marked {articleCount} articles as unread across {feedCount} feeds.")));
         }
 
         private async Task LogDisabledToFeedChannelAsync(ulong guildId, ulong channelId, string reason,

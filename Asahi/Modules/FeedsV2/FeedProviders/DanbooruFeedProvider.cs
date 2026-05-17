@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Asahi.Modules.Models;
+using NodaTime;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
 {
@@ -43,6 +44,17 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             Debug.Assert(posts != null);
 
             return posts.Select(x => x.Id);
+        }
+
+        public IEnumerable<int> ListArticleIdsForTimePeriod(Instant from, Instant to)
+        {
+            Debug.Assert(posts != null);
+            
+            return posts.Where(x =>
+            {
+                var inst = Instant.FromDateTimeOffset(x.CreatedAt);
+                return from < inst && to > inst;
+            }).Select(x => x.Id);
         }
 
         public async IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,

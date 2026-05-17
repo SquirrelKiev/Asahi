@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using NodaTime;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
 {
@@ -35,6 +36,9 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         {
             return Enumerable.Range(Math.Max(0, initializeCallCount-5), initializeCallCount);
         }
+
+        public IEnumerable<int> ListArticleIdsForTimePeriod(Instant from, Instant to) => ListArticleIds();
+
 
         public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor, string? feedTitle, CancellationToken cancellationToken = default) =>
             GetArticleMessageContentSync(articleId, embedColor, feedTitle).ToAsyncEnumerable();

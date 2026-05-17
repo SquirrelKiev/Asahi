@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.Contracts;
+using NodaTime;
 
 namespace Asahi.Modules.FeedsV2;
 
@@ -29,6 +30,17 @@ public interface IFeedProvider
     /// </summary>
     [Pure]
     public IEnumerable<int> ListArticleIds();
+    
+    /// <summary>
+    /// Returns IDs that can be used with <see cref="GetArticleMessageContent"/>.
+    /// Filtered to articles that came out between <see cref="from"/> and <see cref="to"/>.
+    /// Each ID is valid only for the current session established by the most recent call to <see cref="Initialize"/>.
+    /// Expects <see cref="Initialize"/> to have been called.
+    /// </summary>
+    /// <param name="from">The starting timestamp.</param>
+    /// <param name="to">the ending timestamp.</param>
+    [Pure]
+    public IEnumerable<int> ListArticleIdsForTimePeriod(Instant from, Instant to);
 
     /// <summary>
     /// Gets the message content for the specified article.

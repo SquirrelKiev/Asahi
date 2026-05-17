@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Asahi.Modules.Models;
 using Newtonsoft.Json;
+using NodaTime;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
 {
@@ -72,14 +73,18 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         {
             Debug.Assert(posts != null);
 
-            return ListArticleRedditIds().Select(x => x.GetHashCode());
+            return posts.Select(x => x.Data.Name.GetHashCode());
         }
 
-        public IEnumerable<string> ListArticleRedditIds()
+        public IEnumerable<int> ListArticleIdsForTimePeriod(Instant from, Instant to)
         {
             Debug.Assert(posts != null);
 
-            return posts.Select(x => x.Data.Name);
+            return posts.Where(x =>
+            {
+                var inst = Instant.FromUnixTimeSeconds((long)x.Data.CreatedUTC);
+                return from < inst && to > inst;
+            }).Select(x => x.Data.Name.GetHashCode());
         }
 
         public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,

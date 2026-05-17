@@ -2,7 +2,8 @@
 using CodeHollow.FeedReader;
 using CodeHollow.FeedReader.Feeds;
 using CodeHollow.FeedReader.Parser;
-using Microsoft.Extensions.Logging;
+using NodaTime;
+using NodaTime.Extensions;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders;
 
@@ -52,14 +53,29 @@ public class RssFeedProvider(HttpClient client) : IFeedProvider
     public IEnumerable<int> ListArticleIds()
     {
         Debug.Assert(genericFeed != null);
-        
+
         return genericFeed.Items.Select(x => x.Id.GetHashCode());
     }
 
-    public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor, string? feedTitle, CancellationToken cancellationToken = default)
+    public IEnumerable<int> ListArticleIdsForTimePeriod(Instant from, Instant to)
     {
         Debug.Assert(genericFeed != null);
-        
+
+        return genericFeed.Items.Where(x =>
+        {
+            if (!x.PublishingDate.HasValue)
+                return false;
+            
+            var inst = x.PublishingDate.Value.ToInstant();
+            return from < inst && to > inst;
+        }).Select(x => x.Id.GetHashCode());
+    }
+
+    public IAsyncEnumerable<MessageContents> GetArticleMessageContent(int articleId, Color embedColor,
+        string? feedTitle, CancellationToken cancellationToken = default)
+    {
+        Debug.Assert(genericFeed != null);
+
         var article = genericFeed.Items.First(x => x.Id.GetHashCode() == articleId);
 
         IEnumerable<MessageContents> enumerable = [ArticleToMessageContents(article, embedColor, feedTitle)];
@@ -67,10 +83,11 @@ public class RssFeedProvider(HttpClient client) : IFeedProvider
         return enumerable.ToAsyncEnumerable();
     }
 
-    protected virtual MessageContents ArticleToMessageContents(FeedItem genericItem, Color embedColor, string? feedTitle)
+    protected virtual MessageContents ArticleToMessageContents(FeedItem genericItem, Color embedColor,
+        string? feedTitle)
     {
         Debug.Assert(genericFeed != null);
-        
+
         var eb = new EmbedBuilder();
 
         switch (genericFeed.Type)

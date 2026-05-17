@@ -38,6 +38,22 @@ public class FeedsProcessorService(
     private async Task ProcessFeed(string feedSource, FeedListener[] listeners, IFeedsStateTracker stateTracker,
         CancellationToken cancellationToken = default)
     {
+        var semaphore = stateTracker.GetSemaphoreSlim(feedSource);
+
+        await semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            await ProcessFeedInternal(feedSource, listeners, stateTracker, cancellationToken);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    private async Task ProcessFeedInternal(string feedSource, FeedListener[] listeners, IFeedsStateTracker stateTracker,
+        CancellationToken cancellationToken = default)
+    {
         logger.LogTrace("Started processing feed {feedSource}.", feedSource);
         
         var feedProvider = feedProviderFactory.GetFeedProvider(feedSource);

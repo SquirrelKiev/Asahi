@@ -1,13 +1,10 @@
 ﻿using System.Reflection;
-using Asahi.Database;
-using Asahi.Database.Models;
 using Asahi.Modules;
-using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Fergun.Interactive;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NodaTime;
 
 namespace Asahi;
 
@@ -227,6 +224,7 @@ public class CommandHandler(
     {
         interactionService.AddTypeConverter<Color>(new ColorTypeConverter());
         interactionService.AddTypeConverter<IEmote>(new EmoteTypeConverter());
+        interactionService.AddTypeConverter<Instant>(new InstantTypeConverter());
 
         foreach (var assembly in assemblies)
         {
