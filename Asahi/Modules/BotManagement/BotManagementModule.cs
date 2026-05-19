@@ -428,41 +428,17 @@ public class BotManagementModule(
             [Summary(description: "Turn on to disable sending notice messages to channels.")]
             bool silent = false)
         {
-            await DeferAsync();
-
-            await using var context = await dbService.CreateDbContextAsync();
-
             if (!ulong.TryParse(guildIdStr, out var guildId))
             {
-                await FollowupAsync("Guild ID is not a number!");
+                await RespondAsync("Guild ID is not a number!");
                 return;
             }
 
-            var feed = await context.GetFeed(feedId, guildId);
-
-            if (feed == null)
+            await ToggleFeeds(async context =>
             {
-                await FollowupAsync("Feed not found.");
-                return;
-            }
-
-            if (!feed.ForcedDisable)
-            {
-                await FollowupAsync(embed: new EmbedBuilder().WithDescription($"Feed was already enabled.")
-                    .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
-                return;
-            }
-
-            feed.ForcedDisable = false;
-            feed.DisabledReason = "";
-
-            await context.SaveChangesAsync();
-
-            if (!silent)
-                await LogEnabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed);
-
-            await FollowupAsync(embed: new EmbedBuilder().WithDescription($"Feed `{feed.FeedUrl}` enabled.")
-                .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+                var feed = await context.GetFeed(feedId, guildId);
+                return feed == null ? [] : [feed];
+            }, false, "", silent);
         }
 
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
@@ -477,76 +453,131 @@ public class BotManagementModule(
             [Summary(description: "Turn on to disable sending notice messages to channels.")]
             bool silent = false)
         {
-            await DeferAsync();
+            if (!ulong.TryParse(guildIdStr, out var guildId))
+            {
+                await RespondAsync("Guild ID is not a number!");
+                return;
+            }
 
+            await ToggleFeeds(async context =>
+            {
+                var feed = await context.GetFeed(feedId, guildId);
+                return feed == null ? [] : [feed];
+            }, true, reason, silent);
+        }
+
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("enable-in-channel", "Removes force disable from all feeds in the specified channel.")]
+        public async Task EnableFeedsInChannelSlash(
+            [Summary(description: "The guild the feeds are from.", name: "guild-id")]
+            string guildIdStr,
+            [Summary(description: "The channel the feeds are from.", name: "channel-id")]
+            string channelIdStr,
+            [Summary(description: "Turn on to disable sending a notice message to the channel.")]
+            bool silent = false)
+        {
             if (!ulong.TryParse(guildIdStr, out var guildId))
             {
                 await FollowupAsync("Guild ID is not a number!");
                 return;
             }
 
-            await using var context = await dbService.CreateDbContextAsync();
-
-            var feed = await context.GetFeed(feedId, guildId);
-
-            if (feed == null)
+            if (!ulong.TryParse(channelIdStr, out var channelId))
             {
-                await FollowupAsync("Feed not found.");
+                await FollowupAsync("Channel ID is not a number!");
                 return;
             }
 
-            feed.ForcedDisable = true;
-            feed.DisabledReason = reason;
+            await ToggleFeeds(context => context.RssFeedListeners
+                .Where(x => x.GuildId == guildId && x.ChannelId == channelId && x.ForcedDisable)
+                .ToListAsync(), false, "", silent);
+        }
 
-            await context.SaveChangesAsync();
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("disable-in-channel", "Force disables all feeds in the specified channel.")]
+        public async Task DisableFeedsInChannelSlash(
+            [Summary(description: "Reason for being disabled.")]
+            string reason,
+            [Summary(description: "The guild the feeds are from.", name: "guild-id")]
+            string guildIdStr,
+            [Summary(description: "The channel the feeds are from.", name: "channel-id")]
+            string channelIdStr,
+            [Summary(description: "Turn on to disable sending a notice message to the channel.")]
+            bool silent = false)
+        {
+            if (!ulong.TryParse(guildIdStr, out var guildId))
+            {
+                await RespondAsync("Guild ID is not a number!");
+                return;
+            }
 
-            if (!silent)
-                await LogDisabledToFeedChannelAsync(feed.GuildId, feed.ChannelId, feed.DisabledReason, feed);
+            if (!ulong.TryParse(channelIdStr, out var channelId))
+            {
+                await RespondAsync("Channel ID is not a number!");
+                return;
+            }
 
-            await FollowupAsync(embed: new EmbedBuilder().WithDescription($"Feed `{feed.FeedUrl}` disabled.")
-                .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+            await ToggleFeeds(context => context.RssFeedListeners
+                .Where(x => x.GuildId == guildId && x.ChannelId == channelId && !x.ForcedDisable)
+                .ToListAsync(), true, reason, silent);
+        }
+
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("enable-in-guild", "Removes force disable from all feeds in the specified guild.")]
+        public async Task EnableFeedsInGuildSlash(
+            [Summary(description: "The guild the feeds are from.", name: "guild-id")]
+            string guildIdStr,
+            [Summary(description: "Turn on to disable sending a notice message to the channel.")]
+            bool silent = false)
+        {
+            if (!ulong.TryParse(guildIdStr, out var guildId))
+            {
+                await RespondAsync("Guild ID is not a number!");
+                return;
+            }
+
+            await ToggleFeeds(context => context.RssFeedListeners
+                .Where(x => x.GuildId == guildId && x.ForcedDisable)
+                .ToListAsync(), false, "", silent);
+        }
+
+        [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
+        [SlashCommand("disable-in-guild", "Force disables all feeds in the specified guild.")]
+        public async Task DisableFeedsInGuildSlash(
+            [Summary(description: "Reason for being disabled.")]
+            string reason,
+            [Summary(description: "The guild the feeds are from.", name: "guild-id")]
+            string guildIdStr,
+            [Summary(description: "Turn on to disable sending a notice message to the channel.")]
+            bool silent = false)
+        {
+            if (!ulong.TryParse(guildIdStr, out var guildId))
+            {
+                await RespondAsync("Guild ID is not a number!");
+                return;
+            }
+
+            await ToggleFeeds(context => context.RssFeedListeners
+                .Where(x => x.GuildId == guildId && !x.ForcedDisable)
+                .ToListAsync(), true, reason, silent);
         }
 
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
         [SlashCommand("enable-regex-matches", "Removes force disable on feeds with sources that match the regex.")]
-        public async Task EnableFeedWithRegexSlash(
+        public Task EnableFeedWithRegexSlash(
             [Summary(description: "The regex to match feed URLs.")]
             string regex,
             [Summary(description: "Turn on to disable sending notice messages to channels.")]
             bool silent = false)
         {
-            await DeferAsync();
-
-            await using var context = await dbService.CreateDbContextAsync();
-
-            var feeds = await context.RssFeedListeners
+            return ToggleFeeds(context => context.RssFeedListeners
                 .Where(x => Regex.IsMatch(x.FeedUrl, regex) && x.ForcedDisable)
-                .ToListAsync();
-
-            foreach (var feed in feeds)
-            {
-                feed.ForcedDisable = false;
-                feed.DisabledReason = "";
-            }
-
-            await context.SaveChangesAsync();
-
-            if (!silent)
-            {
-                foreach (var feed in feeds.GroupBy(x => new { x.GuildId, x.ChannelId }))
-                {
-                    await LogEnabledToFeedChannelAsync(feed.Key.GuildId, feed.Key.ChannelId, feed);
-                }
-            }
-
-            await FollowupAsync(embed: new EmbedBuilder()
-                .WithDescription($"`{feeds.Count}` feeds enabled.")
-                .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
+                .ToListAsync(), false, "", silent);
         }
 
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
         [SlashCommand("disable-regex-matches", "Force disables feed URLs that match the regex.")]
-        public async Task DisableFeedWithRegexSlash(
+        public Task DisableFeedWithRegexSlash(
             [Summary(description: "Reason for being disabled.")]
             string reason,
             [Summary(description: "The regex to match feed URLs.")]
@@ -554,17 +585,31 @@ public class BotManagementModule(
             [Summary(description: "Turn on to disable sending notice messages to channels.")]
             bool silent = false)
         {
-            await DeferAsync();
+            return ToggleFeeds(context =>
+                    context.RssFeedListeners
+                        .Where(x => Regex.IsMatch(x.FeedUrl, regex) && !x.ForcedDisable).ToListAsync(),
+                true, reason, silent);
+        }
+
+        private async Task ToggleFeeds(Func<BotDbContext, Task<List<FeedListener>>> fetchFeedsFunc, bool forcedDisable,
+            string reason, bool silent)
+        {
+            var defer = DeferAsync();
 
             await using var context = await dbService.CreateDbContextAsync();
 
-            var feeds = await context.RssFeedListeners
-                .Where(x => Regex.IsMatch(x.FeedUrl, regex) && !x.ForcedDisable)
-                .ToListAsync();
+            var feeds = await fetchFeedsFunc(context);
+            if (feeds.Count == 0)
+            {
+                await defer;
+                await FollowupAsync(
+                    $"No feeds found, or they were already {(forcedDisable ? "disabled" : "enabled")}.");
+                return;
+            }
 
             foreach (var feed in feeds)
             {
-                feed.ForcedDisable = true;
+                feed.ForcedDisable = forcedDisable;
                 feed.DisabledReason = reason;
             }
 
@@ -574,12 +619,14 @@ public class BotManagementModule(
             {
                 foreach (var feed in feeds.GroupBy(x => new { x.GuildId, x.ChannelId }))
                 {
-                    await LogDisabledToFeedChannelAsync(feed.Key.GuildId, feed.Key.ChannelId, reason, feed);
+                    await LogToggleToFeedChannelAsync(feed.Key.GuildId, feed.Key.ChannelId, forcedDisable, reason,
+                        feed);
                 }
             }
 
+            await defer;
             await FollowupAsync(embed: new EmbedBuilder()
-                .WithDescription($"`{feeds.Count}` feeds disabled.")
+                .WithDescription($"`{feeds.Count}` feeds {(forcedDisable ? "disabled" : "enabled")}.")
                 .WithOptionalColor(await colorProviderService.GetEmbedColor(Context.Guild.Id)).Build());
         }
 
@@ -595,10 +642,11 @@ public class BotManagementModule(
             {
                 await RespondAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
                     new EmbedBuilder(),
-                    new ConfigChangeResult(false, "The starting timestamp cannot be later than the ending timestamp.")));
+                    new ConfigChangeResult(false,
+                        "The starting timestamp cannot be later than the ending timestamp.")));
                 return;
             }
-            
+
             await DeferAsync();
 
             await using var context = await dbService.CreateDbContextAsync();
@@ -643,6 +691,7 @@ public class BotManagementModule(
                     {
                         feedCount++;
                     }
+
                     articleCount += articleIds.Length;
                 }
                 finally
@@ -650,13 +699,13 @@ public class BotManagementModule(
                     semaphore.Release();
                 }
             }
-            
+
             await FollowupAsync(embeds: ConfigUtilities.CreateEmbeds(await Context.Guild.GetCurrentUserAsync(),
                 new EmbedBuilder(),
                 new ConfigChangeResult(true, $"Marked {articleCount} articles as unread across {feedCount} feeds.")));
         }
 
-        private async Task LogDisabledToFeedChannelAsync(ulong guildId, ulong channelId, string reason,
+        private async Task LogToggleToFeedChannelAsync(ulong guildId, ulong channelId, bool disabled, string reason,
             params IEnumerable<FeedListener> feeds)
         {
             var guild = await Context.Client.GetGuildAsync(guildId);
@@ -667,32 +716,17 @@ public class BotManagementModule(
 
                 if (channel != null)
                 {
-                    await channel.SendMessageAsync(embed: new EmbedBuilder()
+                    var embed = new EmbedBuilder()
                         .WithDescription(
-                            $"Feed {feeds.Select(x => x.FeedTitle ?? feedsStateTracker.GetBestDefaultFeedTitle(x.FeedUrl)).Humanize()} has been temporarily disabled.")
-                        .WithFields(new EmbedFieldBuilder().WithName("Reason").WithValue(reason))
-                        .WithOptionalColor(await colorProviderService.GetEmbedColor(guildId))
-                        .Build());
-                }
-            }
-        }
+                            $"Feed {feeds.Select(x => x.FeedTitle ?? feedsStateTracker.GetBestDefaultFeedTitle(x.FeedUrl)).Humanize()} has been {(disabled ? "temporarily disabled" : "re-enabled")}.")
+                        .WithOptionalColor(await colorProviderService.GetEmbedColor(guildId));
 
-        private async Task LogEnabledToFeedChannelAsync(ulong guildId, ulong channelId,
-            params IEnumerable<FeedListener> feeds)
-        {
-            var guild = await Context.Client.GetGuildAsync(guildId);
+                    if (disabled)
+                    {
+                        embed.WithFields(new EmbedFieldBuilder().WithName("Reason").WithValue(reason));
+                    }
 
-            if (guild != null)
-            {
-                var channel = await guild.GetTextChannelAsync(channelId);
-
-                if (channel != null)
-                {
-                    await channel.SendMessageAsync(embed: new EmbedBuilder()
-                        .WithDescription(
-                            $"Feed `{feeds.Select(x => x.FeedTitle ?? feedsStateTracker.GetBestDefaultFeedTitle(x.FeedUrl)).Humanize()}` has been re-enabled.")
-                        .WithOptionalColor(await colorProviderService.GetEmbedColor(guildId))
-                        .Build());
+                    await channel.SendMessageAsync(embed: embed.Build());
                 }
             }
         }
