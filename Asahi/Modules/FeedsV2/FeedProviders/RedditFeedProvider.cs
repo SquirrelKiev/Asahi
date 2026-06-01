@@ -15,6 +15,8 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         private List<PostChild>? posts;
 
         private RedditContinuationToken? lastReceivedPostPreviousRun;
+        
+        private const string BaseEmbedUrl = "https://www.vxreddit.com";
 
         public async Task<bool> Initialize(string feedSource, object? continuationToken = null,
             CancellationToken cancellationToken = default)
@@ -102,9 +104,9 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         private static MessageContents GetArticleMessageContent(Post post)
         {
             if (post.Spoiler)
-                return new MessageContents($"|| https://www.rxddit.com{post.Permalink} ||");
+                return new MessageContents($"|| {BaseEmbedUrl}{post.Permalink} ||");
             else
-                return new MessageContents($"https://www.rxddit.com{post.Permalink}");
+                return new MessageContents($"{BaseEmbedUrl}{post.Permalink}");
         }
 
         // tracking timestamp to get around a reddit API bug where it randomly decides to send old JSON sometimes.
