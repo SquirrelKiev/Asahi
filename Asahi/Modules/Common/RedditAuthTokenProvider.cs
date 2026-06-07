@@ -24,7 +24,7 @@ public sealed class RedditAuthTokenProvider(IAnonymousRedditApi redditApi, BotCo
         {
             if (!TokenIsValid())
             {
-                await FetchNewToken(cancellationToken);
+                return await FetchNewToken(cancellationToken);
             }
 
             return token;
@@ -50,8 +50,7 @@ public sealed class RedditAuthTokenProvider(IAnonymousRedditApi redditApi, BotCo
         return clock.GetCurrentInstant() >= expiryTime;
     }
 
-    [MemberNotNull(nameof(token))]
-    private async Task FetchNewToken(CancellationToken cancellationToken = default)
+    private async Task<string> FetchNewToken(CancellationToken cancellationToken = default)
     {
         var tokenResponse = await redditApi.GetAccessToken($"{config.RedditApiCredentials.BasicAuthenticationSecret}", cancellationToken);
         
@@ -65,6 +64,8 @@ public sealed class RedditAuthTokenProvider(IAnonymousRedditApi redditApi, BotCo
         token = tokenResponse.Content.AccessToken;
         lastFetched = clock.GetCurrentInstant();
         expiresIn = Duration.FromSeconds(tokenResponse.Content.ExpiresIn);
+
+        return token;
     }
 
     public void Dispose()
