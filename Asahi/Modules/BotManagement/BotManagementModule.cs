@@ -721,6 +721,7 @@ public class BotManagementModule(
                     }
 
                     feedsStateTracker.RemoveArticles(feedSource, articleIds);
+                    feedsStateTracker.SetFeedSourceContinuationToken(feedSource, null);
 
                     if (articleIds.Length > 0)
                     {
