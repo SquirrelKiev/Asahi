@@ -206,9 +206,7 @@ public static class Startup
                 x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("text/xml"));
                 x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/xml"));
             });
-
-        // Anime themes says its implementing the JSON:API spec, but it's so different lol
-        // new JsonApiSerializerSettings()
+        
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 
         serviceCollection.AddRefitClient<ITatsuClient>(settings)
