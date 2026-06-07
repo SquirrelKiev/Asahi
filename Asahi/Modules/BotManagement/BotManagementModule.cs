@@ -668,8 +668,10 @@ public class BotManagementModule(
         public async Task ResetSeenForTimePeriodSlash(
             [Summary(description: "The starting timestamp. (supports Discord timestamps, or Unix timestamps)")]
             Instant from,
-            [Summary(description: "the ending timestamp. (supports Discord timestamps, or Unix timestamps)")]
-            Instant to)
+            [Summary(description: "The ending timestamp. (supports Discord timestamps, or Unix timestamps)")]
+            Instant to,
+            [Summary(description: "Which feed sources specifically to reset. put .* for all feeds.")]
+            string regex)
         {
             if (from > to)
             {
@@ -684,7 +686,7 @@ public class BotManagementModule(
 
             await using var context = await dbService.CreateDbContextAsync();
 
-            var feeds = await context.RssFeedListeners.ToArrayAsync();
+            var feeds = await context.RssFeedListeners.Where(x => Regex.IsMatch(x.FeedUrl, regex)).ToArrayAsync();
 
             var feedCount = 0;
             var articleCount = 0;
