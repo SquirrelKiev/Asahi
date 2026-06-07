@@ -6,7 +6,6 @@ using Asahi.BotEmoteManagement;
 using Asahi.Database;
 using Asahi.HealthChecks;
 using Asahi.Modules;
-using Asahi.Modules.AnimeThemes;
 using Asahi.Modules.FeedsV2;
 using Asahi.Modules.Tatsu;
 using Discord.Interactions;
@@ -211,9 +210,17 @@ public static class Startup
 
         serviceCollection.AddRefitClient<ITatsuClient>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.tatsu.gg/v1"));
-
-        serviceCollection.AddRefitClient<IRedditApi>(settings)
+        
+        serviceCollection.AddRefitClient<IAnonymousRedditApi>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://www.reddit.com"));
+
+        serviceCollection
+            .AddSingleton<IAuthTokenProvider<IRedditApi>, RedditAuthTokenProvider>()
+            .AddTransient<RedditAuthHeaderHandler>();
+        
+        serviceCollection.AddRefitClient<IRedditApi>(settings)
+            .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://oauth.reddit.com"))
+            .AddHttpMessageHandler<RedditAuthHeaderHandler>();
 
         serviceCollection.AddRefitClient<IDanbooruApi>(settings)
             .ConfigureHttpClient(x =>

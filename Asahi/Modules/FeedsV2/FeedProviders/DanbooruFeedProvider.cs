@@ -22,10 +22,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
             var req = await danbooruApi.GetPosts(tags, cancellationToken);
 
-            if (!req.IsSuccessful)
-            {
-                throw req.Error;
-            }
+            await req.EnsureSuccessfulAsync();
 
             posts = req.Content;
 

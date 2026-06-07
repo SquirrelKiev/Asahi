@@ -5,7 +5,7 @@ using NodaTime;
 
 namespace Asahi.Modules.FeedsV2.FeedProviders
 {
-    public class RedditFeedProvider(IRedditApi redditApi) : IFeedProvider
+    public class RedditFeedProvider(IRedditApi redditApi, BotConfig config) : IFeedProvider
     {
         public string? FeedSource { get; private set; }
 
@@ -21,6 +21,9 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         public async Task<bool> Initialize(string feedSource, object? continuationToken = null,
             CancellationToken cancellationToken = default)
         {
+            if(config.RedditApiCredentials == default)
+                throw new InvalidOperationException($"Reddit API credentials are missing from the config.");
+            
             FeedSource = feedSource;
 
             var regex = CompiledRegex.RedditFeedRegex().Match(feedSource);
@@ -38,15 +41,11 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
 
             var lastReceivedPost = continuationToken as RedditContinuationToken?;
             lastReceivedPostPreviousRun = lastReceivedPost;
-
-            // this breaks if the post is deleted :soulless:
-            // var res = await redditApi.GetSubredditPostsRaw(subreddit, before: lastReceivedPost?.LastReceivedId,
-            //     cancellationToken: cancellationToken);
+            
             var res = await redditApi.GetSubredditPostsRaw(subreddit, cancellationToken: cancellationToken);
-            if (!res.IsSuccessful)
-                return false;
+            await res.EnsureSuccessfulAsync();
 
-            var deserialized = JsonConvert.DeserializeObject<SubredditPosts>(res.Content)!;
+            var deserialized = JsonConvert.DeserializeObject<SubredditPosts>(res.Content!)!;
 
             if (deserialized.Kind != "Listing")
                 return false;
@@ -66,7 +65,7 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
             var lastReceivedPost = posts.FirstOrDefault();
 
             if (lastReceivedPost != null)
-                return new RedditContinuationToken(lastReceivedPost.Data.Name, lastReceivedPost.Data.CreatedUTC);
+                return new RedditContinuationToken(lastReceivedPost.Data.CreatedUTC);
             else
                 return lastReceivedPostPreviousRun;
         }
@@ -110,6 +109,6 @@ namespace Asahi.Modules.FeedsV2.FeedProviders
         }
 
         // tracking timestamp to get around a reddit API bug where it randomly decides to send old JSON sometimes.
-        private readonly record struct RedditContinuationToken(string LastReceivedId, ulong LastReceivedTimestamp);
+        private readonly record struct RedditContinuationToken(ulong LastReceivedTimestamp);
     }
 }

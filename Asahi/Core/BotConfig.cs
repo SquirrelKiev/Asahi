@@ -46,8 +46,11 @@ public record BotConfig
     [YamlMember(Description = "The token of the test bot. This is only used for /bot nuke-test-commands at present. Optional.")]
     public string TestingBotToken { get; set; } = DefaultBotToken;
     
-    [YamlMember(Description = "The username to use for Danbooru API requests.")]
+    [YamlMember(Description = "The credentials to use for Danbooru API requests.")]
     public DanbooruApiCredentialsModel DanbooruApiCredentials { get; set; } = default;
+    
+    [YamlMember(Description = "The credentials to use for Reddit API requests. see https://www.reddit.com/prefs/apps")]
+    public RedditApiCredentialsModel RedditApiCredentials { get; set; } = default;
 
     [YamlMember(Description = "Any users in this list are banned from ever making it to highlights.")]
     public HashSet<ulong> BannedHighlightsUsers { get; set; } = [];
@@ -101,10 +104,14 @@ public record BotConfig
         Postgresql
     }
 
+    // given these are deserialized to, the constructor is bypassed. aka, cant get away with a simply = on BasicAuthSecret here
     public readonly record struct DanbooruApiCredentialsModel(string Username, string ApiKey)
     {
-        public string Username { get; init; } = Username;
-        public string ApiKey { get; init; } = ApiKey;
         public string BasicAuthenticationSecret => Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Username}:{ApiKey}"));
+    }
+    
+    public readonly record struct RedditApiCredentialsModel(string ClientId, string ClientSecret)
+    {
+        public string BasicAuthenticationSecret => Convert.ToBase64String(Encoding.UTF8.GetBytes($"{ClientId}:{ClientSecret}"));
     }
 }

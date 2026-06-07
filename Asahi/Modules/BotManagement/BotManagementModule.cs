@@ -415,7 +415,8 @@ public class BotManagementModule(
         IDbContextFactory<BotDbContext> dbService,
         IFeedsStateTracker feedsStateTracker,
         IColorProviderService colorProviderService,
-        IFeedProviderFactory feedProviderFactory
+        IFeedProviderFactory feedProviderFactory,
+        ILogger<FeedsStateTogglingModule> logger
     ) : BotModule
     {
         [TrustedMember(TrustedUserPerms.FeedTogglingPerms)]
@@ -598,7 +599,20 @@ public class BotManagementModule(
 
             await using var context = await dbService.CreateDbContextAsync();
 
-            var feeds = await fetchFeedsFunc(context);
+            List<FeedListener> feeds;
+            try
+            {
+                feeds = await fetchFeedsFunc(context);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to fetch feeds to toggle.");
+
+                await defer;
+                await FollowupAsync($"Failed to fetch feeds: {ex}");
+                return;
+            }
+
             if (feeds.Count == 0)
             {
                 await defer;
@@ -613,14 +627,33 @@ public class BotManagementModule(
                 feed.DisabledReason = reason;
             }
 
-            await context.SaveChangesAsync();
+            try
+            {
+                await context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to save feeds to toggle.");
+
+                await defer;
+                await FollowupAsync($"Failed to save feeds: {ex}");
+            }
 
             if (!silent)
             {
                 foreach (var feed in feeds.GroupBy(x => new { x.GuildId, x.ChannelId }))
                 {
-                    await LogToggleToFeedChannelAsync(feed.Key.GuildId, feed.Key.ChannelId, forcedDisable, reason,
-                        feed);
+                    try
+                    {
+                        await LogToggleToFeedChannelAsync(feed.Key.GuildId, feed.Key.ChannelId, forcedDisable, reason,
+                            feed);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex,
+                            "Failed to log feed {feed} toggle message to channel {channelId}, guild {guildId}.",
+                            feed.Select(x => x.FeedUrl).Humanize(), feed.Key.ChannelId, feed.Key.GuildId);
+                    }
                 }
             }
 
