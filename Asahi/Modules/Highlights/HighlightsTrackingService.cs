@@ -646,7 +646,7 @@ public class HighlightsTrackingService(
         var nonUniqueReactions = msg.Reactions.Sum(x => x.Value.ReactionCount);
 
         var messageAge = (DateTimeOffset.UtcNow - msg.Timestamp).TotalSeconds;
-        
+
         var everyoneChannelPermissions = PermissionsForRole(channel);
 
         var isChannelLocked =
@@ -660,29 +660,30 @@ public class HighlightsTrackingService(
                 isChannelLocked = true;
         }
 
-        var boardsQuery = context.HighlightBoards.Where(x =>
-            x.GuildId == channel.Guild.Id
-            && (
+        var boardsQuery = context.HighlightBoards
+            .Where(x => x.GuildId == channel.Guild.Id)
+            .Where(x =>
+                // if we're a forced board then skip all the standard validation
+                forcedBoards.Contains(x.Name) ||
                 (
-                    (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds)
-                    && (
-                        (
-                            x.FilteredChannelsIsBlockList
-                                ? x.FilteredChannels.All(y => y != parentChannel.Id)
-                                : x.FilteredChannels.Any(y => y == parentChannel.Id)
-                        )
-                        || (
-                            x.FilteredChannelsIsBlockList
-                                ? x.FilteredChannels.All(y => y != channel.Id)
-                                : x.FilteredChannels.Any(y => y == channel.Id)
-                        )
+                    // is the message young enough? AND
+                    (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds) &&
+                    // is the channel not locked? AND
+                    (!x.IgnoreLockedChannels || !isChannelLocked) &&
+                    // is the channel allowed by filters?
+                    (
+                        x.FilteredChannelsIsBlockList
+                        // if both the message's channel and the parent channel is not in the blocklist
+                        ? !x.FilteredChannels.Contains(channel.Id) && !x.FilteredChannels.Contains(parentChannel.Id)
+                        // if either the message's channel or the parent channel is in the allowlist
+                        : x.FilteredChannels.Contains(channel.Id) || x.FilteredChannels.Contains(parentChannel.Id)
                     )
-                ) && (!x.IgnoreLockedChannels || !isChannelLocked) || forcedBoards.Contains(x.Name)
+                )
             )
-            && !x.HighlightedMessages.Any(y =>
+            // although if the message is already highlighted in this board then we don't care about it anyway  
+            .Where(x => !x.HighlightedMessages.Any(y =>
                 y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)
-            )
-        );
+            ));
 
         var boards = (
                 await boardsQuery
@@ -691,6 +692,7 @@ public class HighlightsTrackingService(
                     .Include(x => x.LoggingChannelOverrides)
                     .ToArrayAsync()
             )
+            // we also don't care about the board if the user is muted for that board
             .Where(x =>
                 msg.Author is not IGuildUser
                 || msg.Author is IGuildUser guildUser
