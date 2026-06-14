@@ -16,6 +16,8 @@ using Fergun.Interactive.Pagination;
 using Humanizer;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -1031,7 +1033,8 @@ public class {className}(IInteractionContext context)
 
             using var req = await http.GetAsync(attachment.Url);
 
-            csharpCode = await req.Content.ReadAsStringAsync();
+            var codeBytes = await req.Content.ReadAsByteArrayAsync();
+            csharpCode = Encoding.UTF8.GetString(codeBytes);
             logger.LogTrace("Code is\n{csharpCode}", csharpCode);
         }
         else
@@ -1048,7 +1051,8 @@ public class {className}(IInteractionContext context)
         );
 
         logger.LogTrace("Parsing.");
-        var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
+        var sourceText = SourceText.From(csharpCode, Encoding.UTF8);
+        var syntaxTree = CSharpSyntaxTree.ParseText(sourceText, path: $"{className}.cs");
 
         var references = AppDomain
             .CurrentDomain.GetAssemblies()
@@ -1062,13 +1066,15 @@ public class {className}(IInteractionContext context)
             [syntaxTree],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
+                optimizationLevel: OptimizationLevel.Debug,
                 nullableContextOptions: NullableContextOptions.Enable)
         );
 
         using var ms = new MemoryStream();
 
         logger.LogTrace("Emitting.");
-        var result = compilation.Emit(ms);
+        var emitOptions = new EmitOptions(debugInformationFormat: DebugInformationFormat.Embedded);
+        var result = compilation.Emit(ms, options: emitOptions);
 
         if (!result.Success)
         {
@@ -1142,7 +1148,7 @@ public class {className}(IInteractionContext context)
         }
     }
 
-    // why is this attribute here?
+    // without this the JIT might inline this method and keep some of the instances around for longer than they should be
     [MethodImpl(MethodImplOptions.NoInlining)]
     private async Task<WeakReference> ExecuteMemoryStream(MemoryStream ms, string className)
     {
@@ -1175,7 +1181,7 @@ public class {className}(IInteractionContext context)
             {
                 logger.LogTrace("Could not find method {methodName}.", methodName);
                 await ModifyOriginalResponseAsync(
-                    new MessageContents($"Could not find class `{className}`.")
+                    new MessageContents($"Could not find method `{methodName}`.")
                 );
                 return weakRef;
             }
