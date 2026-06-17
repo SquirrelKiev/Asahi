@@ -91,6 +91,13 @@ public class BirthdayTimerService(
             var birthdayConfig = group.Key;
 
             var guild = client.GetGuild(birthdayConfig.GuildId);
+            
+            if(guild == null)
+            {
+                // logger.LogWarning("Guild {guild} couldn't be found.", birthdayConfig.GuildId);
+                continue;
+            }
+            
             await guild.DownloadUsersAsync();
             var role = guild.GetRole(birthdayConfig.BirthdayRole);
 
