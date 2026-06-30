@@ -12,17 +12,11 @@ public class BirthdayTimerService(
     DiscordSocketClient client,
     IDbContextFactory<BotDbContext> dbService,
     IClock clock,
-    ILogger<BirthdayTimerService> logger)
+    ILogger<BirthdayTimerService> logger,
+    ClientReadyGate readyGate)
+    : DiscordDependentBackgroundService(readyGate)
 {
-    public Task? timerTask;
-
-    public void StartBackgroundTask(CancellationToken token)
-    {
-        timerTask ??= Task.Run(() => TimerTask(token), token);
-    }
-
-    /// <remarks>Should only be one of these running!</remarks>
-    private async Task TimerTask(CancellationToken cancellationToken)
+    protected override async Task ExecuteAfterReadyAsync(CancellationToken cancellationToken)
     {
         try
         {

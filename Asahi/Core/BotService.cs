@@ -2,14 +2,9 @@
 using Asahi.BotEmoteManagement;
 using Asahi.Database;
 using Asahi.Modules;
-using Asahi.Modules.BirthdayRoles;
-using Asahi.Modules.BotManagement;
-using Asahi.Modules.FeedsV2;
 using Asahi.Modules.Highlights;
 using Asahi.Modules.ModSpoilers;
-using Asahi.Modules.Seigen;
 using Asahi.Modules.Welcome;
-using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Fergun.Interactive;
@@ -26,16 +21,12 @@ public class BotService(
     ILogger<BotService> logger,
     CommandHandler commandHandler,
     HighlightsTrackingService highlightsTrackingService,
-    CustomStatusService customStatusService,
     ModSpoilerService modSpoilerService,
     WelcomeService welcomeService,
-    FeedsTimerService feedsTimerService,
     InteractionService interactionService,
     InteractiveService interactiveService,
-    // CommandService commandService,
-    // RoleManagementService roleManagementService,
-    BirthdayTimerService birthdayTimerService,
     BotEmoteService botEmoteService,
+    ClientReadyGate readyGate,
     IHostApplicationLifetime appLifetime
 ) : BackgroundService
 {
@@ -48,11 +39,11 @@ public class BotService(
     // ReSharper disable once InconsistentNaming
     private CancellationToken CancellationToken;
 
+    private int readyHandled;
+
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         CancellationToken = cancellationToken;
-
-        MessageContents.AddRedButtonDefault = false;
 
         var args = Environment.GetCommandLineArgs();
 
@@ -105,8 +96,6 @@ public class BotService(
 
         await client.LoginAsync(TokenType.Bot, config.BotToken);
         await client.StartAsync();
-
-        await Task.Delay(-1, cancellationToken);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -271,6 +260,9 @@ public class BotService(
 
     private async Task Client_Ready()
     {
+        if (Interlocked.Exchange(ref readyHandled, 1) == 1)
+            return;
+        
         logger.LogInformation(
             "Logged in as {user}#{discriminator} ({id})",
             client.CurrentUser?.Username,
@@ -282,15 +274,9 @@ public class BotService(
 
         await commandHandler.OnReady(Assembly.GetExecutingAssembly());
 
-        highlightsTrackingService.StartBackgroundTask(CancellationToken);
+        readyGate.SignalReady();
 
-        customStatusService.StartBackgroundTask(CancellationToken);
-
-        birthdayTimerService.StartBackgroundTask(CancellationToken);
-
-        feedsTimerService.StartBackgroundTask(CancellationToken);
-
-        // await roleManagementService.CacheAndResolve();
+        logger.LogTrace("Ready!");
     }
 
     private async Task SyncEmotesAsync(CancellationToken cancellationToken = default)
@@ -302,15 +288,15 @@ public class BotService(
         try
         {
             await botEmoteService.InitializeAsync(config.Emotes, emoteTracking);
-            
+
             var removed = originalEmoteTracking.Except(emoteTracking);
             var added = emoteTracking.Except(originalEmoteTracking);
-        
+
             foreach (var e in removed)
             {
                 context.InternalCustomEmoteTracking.Remove(e);
             }
-            
+
             foreach (var e in added)
             {
                 context.InternalCustomEmoteTracking.Add(e);
@@ -319,7 +305,7 @@ public class BotService(
         catch (Exception e)
         {
             logger.LogCritical(e, "Failed to initialize bot emotes!");
-        
+
             appLifetime.StopApplication();
             throw;
         }

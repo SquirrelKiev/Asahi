@@ -29,8 +29,9 @@ public class HighlightsTrackingService(
     ILogger<HighlightsTrackingService> logger,
     IDiscordClient client,
     BotConfig botConfig,
-    DiscordRestConfig webhookRestConfig
-)
+    DiscordRestConfig webhookRestConfig,
+    ClientReadyGate readyGate
+) : DiscordDependentBackgroundService(readyGate)
 {
     public record struct CachedMessage(ulong MessageId, ulong AuthorId, DateTimeOffset Timestamp)
     {
@@ -45,7 +46,6 @@ public class HighlightsTrackingService(
     private readonly ConcurrentDictionary<ulong, ConcurrentQueue<CachedMessage>> messageCaches = [];
     private readonly MemoryCache messageThresholds = new(new MemoryCacheOptions());
 
-    private Task? timerTask;
     private readonly object lockMessageQueue = new();
     private readonly HashSet<MessageIdInfo> messageQueue = [];
     private readonly HashSet<MessageIdInfo> messageQueueShouldSendHighlight = [];
@@ -72,17 +72,7 @@ public class HighlightsTrackingService(
         }
     }
 
-    /// <summary>
-    /// Starts the background task that checks queued messages to see if they should be highlighted.
-    /// </summary>
-    /// <param name="cancellationToken">Indicates that the task should stop checking messages.</param>
-    public void StartBackgroundTask(CancellationToken cancellationToken)
-    {
-        timerTask ??= Task.Run(() => TimerTask(cancellationToken), cancellationToken);
-    }
-
-    /// <remarks>Should only be one of these running!</remarks>
-    private async Task TimerTask(CancellationToken cancellationToken)
+    protected override async Task ExecuteAfterReadyAsync(CancellationToken cancellationToken)
     {
         await MigrateOldMessages();
 
@@ -673,10 +663,10 @@ public class HighlightsTrackingService(
                     // is the channel allowed by filters?
                     (
                         x.FilteredChannelsIsBlockList
-                        // if both the message's channel and the parent channel is not in the blocklist
-                        ? !x.FilteredChannels.Contains(channel.Id) && !x.FilteredChannels.Contains(parentChannel.Id)
-                        // if either the message's channel or the parent channel is in the allowlist
-                        : x.FilteredChannels.Contains(channel.Id) || x.FilteredChannels.Contains(parentChannel.Id)
+                            // if both the message's channel and the parent channel is not in the blocklist
+                            ? !x.FilteredChannels.Contains(channel.Id) && !x.FilteredChannels.Contains(parentChannel.Id)
+                            // if either the message's channel or the parent channel is in the allowlist
+                            : x.FilteredChannels.Contains(channel.Id) || x.FilteredChannels.Contains(parentChannel.Id)
                     )
                 )
             )

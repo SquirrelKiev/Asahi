@@ -6,7 +6,10 @@ using Asahi.BotEmoteManagement;
 using Asahi.Database;
 using Asahi.HealthChecks;
 using Asahi.Modules;
+using Asahi.Modules.BirthdayRoles;
+using Asahi.Modules.BotManagement;
 using Asahi.Modules.FeedsV2;
+using Asahi.Modules.Highlights;
 using Asahi.Modules.Tatsu;
 using Discord.Interactions;
 using Discord.Rest;
@@ -205,19 +208,19 @@ public static class Startup
                 x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("text/xml"));
                 x.DefaultRequestHeaders.Accept.Add(MediaTypeWithQualityHeaderValue.Parse("application/xml"));
             });
-        
+
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 
         serviceCollection.AddRefitClient<ITatsuClient>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.tatsu.gg/v1"));
-        
+
         serviceCollection.AddRefitClient<IAnonymousRedditApi>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://www.reddit.com"));
 
         serviceCollection
             .AddSingleton<IAuthTokenProvider<IRedditApi>, RedditAuthTokenProvider>()
             .AddTransient<RedditAuthHeaderHandler>();
-        
+
         serviceCollection.AddRefitClient<IRedditApi>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://oauth.reddit.com"))
             .AddHttpMessageHandler<RedditAuthHeaderHandler>();
@@ -265,6 +268,11 @@ public static class Startup
         //    .WithTransientLifetime());
 
         serviceCollection.AddHostedService<BotService>();
+
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<HighlightsTrackingService>());
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<CustomStatusService>());
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<BirthdayTimerService>());
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<FeedsTimerService>());
 
         return serviceCollection;
     }

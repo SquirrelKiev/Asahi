@@ -11,17 +11,11 @@ public class FeedsTimerService(
     ILogger<FeedsTimerService> logger,
     FeedsProcessorService feedsProcessor,
     IDbContextFactory<BotDbContext> dbService,
-    IFeedsStateTracker feedsStateTracker)
+    IFeedsStateTracker feedsStateTracker,
+    ClientReadyGate readyGate)
+    : DiscordDependentBackgroundService(readyGate)
 {
-    private Task? timerTask;
-
-    public void StartBackgroundTask(CancellationToken token)
-    {
-        timerTask ??= Task.Run(() => TimerTask(token), token);
-    }
-
-    /// <remarks>Should only be one of these running!</remarks>
-    private async Task TimerTask(CancellationToken cancellationToken)
+    protected override async Task ExecuteAfterReadyAsync(CancellationToken cancellationToken)
     {
         await MigrateOldMessages();
         

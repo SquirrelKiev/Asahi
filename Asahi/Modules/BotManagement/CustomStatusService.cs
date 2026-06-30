@@ -6,23 +6,16 @@ using Microsoft.Extensions.Logging;
 namespace Asahi.Modules.BotManagement;
 
 [Inject(ServiceLifetime.Singleton)]
-public class CustomStatusService(ILogger<CustomStatusService> logger, IDbContextFactory<BotDbContext> dbService, DiscordSocketClient client)
+public class CustomStatusService(
+    ILogger<CustomStatusService> logger,
+    IDbContextFactory<BotDbContext> dbService,
+    DiscordSocketClient client,
+    ClientReadyGate readyGate)
+    : DiscordDependentBackgroundService(readyGate)
 {
     private int currentActivityId;
 
-    private Task? timerTask;
-
-    /// <summary>
-    /// Starts the background task that refreshes the custom status.
-    /// </summary>
-    /// <param name="cancellationToken">Indicates that the task should stop refreshing.</param>
-    public void StartBackgroundTask(CancellationToken cancellationToken)
-    {
-        timerTask ??= Task.Run(() => TimerTask(cancellationToken), cancellationToken);
-    }
-
-    /// <remarks>Should only be one of these running!</remarks>
-    private async Task TimerTask(CancellationToken cancellationToken)
+    protected override async Task ExecuteAfterReadyAsync(CancellationToken cancellationToken)
     {
         logger.LogTrace("Custom status timer task started");
 
@@ -92,7 +85,8 @@ public class CustomStatusService(ILogger<CustomStatusService> logger, IDbContext
                 throw new ArgumentOutOfRangeException();
         }
 
-        logger.LogInformation("Set activity to {activityType}, with contents {activityContents}", botWideConfig.ActivityType, activity);
+        logger.LogInformation("Set activity to {activityType}, with contents {activityContents}",
+            botWideConfig.ActivityType, activity);
 
         currentActivityId = (currentActivityId + 1) % botWideConfig.BotActivities.Length;
     }
