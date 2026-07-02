@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net.Http.Headers;
 using System.Text;
 using Discord.Interactions;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 
 namespace Asahi.Modules.GuildBackup;
@@ -97,6 +98,7 @@ public class BackupModule(BotConfig config, IHttpClientFactory httpClientFactory
             await WriteTextToZip(zip, guildJson, "guild.json");
             await WriteTextToZip(zip, channelsJson, "channels.json");
             await WriteTextToZip(zip, activeThreadsJson, "active-threads.json");
+            await WriteTextToZip(zip, onboardingJson, "onboarding.json");
             for (var i = 0; i < banJsonList.Count; i++)
             {
                 var json = banJsonList[i];
@@ -221,12 +223,13 @@ public class BackupModule(BotConfig config, IHttpClientFactory httpClientFactory
 
     private record PartialBanObject
     {
-        public PartialUserObject User { get; init; }
-        public string Reason { get; init; }
+        [UsedImplicitly]
+        public required PartialUserObject User { get; init; }
     }
 
     private record PartialUserObject
     {
+        [UsedImplicitly]
         public ulong Id { get; init; }
     }
 }
