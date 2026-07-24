@@ -261,7 +261,7 @@ public static class AnimeThemesPaginatorGenerator
                 artistInfo = $"\nby *{theme.Song.Performances.Select(x => x.ToStringNice()).Humanize()}*";
             }
 
-            songInfo = $"**{theme.Song.Title}**{artistInfo}";
+            songInfo = $"**{theme.Song.Title.Romaji}**{artistInfo}";
         }
 
         return $"-# {theme.Slug}{entryInformation}\n{songInfo}";
@@ -402,8 +402,8 @@ public static class AnimeThemeModelExtensions
             }
 
             songInfo = discordRichText
-                ? $"**{themeInfo.Song.Title}**{artistInfo}"
-                : $"{themeInfo.Song.Title}{artistInfo}";
+                ? $"**{themeInfo.Song.Title.Romaji}**{artistInfo}"
+                : $"{themeInfo.Song.Title.Romaji}{artistInfo}";
         }
 
         return $"{warnings}{(includeSlug ? $"**{themeInfo.Slug}** • {songInfo}" : songInfo)}";
