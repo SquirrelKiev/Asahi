@@ -1,6 +1,9 @@
 ﻿fragment animeInfo on Anime {
     id
-    name
+    title {
+        romaji
+        english
+    }
     format
     season
     year
@@ -21,7 +24,9 @@ fragment animeThemeInfo on AnimeTheme {
     sequence
     song {
         id
-        title
+        title {
+            romaji
+        }
         performances(first: 100) {
             ...performanceInfo
         }
@@ -45,7 +50,9 @@ fragment performanceInfo on Performance {
 
 fragment artistInfo on Artist {
     id
-    name
+    name {
+        main
+    }
     slug
 }
 

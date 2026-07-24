@@ -10,13 +10,6 @@ enum AnnouncementFilterableColumns {
   UPDATED_AT
 }
 
-enum DumpFilterableColumns {
-  ID
-  PATH
-  CREATED_AT
-  UPDATED_AT
-}
-
 enum PageFilterableColumns {
   ID
   NAME
@@ -55,8 +48,10 @@ enum PlaylistTrackFilterableColumns {
 
 enum AnimeFilterableColumns {
   ID
-  NAME
-  MEDIA_FORMAT @deprecated(reason: "Use FORMAT instead")
+  NAME @deprecated(reason: "Use TITLE_ROMAJI instead")
+  TITLE_ROMAJI
+  TITLE_ENGLISH
+  TITLE_NATIVE
   FORMAT
   SEASON
   SYNOPSIS
@@ -77,9 +72,11 @@ enum AnimeThemeFilterableColumns {
 enum AnimeThemeEntryFilterableColumns {
   ID
   EPISODES
+  LIKES_COUNT
   NOTES
   NSFW
   SPOILER
+  TRACKS_COUNT
   VERSION
   CREATED_AT
   UPDATED_AT
@@ -87,7 +84,9 @@ enum AnimeThemeEntryFilterableColumns {
 
 enum ArtistFilterableColumns {
   ID
-  NAME
+  NAME @deprecated(reason: "Use NAME_MAIN instead")
+  NAME_MAIN
+  NAME_NATIVE
   SLUG
   INFORMATION
   CREATED_AT
@@ -135,7 +134,8 @@ enum PerformanceFilterableColumns {
 
 enum SeriesFilterableColumns {
   ID
-  NAME
+  NAME @deprecated(reason: "Use TITLE_ROMAJI instead")
+  TITLE_ROMAJI
   SLUG
   CREATED_AT
   UPDATED_AT
@@ -160,7 +160,7 @@ enum StudioFilterableColumns {
 enum SynonymFilterableColumns {
   ID
   TEXT
-  TYPE
+  LANGUAGE
   CREATED_AT
   UPDATED_AT
 }
@@ -192,16 +192,6 @@ enum VideoFilterableColumns {
 }
 
 enum AnnouncementSort {
-  ID
-  ID_DESC
-  CREATED_AT
-  CREATED_AT_DESC
-  UPDATED_AT
-  UPDATED_AT_DESC
-  RANDOM
-}
-
-enum DumpSort {
   ID
   ID_DESC
   CREATED_AT
@@ -256,8 +246,6 @@ enum PlaylistSort {
   ID_DESC
   NAME
   NAME_DESC
-  LIKES_COUNT
-  LIKES_COUNT_DESC
   TRACKS_COUNT
   TRACKS_COUNT_DESC
   CREATED_AT
@@ -282,8 +270,14 @@ enum PlaylistTrackSort {
 enum AnimeSort {
   ID
   ID_DESC
-  NAME
-  NAME_DESC
+  NAME @deprecated(reason: "Use 'TITLE' instead")
+  NAME_DESC @deprecated(reason: "Use 'TITLE_DESC' instead")
+  TITLE_ROMAJI
+  TITLE_ROMAJI_DESC
+  TITLE_ENGLISH
+  TITLE_ENGLISH_DESC
+  TITLE_NATIVE
+  TITLE_NATIVE_DESC
   YEAR
   YEAR_DESC
   CREATED_AT
@@ -302,8 +296,8 @@ enum AnimeThemeSort {
   CREATED_AT_DESC
   UPDATED_AT
   UPDATED_AT_DESC
-  SONG_TITLE
-  SONG_TITLE_DESC
+  SONG_TITLE_ROMAJI
+  SONG_TITLE_ROMAJI_DESC
   SONG_TITLE_NATIVE
   SONG_TITLE_NATIVE_DESC
   RANDOM
@@ -330,8 +324,12 @@ enum AnimeThemeEntrySort {
 enum ArtistSort {
   ID
   ID_DESC
-  NAME
-  NAME_DESC
+  NAME @deprecated(reason: "Use NAME_MAIN instead")
+  NAME_DESC @deprecated(reason: "Use NAME_MAIN_DESC instead")
+  NAME_MAIN
+  NAME_MAIN_DESC
+  NAME_NATIVE
+  NAME_NATIVE_DESC
   CREATED_AT
   CREATED_AT_DESC
   UPDATED_AT
@@ -404,8 +402,10 @@ enum PerformanceSort {
 enum SeriesSort {
   ID
   ID_DESC
-  NAME
-  NAME_DESC
+  NAME @deprecated(reason: "Use 'TITLE_ROMAJI' instead")
+  NAME_DESC @deprecated(reason: "Use 'TITLE_ROMAJI_DESC' instead")
+  TITLE_ROMAJI
+  TITLE_ROMAJI_DESC
   CREATED_AT
   CREATED_AT_DESC
   UPDATED_AT
@@ -543,15 +543,6 @@ enum NotificationType {
   PROFILE_SYNCED
 }
 
-enum AnimeMediaFormat {
-  TV
-  TV_SHORT
-  OVA
-  MOVIE
-  SPECIAL
-  ONA
-}
-
 enum AnimeFormat {
   TV
   TV_SHORT
@@ -566,14 +557,6 @@ enum AnimeSeason {
   SPRING
   SUMMER
   FALL
-}
-
-"@deprecated Use SynonymType instead."
-enum AnimeSynonymType {
-  OTHER
-  NATIVE
-  ENGLISH
-  SHORT
 }
 
 enum ImageFacet {
@@ -609,13 +592,6 @@ enum ResourceSite {
   AMAZON_PRIME_VIDEO
 }
 
-enum SynonymType {
-  OTHER
-  NATIVE
-  ENGLISH
-  SHORT
-}
-
 enum ThemeType {
   "Opening"
   OP
@@ -645,7 +621,7 @@ type Query {
   "Returns a listing of resources that match a given search term."
   search(search: String! first: Int page: Int): Search!
   "Returns the first featured theme where the current date is between start_at and end_at dates."
-  currentfeaturedtheme: FeaturedTheme
+  currentFeaturedTheme: FeaturedTheme
   "Returns the data of the currently authenticated user."
   me: Me
   "Returns a page resource."
@@ -667,13 +643,11 @@ type Query {
   "Returns a studio resource."
   studio(slug: String!): Studio
   "Returns a video resource."
-  video(id: String!): Video
+  video(id: Int!): Video
   "Shuffle themes."
   animethemeShuffle(type: [ThemeType!] format: [AnimeFormat!] year_lte: Int year_gte: Int spoiler: Boolean first: Int page: Int): [AnimeTheme!]!
   "Returns a listing of announcement resources given fields."
   announcementPagination(sort: [AnnouncementSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): AnnouncementPaginator!
-  "Returns a listing of dump resources given fields."
-  dumpPagination(where: QueryDumpPaginationWhereWhereConditions sort: [DumpSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): DumpPaginator!
   "Returns a listing of page resources given fields."
   pagePagination(id: Int name: String name_like: String path_like: String where: QueryPagePaginationWhereWhereConditions sort: [PageSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): PagePaginator!
   "Returns a listing of external profile resources given fields."
@@ -683,17 +657,17 @@ type Query {
   "Returns a listing of playlist track resources given fields."
   playlisttrackPagination(playlist: String! position: Int where: QueryPlaylisttrackPaginationWhereWhereConditions sort: [PlaylistTrackSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): PlaylistTrackPaginator!
   "Returns a listing of anime resources given fields."
-  animePagination(id: Int search: String name: String name_like: String mediaFormat: AnimeMediaFormat @deprecated(reason: "Use 'format' instead") mediaFormat_in: [AnimeMediaFormat!] @deprecated(reason: "Use 'format_in' instead") format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] slug: String year: Int year_lesser: Int year_greater: Int where: QueryAnimePaginationWhereWhereConditions sort: [AnimeSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): AnimePaginator!
+  animePagination(id: Int search: String name: String @deprecated(reason: "Use the 'title_romaji' argument instead") name_like: String @deprecated(reason: "Use the 'titleRomaji_like' argument instead") titleRomaji: String titleRomaji_like: String format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] slug: String year: Int year_lesser: Int year_greater: Int where: QueryAnimePaginationWhereWhereConditions sort: [AnimeSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): AnimePaginator!
   "Returns a listing of artist resources given fields."
-  artistPagination(id: Int name: String name_like: String search: String slug: String where: QueryArtistPaginationWhereWhereConditions sort: [ArtistSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): ArtistPaginator!
+  artistPagination(id: Int nameMain: String nameMain_like: String search: String slug: String where: QueryArtistPaginationWhereWhereConditions sort: [ArtistSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): ArtistPaginator!
   "Returns a listing of audio resources given fields."
   audioPagination(id: Int basename: String filename: String mimetype: String path: String path_like: String size_lesser: Int size_greater: Int where: QueryAudioPaginationWhereWhereConditions sort: [AudioSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): AudioPaginator!
   "Returns a listing of images resources given fields."
   imagePagination(id: Int facet: ImageFacet path: String path_like: String where: QueryImagePaginationWhereWhereConditions sort: [ImageSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): ImagePaginator!
   "Returns a listing of series resources given fields."
-  seriesPagination(id: Int search: String name: String name_like: String slug: String where: QuerySeriesPaginationWhereWhereConditions sort: [SeriesSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): SeriesPaginator!
+  seriesPagination(id: Int search: String name: String @deprecated(reason: "Use the 'titleRomaji' argument instead") name_like: String @deprecated(reason: "Use the 'titleRomaji_like' argument instead") titleRomaji: String titleRomaji_like: String slug: String where: QuerySeriesPaginationWhereWhereConditions sort: [SeriesSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): SeriesPaginator!
   "Returns a listing of song resources given fields."
-  songPagination(id: Int title: String titleNative: String where: QuerySongPaginationWhereWhereConditions sort: [SongSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): SongPaginator!
+  songPagination(id: Int titleRomaji: String titleNative: String where: QuerySongPaginationWhereWhereConditions sort: [SongSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): SongPaginator!
   "Returns a listing of studio resources given fields."
   studioPagination(id: Int search: String name: String name_like: String slug: String where: QueryStudioPaginationWhereWhereConditions sort: [StudioSort!] "Limits number of fetched items. Maximum allowed value: 100." first: Int! = 15 "The offset from which items are returned." page: Int): StudioPaginator!
   "Returns a listing of theme group resources given fields."
@@ -727,20 +701,6 @@ type Announcement {
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
   updatedAt(format: String! = "Y-m-d H:i:s"): String
-}
-
-"Represents a database dump of selected tables at a given point in time.\n\nFor example, the animethemes-db-dump-wiki-1663559663946.sql dump represents the database dump of wiki tables performed at 2022-09-19."
-type Dump {
-  "The primary key of the resource"
-  id: Int!
-  "The path of the file in storage"
-  path: String!
-  "The URL to download the file from storage"
-  link: String!
-  "The date that the resource was created"
-  createdAt(format: String! = "Y-m-d H:i:s"): String!
-  "The date that the resource was updated"
-  updatedAt(format: String! = "Y-m-d H:i:s"): String!
 }
 
 "Represents a video to be featured on the homepage of the site for a specified amount of time."
@@ -899,8 +859,8 @@ type Playlist {
   tracksCount: Int!
   "The existence of tracks belonging to the resource"
   tracksExists: Boolean!
-  "The number of likes recorded for the resource"
-  likesCount: Int!
+  "The URL for the playlist page on the website"
+  siteUrl: String!
   "The date that the resource was created"
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
@@ -987,11 +947,9 @@ type Anime {
   "The primary key of the resource"
   id: Int!
   "The primary title of the anime"
-  name: String!
-  "The media format of the anime"
-  mediaFormat: AnimeMediaFormat @deprecated(reason: "Use 'format' instead")
-  "The formatted string value of the mediaFormat field"
-  mediaFormatLocalized: String @deprecated(reason: "Use 'formatLocalized' instead")
+  name: String! @deprecated(reason: "Use the title.romaji field instead")
+  "The primary title of the anime"
+  title: AnimeTitle!
   "The format of the anime"
   format: AnimeFormat
   "The formatted string value of the format field"
@@ -1004,18 +962,29 @@ type Anime {
   slug: String!
   "The brief summary of the anime"
   synopsis: String
-  "The premiere year of the anime"
+  "The premiere season year of the anime."
   year: Int
+  "The URL for the anime page on the website"
+  siteUrl: String!
   "The date that the resource was created"
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
   updatedAt(format: String! = "Y-m-d H:i:s"): String
-  synonyms(type: SynonymType where: AnimeSynonymsWhereWhereConditions sort: [SynonymSort!]): [Synonym!]!
+  synonyms(language: String where: AnimeSynonymsWhereWhereConditions sort: [SynonymSort!]): [Synonym!]!
   animethemes(type: ThemeType type_in: [ThemeType!] sequence: Int sequence_lesser: Int sequence_greater: Int slug: String where: AnimeAnimethemesWhereWhereConditions sort: [AnimeThemeSort!] "Limits number of fetched items." first: Int! = 1000 "The offset from which items are returned." page: Int): [AnimeTheme!]!
   images(facet: ImageFacet path_like: String where: AnimeImagesWhereWhereConditions sort: [ImageSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ImageConnection!
   resources(site: ResourceSite externalId: Int where: AnimeResourcesWhereWhereConditions sort: [ExternalResourceSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ExternalResourceConnection!
-  series(name_like: String where: AnimeSeriesWhereWhereConditions sort: [SeriesSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): AnimeSeriesConnection!
+  series(name_like: String @deprecated(reason: "Use titleRomaji_like argument instead") titleRomaji_like: String where: AnimeSeriesWhereWhereConditions sort: [SeriesSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): AnimeSeriesConnection!
   studios(name_like: String where: AnimeStudiosWhereWhereConditions sort: [StudioSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): AnimeStudioConnection!
+}
+
+type AnimeTitle {
+  "The romaji title of the anime"
+  romaji: String!
+  "The licensed title of the anime"
+  english: String
+  "The original title of the anime"
+  native: String
 }
 
 type AnimeSeriesEdge {
@@ -1053,7 +1022,7 @@ type AnimeYearSeasons {
   "The formatted string value of the season field"
   seasonLocalized: String!
   "The animes of the season year filtered"
-  anime(name_like: String mediaFormat: AnimeMediaFormat @deprecated(reason: "Use 'format' instead") mediaFormat_in: [AnimeMediaFormat!] @deprecated(reason: "Use 'format_in' instead") format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int where: AnimeYearSeasonsAnimeWhereWhereConditions sort: [AnimeSort!] first: Int page: Int = 1): AnimePaginator
+  anime(name_like: String @deprecated(reason: "Use titleRomaji_like argument instead") titleRomaji_like: String format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int where: AnimeYearSeasonsAnimeWhereWhereConditions sort: [AnimeSort!] first: Int page: Int = 1): AnimePaginator
 }
 
 "The anime year season type."
@@ -1063,7 +1032,7 @@ type AnimeYearSeason {
   "The formatted string value of the season field"
   seasonLocalized: String!
   "The animes of the season year filtered"
-  anime(name_like: String mediaFormat: AnimeMediaFormat @deprecated(reason: "Use 'format' instead") mediaFormat_in: [AnimeMediaFormat!] @deprecated(reason: "Use 'format_in' instead") format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int sort: [AnimeSort!] first: Int page: Int = 1): AnimePaginator
+  anime(name_like: String @deprecated(reason: "Use titleRomaji_like argument instead") titleRomaji_like: String format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int sort: [AnimeSort!] first: Int page: Int = 1): AnimePaginator
 }
 
 "Represents a musical performer of anime sequences.\n\nFor example, Chiwa Saitou is the musical performer of the Bakemonogatari OP1 theme, among many others."
@@ -1071,22 +1040,31 @@ type Artist {
   "The primary key of the resource"
   id: Int!
   "The primary title of the artist"
-  name: String!
+  name: ArtistName!
   "The URL slug & route key of the resource"
   slug: String!
   "The brief information of the resource"
   information: String
+  "The URL for the artist page on the website"
+  siteUrl: String!
   "The date that the resource was created"
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
   updatedAt(format: String! = "Y-m-d H:i:s"): String
-  synonyms(type: SynonymType where: ArtistSynonymsWhereWhereConditions sort: [SynonymSort!]): [Synonym!]!
+  synonyms(where: ArtistSynonymsWhereWhereConditions sort: [SynonymSort!]): [Synonym!]!
   images(facet: ImageFacet path_like: String where: ArtistImagesWhereWhereConditions sort: [ImageSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ImageConnection!
   resources(site: ResourceSite externalId: Int where: ArtistResourcesWhereWhereConditions sort: [ExternalResourceSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ExternalResourceConnection!
   performances(alias: String as: String memberAlias: String memberAs: String relevance: Int relevance_lesser: Int relevance_greater: Int where: ArtistPerformancesWhereWhereConditions sort: [PerformanceSort!] "Limits number of fetched items." first: Int! = 1000 "The offset from which items are returned." page: Int): [Performance!]!
   memberPerformances(alias: String as: String memberAlias: String memberAs: String relevance: Int relevance_lesser: Int relevance_greater: Int where: ArtistMemberPerformancesWhereWhereConditions sort: [PerformanceSort!] "Limits number of fetched items." first: Int! = 1000 "The offset from which items are returned." page: Int): [Performance!]!
-  members(name: String name_like: String where: ArtistMembersWhereWhereConditions sort: [ArtistMemberSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ArtistMemberConnection!
-  groups(name: String name_like: String where: ArtistGroupsWhereWhereConditions sort: [ArtistMemberSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ArtistMemberConnection!
+  members(nameMain: String nameMain_like: String where: ArtistMembersWhereWhereConditions sort: [ArtistMemberSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ArtistMemberConnection!
+  groups(nameMain: String nameMain_like: String where: ArtistGroupsWhereWhereConditions sort: [ArtistMemberSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ArtistMemberConnection!
+}
+
+type ArtistName {
+  "The stylized name of the artist"
+  main: String!
+  "The native name of the artist"
+  native: String
 }
 
 type ArtistMemberEdge {
@@ -1193,13 +1171,22 @@ type Series {
   id: Int!
   "The primary title of the series"
   name: String!
+  "The primary title of the series"
+  title: SeriesTitle!
   "The URL slug & route key of the resource"
   slug: String!
+  "The URL for the series page on the website"
+  siteUrl: String!
   "The date that the resource was created"
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
   updatedAt(format: String! = "Y-m-d H:i:s"): String
-  anime(name_like: String mediaFormat: AnimeMediaFormat @deprecated(reason: "Use 'format' instead") mediaFormat_in: [AnimeMediaFormat!] @deprecated(reason: "Use 'format_in' instead") format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int where: SeriesAnimeWhereWhereConditions sort: [AnimeSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): SeriesAnimeConnection!
+  anime(name_like: String @deprecated(reason: "Use the 'titleRomaji_like' argument instead") titleRomaji_like: String format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int where: SeriesAnimeWhereWhereConditions sort: [AnimeSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): SeriesAnimeConnection!
+}
+
+type SeriesTitle {
+  "The romaji title of the series"
+  romaji: String!
 }
 
 type SeriesAnimeEdge {
@@ -1215,10 +1202,8 @@ type SeriesAnimeEdge {
 type Song {
   "The primary key of the resource"
   id: Int!
-  "The name of the composition"
-  title: String
-  "The native name of the composition"
-  titleNative: String
+  "The title of the composition"
+  title: SongTitle!
   "The date that the resource was created"
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
@@ -1226,6 +1211,13 @@ type Song {
   animethemes(type: ThemeType type_in: [ThemeType!] sequence: Int sequence_lesser: Int sequence_greater: Int sort: [AnimeThemeSort!] "Limits number of fetched items." first: Int! = 1000 "The offset from which items are returned." page: Int): [AnimeTheme!]!
   performances(alias: String as: String memberAlias: String memberAs: String relevance: Int relevance_lesser: Int relevance_greater: Int where: SongPerformancesWhereWhereConditions sort: [PerformanceSort!] "Limits number of fetched items." first: Int! = 1000 "The offset from which items are returned." page: Int): [Performance!]!
   resources(site: ResourceSite externalId: Int where: SongResourcesWhereWhereConditions sort: [ExternalResourceSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ExternalResourceConnection!
+}
+
+type SongTitle {
+  "The romaji title of the composition"
+  romaji: String
+  "The native title of the composition"
+  native: String
 }
 
 "Represents a company that produces anime.\n\nFor example, Shaft is the studio that produced the anime Bakemonogatari."
@@ -1236,11 +1228,13 @@ type Studio {
   name: String!
   "The URL slug & route key of the resource"
   slug: String!
+  "The URL for the studio page on the website"
+  siteUrl: String!
   "The date that the resource was created"
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
   updatedAt(format: String! = "Y-m-d H:i:s"): String
-  anime(name_like: String mediaFormat: AnimeMediaFormat @deprecated(reason: "Use 'format' instead") mediaFormat_in: [AnimeMediaFormat!] @deprecated(reason: "Use 'format_in' instead") format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int where: StudioAnimeWhereWhereConditions sort: [AnimeSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): StudioAnimeConnection!
+  anime(name_like: String @deprecated(reason: "Use the 'title_like' argument instead") title_like: String format: AnimeFormat format_in: [AnimeFormat!] season: AnimeSeason season_in: [AnimeSeason!] year: Int year_lesser: Int year_greater: Int where: StudioAnimeWhereWhereConditions sort: [AnimeSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): StudioAnimeConnection!
   images(facet: ImageFacet path_like: String where: StudioImagesWhereWhereConditions sort: [ImageSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ImageConnection!
   resources(site: ResourceSite externalId: Int where: StudioResourcesWhereWhereConditions sort: [ExternalResourceSort!] "Limits number of fetched items." first: Int! = 1000 "A cursor after which elements are returned." after: String): ExternalResourceConnection!
 }
@@ -1260,10 +1254,8 @@ type Synonym {
   id: Int!
   "The alternate title or common abbreviations"
   text: String!
-  "The type of the synonym"
-  type: SynonymType!
-  "The formatted string value of the type field"
-  typeLocalized: String!
+  "The language of the synonym. It may be used for short synonyms"
+  language: String
   "The date that the resource was created"
   createdAt(format: String! = "Y-m-d H:i:s"): String
   "The date that the resource was updated"
@@ -1463,9 +1455,19 @@ scalar DateTimeTz
 "Loose type that allows any value. Be careful when passing in large `Int` or `Float` literals,\nas they may not be parsed correctly on the server side. Use `String` literals if you are\ndealing with really large numbers to be on the safe side."
 scalar Mixed
 
+"A partial date encoded as an integer in YYYYMMDD format.\n\nUnknown parts are represented with 00:\n- 20260709 = July 9, 2026\n- 20260700 = July 2026\n- 20260000 = 2026\n\nNull means the date is unknown."
+scalar FuzzyDateInt
+
 "Represents a response containing a message."
 type MessageResponse {
   message: String!
+}
+
+"A fuzzy date in YYYYMMDD format."
+type FuzzyDate {
+  year: Int
+  month: Int
+  day: Int
 }
 
 "Information about pagination using a simple paginator."
@@ -1640,14 +1642,6 @@ type AnnouncementPaginator {
   paginatorInfo: PaginatorInfo!
   "A list of Announcement items."
   data: [Announcement!]!
-}
-
-"A paginated list of Dump items."
-type DumpPaginator {
-  "Pagination information about the list of items."
-  paginatorInfo: PaginatorInfo!
-  "A list of Dump items."
-  data: [Dump!]!
 }
 
 "A paginated list of Page items."
@@ -3000,50 +2994,6 @@ input AnimeThemeEntryVideosWhereWhereConditionsRelation {
   amount: Int = 1
   "Additional condition logic."
   condition: AnimeThemeEntryVideosWhereWhereConditionsHasCondition
-}
-
-"Dynamic WHERE conditions for the `where` argument of the query `dumpPagination`."
-input QueryDumpPaginationWhereWhereConditions {
-  "The column that is used for the condition."
-  column: DumpFilterableColumns
-  "The operator that is used for the condition."
-  operator: SQLOperator = EQ
-  "The value that is used for the condition."
-  value: Mixed
-  "A set of conditions that requires all conditions to match."
-  AND: [QueryDumpPaginationWhereWhereConditions!]
-  "A set of conditions that requires at least one condition to match."
-  OR: [QueryDumpPaginationWhereWhereConditions!]
-  "Check whether a relation exists. Extra conditions or a minimum amount can be applied."
-  HAS: QueryDumpPaginationWhereWhereConditionsRelation
-}
-
-"Dynamic WHERE HAS conditions for the `where` argument of the query `dumpPagination`."
-input QueryDumpPaginationWhereWhereConditionsHasCondition {
-  "The column that is used for the condition."
-  column: String
-  "The operator that is used for the condition."
-  operator: SQLOperator = EQ
-  "The value that is used for the condition."
-  value: Mixed
-  "A set of conditions that requires all conditions to match."
-  AND: [QueryDumpPaginationWhereWhereConditionsHasCondition!]
-  "A set of conditions that requires at least one condition to match."
-  OR: [QueryDumpPaginationWhereWhereConditionsHasCondition!]
-  "Check whether a relation exists. Extra conditions or a minimum amount can be applied."
-  HAS: QueryDumpPaginationWhereWhereConditionsRelation
-}
-
-"Dynamic HAS conditions for WHERE conditions for the `where` argument of the query `dumpPagination`."
-input QueryDumpPaginationWhereWhereConditionsRelation {
-  "The relation that is checked."
-  relation: String!
-  "The comparison operator to test against the amount."
-  operator: SQLOperator = GTE
-  "The amount to test."
-  amount: Int = 1
-  "Additional condition logic."
-  condition: QueryDumpPaginationWhereWhereConditionsHasCondition
 }
 
 "Dynamic WHERE conditions for the `where` argument of the query `pagePagination`."

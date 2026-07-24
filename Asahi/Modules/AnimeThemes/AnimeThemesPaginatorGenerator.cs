@@ -50,7 +50,7 @@ public static class AnimeThemesPaginatorGenerator
                 _ => "N/A"
             };
             titleComponent.WithTextDisplay(
-                $"### {i + 1}. {anime.Name}\n{mediaFormat} • {anime.Season} {anime.Year} • {totalThemes} {(totalThemes == 1 ? "theme" : "themes")}");
+                $"### {i + 1}. {anime.Title.Romaji}\n{mediaFormat} • {anime.Season} {anime.Year} • {totalThemes} {(totalThemes == 1 ? "theme" : "themes")}");
 
             var image = GetAnimeThumbnail(anime);
             var media = new UnfurledMediaItemProperties(image);
@@ -176,7 +176,7 @@ public static class AnimeThemesPaginatorGenerator
                 new SectionBuilder()
                     .WithComponents([
                         new TextDisplayBuilder(
-                            $"{ThemeToString(state.SelectedTheme, $" • {state.SelectedThemeEntry.ToStringNice()}")}\nfrom *{state.SelectedAnime.Name}*")
+                            $"{ThemeToString(state.SelectedTheme, $" • {state.SelectedThemeEntry.ToStringNice()}")}\nfrom *{state.SelectedAnime.Title.Romaji}*")
                     ]).WithAccessory(
                         new ThumbnailBuilder(new UnfurledMediaItemProperties(GetAnimeThumbnail(state.SelectedAnime)))),
                 // new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
@@ -423,7 +423,7 @@ public static class AnimeThemeModelExtensions
         }
         else
         {
-            displayName = performanceInfo.Artist.Name;
+            displayName = performanceInfo.Artist.Name.Main;
         }
 
         var character = performanceInfo.As;
