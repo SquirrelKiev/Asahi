@@ -235,6 +235,11 @@ public static class Startup
                     x.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
                         config.DanbooruApiCredentials.BasicAuthenticationSecret);
                 }
+
+                if (config.DanbooruUserId != 0)
+                {
+                    x.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue($"(user #{config.DanbooruUserId})"));
+                }
             });
 
         serviceCollection.AddAnimeThemesClient()

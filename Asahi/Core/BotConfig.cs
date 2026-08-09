@@ -48,6 +48,8 @@ public record BotConfig
     
     [YamlMember(Description = "The credentials to use for Danbooru API requests.")]
     public DanbooruApiCredentialsModel DanbooruApiCredentials { get; set; } = default;
+    [YamlMember(Description = "Your Danbooru user ID. Used for identifying the user in the User-Agent header. Highly recommend specifying this, see https://danbooru.donmai.us/forum_topics/37341 for more information.")]
+    public ulong DanbooruUserId { get; set; } = 0;
     
     [YamlMember(Description = "The credentials to use for Reddit API requests. see https://www.reddit.com/prefs/apps")]
     public RedditApiCredentialsModel RedditApiCredentials { get; set; } = default;
@@ -104,7 +106,7 @@ public record BotConfig
         Postgresql
     }
 
-    // given these are deserialized to, the constructor is bypassed. aka, cant get away with a simply = on BasicAuthSecret here
+    // given these are deserialized to, the constructor is bypassed. aka, can't get away with a simply = on BasicAuthSecret here
     public readonly record struct DanbooruApiCredentialsModel(string Username, string ApiKey)
     {
         public string BasicAuthenticationSecret => Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Username}:{ApiKey}"));
