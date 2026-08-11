@@ -419,7 +419,7 @@ public static class AnimeThemeModelExtensions
         }
         else if (performanceInfo.Member != null)
         {
-            displayName = $"{performanceInfo.Member.Name}* from *{performanceInfo.Artist.Name}";
+            displayName = $"{performanceInfo.Member.Name.Main}* from *{performanceInfo.Artist.Name.Main}";
         }
         else
         {
