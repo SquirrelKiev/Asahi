@@ -42,7 +42,7 @@ namespace Asahi.Modules
             if (!string.IsNullOrWhiteSpace(post.TagStringArtist))
             {
                 authors = post.TagStringArtist.Split(' ')
-                    .Select(x => $"[{x}](https://danbooru.donmai.us/posts?tags={x})")
+                    .Select(x => $"[{x.Replace("_", "\\_")}](https://danbooru.donmai.us/posts?tags={x})")
                     .HumanizeStringArrayWithTruncation();
             }
 
@@ -85,13 +85,14 @@ namespace Asahi.Modules
             if (extraInfoMode)
             {
                 footerText.Append("\n**Feed title:** ");
+                footerText.Append(feedTitle.Replace("_", "\\_"));
             }
             else
             {
                 footerText.Append(" • ");
+                footerText.Append(feedTitle);
             }
 
-            footerText.Append($"{feedTitle}");
 
             var shouldSpoiler = post.Rating is DanbooruRating.Explicit or DanbooruRating.Questionable;
             if (extraInfoMode)
@@ -120,10 +121,9 @@ namespace Asahi.Modules
                         extraInfoText += $"\n**Source:** {emote} [{platformName}]({sourceUrl})";
                     }
 
-                    SectionBuilder? section;
                     if (bestVariant != null)
                     {
-                        section = new SectionBuilder()
+                        var section = new SectionBuilder()
                             .WithTextDisplay(titleString + userInfo)
                             .WithTextDisplay(extraInfoText)
                             .WithAccessory(new ThumbnailBuilder(bestVariant.Variant.Url, isSpoiler: shouldSpoiler));
@@ -184,8 +184,9 @@ namespace Asahi.Modules
                     container.WithMediaGallery([
                         new MediaGalleryItemProperties(new UnfurledMediaItemProperties(bestVariant.Variant.Url),
                             isSpoiler: shouldSpoiler, description: footerText.ToString()),
-                        ..bestVariant.ExtraUrls.Select(x =>
-                            new MediaGalleryItemProperties(new UnfurledMediaItemProperties(x), isSpoiler: shouldSpoiler))
+                        .. bestVariant.ExtraUrls.Select(x =>
+                            new MediaGalleryItemProperties(new UnfurledMediaItemProperties(x),
+                                isSpoiler: shouldSpoiler))
                     ]);
                 }
             }
