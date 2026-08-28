@@ -42,7 +42,7 @@ namespace Asahi.Modules
             if (!string.IsNullOrWhiteSpace(post.TagStringArtist))
             {
                 authors = post.TagStringArtist.Split(' ')
-                    .Select(x => $"[{x.Replace("_", "\\_")}](https://danbooru.donmai.us/posts?tags={x})")
+                    .Select(x => $"[{x}](https://danbooru.donmai.us/posts?tags={x})")
                     .HumanizeStringArrayWithTruncation();
             }
 
