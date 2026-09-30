@@ -345,23 +345,17 @@ public class HighlightsTrackingService(
                 Task.Run(
                     async () =>
                     {
-                        logger.LogDebug(
-                            "Checking for Guild {guildId} has begun.",
-                            groupedMessages.Key
-                        );
+                        logger.LogDebug("Checking for Guild {guildId} has begun.", groupedMessages.Key);
 
                         foreach (var queuedMessage in groupedMessages)
                         {
                             try
                             {
                                 var guild = await client.GetGuildAsync(queuedMessage.GuildId);
-                                var textChannel = await guild.GetTextChannelAsync(
-                                    queuedMessage.ChannelId
-                                );
+                                var textChannel = await guild.GetTextChannelAsync(queuedMessage.ChannelId);
 
-                                var shouldAddNewHighlight = messagesShouldSendHighlight.Contains(
-                                    queuedMessage.MessageId
-                                );
+                                var shouldAddNewHighlight =
+                                    messagesShouldSendHighlight.Contains(queuedMessage.MessageId);
 
                                 await CheckMessageForHighlights(
                                     queuedMessage.MessageId,
@@ -384,10 +378,7 @@ public class HighlightsTrackingService(
                             }
                         }
 
-                        logger.LogDebug(
-                            "Finished processing messages for Guild {guildId}.",
-                            groupedMessages.Key
-                        );
+                        logger.LogDebug("Finished processing messages for Guild {guildId}.", groupedMessages.Key);
                     },
                     cancellationToken
                 )
@@ -405,10 +396,8 @@ public class HighlightsTrackingService(
         // don't think we need to lock here?
         //lock (messageCaches)
         //{
-        var cache = messageCaches.GetOrAdd(
-            msg.Channel.Id,
-            _ => new ConcurrentQueue<CachedMessage>()
-        );
+        var cache = messageCaches.GetOrAdd(msg.Channel.Id,
+            _ => new ConcurrentQueue<CachedMessage>());
 
         cache.Enqueue(new CachedMessage(msg.Id, msg.Author.Id, msg.CreatedAt));
         while (cache.Count > maxSize)
@@ -478,7 +467,7 @@ public class HighlightsTrackingService(
 
         await context.SaveChangesAsync();
     }
-    
+
     private async Task RefreshExistingHighlights(
         IReadOnlyList<CachedHighlightedMessage> existingHighlights,
         IGuild guild,
@@ -530,7 +519,7 @@ public class HighlightsTrackingService(
                 if (bail)
                     continue;
 
-                var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap_) =
+                var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap) =
                     await GetReactions(
                         [originalMessage, highlightMessages[^1]],
                         [originalMessage],
@@ -601,9 +590,8 @@ public class HighlightsTrackingService(
                     }
                 );
 
-                cachedHighlightedMessage.TotalUniqueReactions =
-                    uniqueReactionUsersAutoReact.Count;
-                cachedHighlightedMessage.UpdateReactions(emoteUserMap_);
+                cachedHighlightedMessage.TotalUniqueReactions = uniqueReactionUsersAutoReact.Count;
+                cachedHighlightedMessage.UpdateReactions(emoteUserMap);
             }
             catch (Exception ex)
             {
@@ -615,7 +603,7 @@ public class HighlightsTrackingService(
             }
         }
     }
-    
+
     private async Task CheckForNewHighlights(
         BotDbContext context,
         HighlightBoard[] boards,
@@ -713,7 +701,8 @@ public class HighlightsTrackingService(
 
                             entry.AbsoluteExpirationRelativeToNow = timespan;
 
-                            var threshold = ThresholdCalculator.ResolveThreshold(board, channel.Id, parentChannel.Id, channel.CategoryId, channel.Guild.Id);
+                            var threshold = ThresholdCalculator.ResolveThreshold(board, channel.Id, parentChannel.Id,
+                                channel.CategoryId, channel.Guild.Id);
 
                             if (threshold == null)
                             {
@@ -1054,7 +1043,7 @@ public class HighlightsTrackingService(
             }
         }
     }
-    
+
     private static ulong ResolveLoggingChannelId(HighlightBoard board, ulong channelId)
     {
         var loggingChannelId = board.LoggingChannelId;
@@ -1100,7 +1089,7 @@ public class HighlightsTrackingService(
         public required int TotalCachedMessages { get; set; }
         public required int CachedMessagesBeingConsidered { get; set; }
 
-        public override readonly string ToString()
+        public readonly override string ToString()
         {
             return $"**Important info:**\n"
                    + $"Current threshold: `{CurrentThreshold}`\n"
