@@ -724,7 +724,7 @@ public class HighlightsTrackingService(
                         entry =>
                         {
                             var timespan = TimeSpan.FromSeconds(
-                                Math.Min(board.MaxMessageAgeSeconds, 43200)
+                                board.MaxMessageAgeSeconds == 0 ? 43200 : Math.Min(board.MaxMessageAgeSeconds, 43200)
                             ); // 43200 seconds = 12 hours
 
                             entry.AbsoluteExpirationRelativeToNow = timespan;
