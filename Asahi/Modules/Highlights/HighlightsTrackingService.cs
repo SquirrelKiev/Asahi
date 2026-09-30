@@ -561,7 +561,7 @@ public class HighlightsTrackingService(
                     }
 
                     if (reactorsMessage == null)
-                        return;
+                        continue;
 
                     var webhook = await loggingChannel.GetOrCreateWebhookAsync(
                         BotService.WebhookDefaultName
