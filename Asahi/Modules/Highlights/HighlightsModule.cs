@@ -1671,6 +1671,11 @@ public class HighlightsModule(
             name,
             async options =>
             {
+                if (channel is not ITextChannel textChannel)
+                {
+                    return new ConfigChangeResult(false, "Channel must be a text channel.");
+                }
+
                 var threshold = options.board.Thresholds.FirstOrDefault(x =>
                     x.OverrideId == channel.Id
                 );
@@ -1678,8 +1683,6 @@ public class HighlightsModule(
                     threshold ??= options.board.Thresholds.FirstOrDefault(x =>
                         x.OverrideId == threadChannel.ParentChannel.Id
                     );
-
-                var textChannel = (ITextChannel)channel;
 
                 threshold ??= options.board.Thresholds.FirstOrDefault(x =>
                     x.OverrideId == textChannel.CategoryId
