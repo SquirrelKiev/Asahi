@@ -41,24 +41,25 @@ public class HighlightsTrackingService(
         }
     }
 
-    public record struct ForcedMessage(MessageIdInfo QueuedMessage, string BoardName);
+    /// <remarks>Only touched while holding <see cref="lockMessageQueue"/>.</remarks>
+    private class PendingCheck
+    {
+        public bool ShouldSendHighlight { get; set; }
+        public HashSet<string> ForcedBoards { get; } = [];
+    }
 
     private readonly ConcurrentDictionary<ulong, ConcurrentQueue<CachedMessage>> messageCaches = [];
     private readonly MemoryCache messageThresholds = new(new MemoryCacheOptions());
 
     private readonly object lockMessageQueue = new();
-    private readonly HashSet<MessageIdInfo> messageQueue = [];
-    private readonly HashSet<MessageIdInfo> messageQueueShouldSendHighlight = [];
-    private readonly HashSet<ForcedMessage> messageQueueForceToHighlights = [];
+
+    private Dictionary<MessageIdInfo, PendingCheck> messageQueue = [];
 
     public void QueueMessage(MessageIdInfo messageToQueue, bool shouldSendHighlight)
     {
         lock (lockMessageQueue)
         {
-            messageQueue.Add(messageToQueue);
-
-            if (shouldSendHighlight)
-                messageQueueShouldSendHighlight.Add(messageToQueue);
+            GetOrAddPendingCheck(messageToQueue).ShouldSendHighlight |= shouldSendHighlight;
         }
     }
 
@@ -66,10 +67,23 @@ public class HighlightsTrackingService(
     {
         lock (lockMessageQueue)
         {
-            QueueMessage(messageToQueue, true);
+            var pendingCheck = GetOrAddPendingCheck(messageToQueue);
 
-            messageQueueForceToHighlights.Add(new ForcedMessage(messageToQueue, boardName));
+            pendingCheck.ShouldSendHighlight = true;
+            pendingCheck.ForcedBoards.Add(boardName);
         }
+    }
+
+    /// <remarks>Must be called while holding <see cref="lockMessageQueue"/>.</remarks>
+    private PendingCheck GetOrAddPendingCheck(MessageIdInfo message)
+    {
+        if (!messageQueue.TryGetValue(message, out var pendingCheck))
+        {
+            pendingCheck = new PendingCheck();
+            messageQueue.Add(message, pendingCheck);
+        }
+
+        return pendingCheck;
     }
 
     protected override async Task ExecuteAfterReadyAsync(CancellationToken cancellationToken)
@@ -312,9 +326,7 @@ public class HighlightsTrackingService(
 
     private async Task OnFinishWaitingForTick(CancellationToken cancellationToken)
     {
-        ForcedMessage[] forcedMessages;
-        HashSet<MessageIdInfo> messages;
-        HashSet<ulong> messagesShouldSendHighlight;
+        Dictionary<MessageIdInfo, PendingCheck> messages;
         lock (lockMessageQueue)
         {
             if (messageQueue.Count == 0)
@@ -322,21 +334,13 @@ public class HighlightsTrackingService(
                 return;
             }
 
-            messages = [.. messageQueue];
-            messageQueue.Clear();
-
-            messagesShouldSendHighlight = messageQueueShouldSendHighlight
-                .Select(x => x.MessageId)
-                .ToHashSet();
-            messageQueueShouldSendHighlight.Clear();
-
-            forcedMessages = [.. messageQueueForceToHighlights];
-            messageQueueForceToHighlights.Clear();
+            messages = messageQueue;
+            messageQueue = [];
         }
 
         List<Task> guildTasks = [];
 
-        foreach (var groupedMessages in messages.GroupBy(x => x.GuildId))
+        foreach (var groupedMessages in messages.GroupBy(x => x.Key.GuildId))
         {
             if (cancellationToken.IsCancellationRequested)
                 break;
@@ -347,24 +351,18 @@ public class HighlightsTrackingService(
                     {
                         logger.LogDebug("Checking for Guild {guildId} has begun.", groupedMessages.Key);
 
-                        foreach (var queuedMessage in groupedMessages)
+                        foreach (var (queuedMessage, pendingCheck) in groupedMessages)
                         {
                             try
                             {
                                 var guild = await client.GetGuildAsync(queuedMessage.GuildId);
                                 var textChannel = await guild.GetTextChannelAsync(queuedMessage.ChannelId);
 
-                                var shouldAddNewHighlight =
-                                    messagesShouldSendHighlight.Contains(queuedMessage.MessageId);
-
                                 await CheckMessageForHighlights(
                                     queuedMessage.MessageId,
                                     textChannel,
-                                    shouldAddNewHighlight,
-                                    forcedMessages
-                                        .Where(x => x.QueuedMessage == queuedMessage)
-                                        .Select(x => x.BoardName)
-                                        .ToArray()
+                                    pendingCheck.ShouldSendHighlight,
+                                    [.. pendingCheck.ForcedBoards]
                                 );
                             }
                             catch (Exception ex)
