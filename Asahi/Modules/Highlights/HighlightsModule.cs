@@ -663,7 +663,7 @@ public class HighlightsModule(
                     )
                 );
             },
-            boards => boards.Include(x => x.SpoilerChannels)
+            boards => boards.Include(x => x.LoggingChannelOverrides)
         );
     }
 
