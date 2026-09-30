@@ -349,7 +349,7 @@ public class HighlightsModule(
             [Autocomplete(typeof(HighlightsThresholdAutocomplete))]
             [MaxLength(20)]
             string overrideId,
-            [Summary(description: "The maximum age of the message, in seconds.")] [MinValue(0)]
+            [Summary(description: "The multiplier applied to the unique user count.")] [MinValue(0)]
             float uniqueUserMultiplier
         )
         {
@@ -1276,7 +1276,7 @@ public class HighlightsModule(
 
         [SlashCommand(
             "max-reactions",
-            "Sets how many attempts the bot will make to react to the message sent in the highlights channel."
+            "Sets the maximum number of reactions the bot will add to the highlight."
         )]
         public Task AutoReactMaxReactionsSlash(
             [Summary(description: NameDescription)]
@@ -1285,7 +1285,7 @@ public class HighlightsModule(
             string name,
             [Summary(
                 description:
-                "The maximum number of emojis the bot will react to the message sent in the highlights channel with."
+                "The maximum number of reactions the bot add to the highlight."
             )]
             [MinValue(0)]
             [MaxValue(20)]
