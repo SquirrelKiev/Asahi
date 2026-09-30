@@ -1906,8 +1906,8 @@ public class HighlightsModule(
                 return;
 
             HighlightsTrackingService.CalculateThreshold(
-                board.Thresholds.First(),
-                hts.GetCachedMessages(Context.Channel.Id),
+                threshold,
+                hts.GetCachedMessages(channel.Id),
                 DateTimeOffset.UtcNow,
                 out var threshDebugInfo
             );
