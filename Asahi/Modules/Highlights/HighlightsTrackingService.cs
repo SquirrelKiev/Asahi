@@ -331,6 +331,7 @@ public class HighlightsTrackingService(
             messageQueueShouldSendHighlight.Clear();
 
             forcedMessages = [.. messageQueueForceToHighlights];
+            messageQueueForceToHighlights.Clear();
         }
 
         List<Task> guildTasks = [];
