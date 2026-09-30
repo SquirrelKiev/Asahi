@@ -718,9 +718,6 @@ public class HighlightsTrackingService(
                     if (forcedBoards.Contains(board.Name))
                         return true;
 
-                    if (isChannelLocked)
-                        return false;
-
                     var threshold = messageThresholds.GetOrCreate(
                         GetThresholdKey(board, msg.Id),
                         entry =>
