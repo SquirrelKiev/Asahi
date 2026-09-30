@@ -10,12 +10,9 @@ namespace Asahi.Modules.Highlights
             IReadOnlyCollection<ulong> AuthorRoleIds,
             TimeSpan Age,
             bool IsChannelLocked);
-        
-        public static bool IsEligible(HighlightBoard board, HighlightCandidate candidate, bool isForced)
+
+        public static bool IsEligible(HighlightBoard board, HighlightCandidate candidate)
         {
-            if (isForced)
-                return true;
-            
             if(board.HighlightsMuteRole != 0 && candidate.AuthorRoleIds.Contains(board.HighlightsMuteRole))
                 return false;
             

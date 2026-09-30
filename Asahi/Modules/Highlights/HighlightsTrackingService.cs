@@ -660,7 +660,7 @@ public class HighlightsTrackingService(
 
         var eligibleBoards = boards
             .Where(x => !boardsAlreadyHighlightedIn.Contains(x.Name))
-            .Where(x => HighlightRules.IsEligible(x, candidate, forcedBoards.Contains(x.Name)))
+            .Where(x => forcedBoards.Contains(x.Name) || HighlightRules.IsEligible(x, candidate))
             .ToArray();
 
         logger.LogDebug(
@@ -731,12 +731,12 @@ public class HighlightsTrackingService(
                     return threshold
                            <= uniqueReactionUsers.Count(y =>
                            {
-                               logger.LogTrace(
+                    logger.LogTrace(
                                    "user {user}: filter self react: {fsr}, is self react: {isr}",
                                    y,
-                                   board.FilterSelfReactions,
+                        board.FilterSelfReactions,
                                    y == msg.Author.Id
-                               );
+                    );
 
                                return board.FilterSelfReactions == false || y != msg.Author.Id;
                            });
