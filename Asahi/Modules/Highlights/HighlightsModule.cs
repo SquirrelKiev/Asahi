@@ -78,11 +78,11 @@ public class HighlightsModule(
             async (context, cleanName, _) =>
             {
                 var board = await context.HighlightBoards.FirstOrDefaultAsync(x =>
-                    x.GuildId == Context.Guild.Id && x.Name == name
+                    x.GuildId == Context.Guild.Id && x.Name == cleanName
                 );
                 if (board == null)
                 {
-                    return new ConfigChangeResult(false, $"`{name}` does not exist already.");
+                    return new ConfigChangeResult(false, $"`{cleanName}` does not exist already.");
                 }
 
                 context.HighlightBoards.Remove(board);
