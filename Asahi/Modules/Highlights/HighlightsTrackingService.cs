@@ -423,8 +423,6 @@ public class HighlightsTrackingService(
         public IEmote emote = emote;
     }
 
-    // I love linq
-    // its such a mess tho lmao
     private async Task CheckMessageForHighlights(
         ulong messageId,
         ITextChannel channel,
@@ -441,43 +439,37 @@ public class HighlightsTrackingService(
             ? await client.GetChannelAsync(threadChannel.GetParentChannelId())
             : channel;
 
-        // could probably be merged into one request?
-        if (await context.HighlightBoards.AllAsync(x => x.GuildId != channel.Guild.Id))
+        var boards = await context.HighlightBoards
+            .Where(x => x.GuildId == channel.Guild.Id)
+            .Include(x => x.Thresholds)
+            .Include(x => x.SpoilerChannels)
+            .Include(x => x.LoggingChannelOverrides)
+            .ToArrayAsync();
+
+        if (boards.Length == 0)
             return;
+
+        var existingHighlights = await context.CachedHighlightedMessages
+            .Include(x => x.CachedMessageReactions)
+            .Where(x =>
+                x.HighlightBoardGuildId == channel.Guild.Id
+                && (x.OriginalMessageId == messageId || x.HighlightMessageIds.Contains(messageId))
+            )
+            .ToListAsync();
 
         #region Handling new reactions to already highlighted messages
 
         var reactionsCache = new Dictionary<int, IUser[]>();
-        var boardsWithMarkedHighlight = await context
-            .HighlightBoards.Where(x =>
-                x.GuildId == channel.Guild.Id
-                && x.HighlightedMessages.Any(y =>
-                    y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)
-                )
-            )
-            .Include(highlightBoard => highlightBoard.LoggingChannelOverrides)
-            .ToArrayAsync();
 
-        if (boardsWithMarkedHighlight.Length != 0)
+        if (existingHighlights.Count != 0)
         {
-            foreach (var board in boardsWithMarkedHighlight)
+            foreach (var cachedHighlightedMessage in existingHighlights)
             {
+                // board is already tracked by ef core from the boards request, so this should be valid
+                var board = cachedHighlightedMessage.HighlightBoard;
+
                 try
                 {
-                    var cachedHighlightedMessage = await context
-                        .CachedHighlightedMessages.Include(x => x.CachedMessageReactions)
-                        .FirstOrDefaultAsync(x =>
-                            x.HighlightBoard.GuildId == board.GuildId
-                            && x.HighlightBoard.Name == board.Name
-                            && (
-                                x.OriginalMessageId == messageId
-                                || x.HighlightMessageIds.Contains(messageId)
-                            )
-                        );
-
-                    if (cachedHighlightedMessage == null)
-                        continue;
-
                     var originalMessage = await (
                         await channel.Guild.GetTextChannelAsync(
                             cachedHighlightedMessage.OriginalMessageChannelId
@@ -487,16 +479,8 @@ public class HighlightsTrackingService(
                     if (originalMessage == null)
                         continue;
 
-                    var loggingChannelId = board.LoggingChannelId;
-                    var loggingChannelOverride = board.LoggingChannelOverrides.FirstOrDefault(x =>
-                        x.OverriddenChannelId == originalMessage.Channel.Id
+                    var loggingChannelId = ResolveLoggingChannelId(board, cachedHighlightedMessage.OriginalMessageChannelId
                     );
-
-                    if (loggingChannelOverride != null)
-                    {
-                        loggingChannelId = loggingChannelOverride.LoggingChannelId;
-                    }
-
                     var loggingChannel = await channel.Guild.GetTextChannelAsync(loggingChannelId);
 
                     List<IMessage> highlightMessages = [];
@@ -619,7 +603,7 @@ public class HighlightsTrackingService(
             return;
 
         if (
-            await context.HighlightBoards.AnyAsync(x =>
+            boards.Any(x =>
                 x.LoggingChannelId == parentChannel.Id
                 || x.LoggingChannelOverrides.Any(y => y.LoggingChannelId == parentChannel.Id)
             )
@@ -636,8 +620,6 @@ public class HighlightsTrackingService(
 
         var nonUniqueReactions = msg.Reactions.Sum(x => x.Value.ReactionCount);
 
-        var messageAge = (DateTimeOffset.UtcNow - msg.Timestamp).TotalSeconds;
-
         var everyoneChannelPermissions = PermissionsForRole(channel);
 
         var isChannelLocked =
@@ -651,60 +633,34 @@ public class HighlightsTrackingService(
                 isChannelLocked = true;
         }
 
-        var boardsQuery = context.HighlightBoards
-            .Where(x => x.GuildId == channel.Guild.Id)
-            .Where(x =>
-                // if we're a forced board then skip all the standard validation
-                forcedBoards.Contains(x.Name) ||
-                (
-                    // is the message young enough? AND
-                    (x.MaxMessageAgeSeconds == 0 || messageAge <= x.MaxMessageAgeSeconds) &&
-                    // is the channel not locked? AND
-                    (!x.IgnoreLockedChannels || !isChannelLocked) &&
-                    // is the channel allowed by filters?
-                    (
-                        x.FilteredChannelsIsBlockList
-                            // if both the message's channel and the parent channel is not in the blocklist
-                            ? !x.FilteredChannels.Contains(channel.Id) && !x.FilteredChannels.Contains(parentChannel.Id)
-                            // if either the message's channel or the parent channel is in the allowlist
-                            : x.FilteredChannels.Contains(channel.Id) || x.FilteredChannels.Contains(parentChannel.Id)
-                    )
-                )
-            )
-            // although if the message is already highlighted in this board then we don't care about it anyway  
-            .Where(x => !x.HighlightedMessages.Any(y =>
-                y.OriginalMessageId == messageId || y.HighlightMessageIds.Contains(messageId)
-            ));
+        var boardsAlreadyHighlightedIn = existingHighlights.Select(x => x.HighlightBoardName).ToHashSet();
 
-        var boards = (
-                await boardsQuery
-                    .Include(x => x.Thresholds)
-                    .Include(x => x.SpoilerChannels)
-                    .Include(x => x.LoggingChannelOverrides)
-                    .ToArrayAsync()
-            )
-            // we also don't care about the board if the user is muted for that board
-            .Where(x =>
-                msg.Author is not IGuildUser
-                || msg.Author is IGuildUser guildUser
-                && guildUser.RoleIds.All(y => y != x.HighlightsMuteRole)
-            )
+        var candidate = new HighlightRules.HighlightCandidate(
+            channel.Id,
+            parentChannel.Id,
+            (msg.Author as IGuildUser)?.RoleIds ?? [],
+            DateTimeOffset.UtcNow - msg.Timestamp,
+            isChannelLocked
+        );
+
+        var eligibleBoards = boards
+            .Where(x => !boardsAlreadyHighlightedIn.Contains(x.Name))
+            .Where(x => HighlightRules.IsEligible(x, candidate, forcedBoards.Contains(x.Name)))
             .ToArray();
 
         logger.LogDebug(
             "Total non unique reactions is {nur}, found {bl} boards",
             nonUniqueReactions,
-            boards.Length
+            eligibleBoards.Length
         );
 
-        if (boards.Length == 0)
+        if (eligibleBoards.Length == 0)
             return;
 
         var aliases = await context
             .EmoteAliases.Where(x => x.GuildId == channel.Guild.Id)
             .ToArrayAsync();
 
-        HashSet<HighlightBoard> completedBoards = [];
         var (uniqueReactionUsers, reactionEmotes, emoteUserMap) = await GetReactions(
             [msg],
             [msg],
@@ -712,8 +668,7 @@ public class HighlightsTrackingService(
         );
 
         foreach (
-            var board in boards
-                .Where(x => !completedBoards.Contains(x))
+            var board in eligibleBoards
                 .Where(board =>
                 {
                     if (forcedBoards.Contains(board.Name))
@@ -729,18 +684,7 @@ public class HighlightsTrackingService(
 
                             entry.AbsoluteExpirationRelativeToNow = timespan;
 
-                            var threshold = board.Thresholds.FirstOrDefault(x =>
-                                x.OverrideId == channel.Id
-                            );
-                            threshold ??= board.Thresholds.FirstOrDefault(x =>
-                                x.OverrideId == parentChannel.Id
-                            );
-                            threshold ??= board.Thresholds.FirstOrDefault(x =>
-                                x.OverrideId == channel.CategoryId
-                            );
-                            threshold ??= board.Thresholds.FirstOrDefault(x =>
-                                x.OverrideId == channel.Guild.Id
-                            );
+                            var threshold = ThresholdCalculator.ResolveThreshold(board, channel.Id, parentChannel.Id, channel.CategoryId, channel.Guild.Id);
 
                             if (threshold == null)
                             {
@@ -755,7 +699,7 @@ public class HighlightsTrackingService(
 
                             var messages = GetCachedMessages(channel.Id);
 
-                            var requiredReactions = CalculateThreshold(
+                            var requiredReactions = ThresholdCalculator.CalculateThreshold(
                                 threshold,
                                 messages,
                                 msg.CreatedAt,
@@ -783,8 +727,6 @@ public class HighlightsTrackingService(
                 })
         )
         {
-            completedBoards.Add(board);
-
             await SendAndTrackHighlightMessage(
                 board,
                 aliases,
@@ -796,19 +738,6 @@ public class HighlightsTrackingService(
         }
 
         await context.SaveChangesAsync();
-    }
-
-    public int GetCachedThreshold(HighlightBoard board, ulong msgId)
-    {
-        if (messageThresholds.TryGetValue(GetThresholdKey(board, msgId), out int cachedThreshold))
-            return cachedThreshold;
-        else
-            return -1;
-    }
-
-    private static string GetThresholdKey(HighlightBoard board, ulong msgId)
-    {
-        return $"{board.GuildId}-{board.Name}-{msgId}";
     }
 
     public async Task<(
@@ -873,13 +802,6 @@ public class HighlightsTrackingService(
         }
     }
 
-    public IReadOnlyCollection<CachedMessage> GetCachedMessages(ulong channelId)
-    {
-        messageCaches.TryGetValue(channelId, out var queue);
-        IReadOnlyCollection<CachedMessage> messages = queue ?? [];
-        return messages;
-    }
-
     public void AddReactionsFieldToQuote(
         EmbedBuilder embedBuilder,
         IEnumerable<ReactionInfo> reactions,
@@ -922,16 +844,7 @@ public class HighlightsTrackingService(
         Dictionary<IEmote, HashSet<ulong>> emoteUserMap
     )
     {
-        var loggingChannelId = board.LoggingChannelId;
-
-        var loggingChannelOverride = board.LoggingChannelOverrides.FirstOrDefault(x =>
-            x.OverriddenChannelId == message.Channel.Id
-        );
-
-        if (loggingChannelOverride != null)
-        {
-            loggingChannelId = loggingChannelOverride.LoggingChannelId;
-        }
+        var loggingChannelId = ResolveLoggingChannelId(board, message.Channel.Id);
 
         logger.LogDebug("Sending highlight message to {channel}", loggingChannelId);
 
@@ -1114,6 +1027,41 @@ public class HighlightsTrackingService(
             }
         }
     }
+    
+    private static ulong ResolveLoggingChannelId(HighlightBoard board, ulong channelId)
+    {
+        var loggingChannelId = board.LoggingChannelId;
+        var loggingChannelOverride = board.LoggingChannelOverrides.FirstOrDefault(x =>
+            x.OverriddenChannelId == channelId
+        );
+
+        if (loggingChannelOverride != null)
+        {
+            loggingChannelId = loggingChannelOverride.LoggingChannelId;
+        }
+
+        return loggingChannelId;
+    }
+
+    public int GetCachedThreshold(HighlightBoard board, ulong msgId)
+    {
+        if (messageThresholds.TryGetValue(GetThresholdKey(board, msgId), out int cachedThreshold))
+            return cachedThreshold;
+        else
+            return -1;
+    }
+
+    private static string GetThresholdKey(HighlightBoard board, ulong msgId)
+    {
+        return $"{board.GuildId}-{board.Name}-{msgId}";
+    }
+
+    public IReadOnlyCollection<CachedMessage> GetCachedMessages(ulong channelId)
+    {
+        messageCaches.TryGetValue(channelId, out var queue);
+        IReadOnlyCollection<CachedMessage> messages = queue ?? [];
+        return messages;
+    }
 
     public struct ThresholdInfo
     {
@@ -1137,91 +1085,6 @@ public class HighlightsTrackingService(
                    + $"Total messages cached: `{TotalCachedMessages}`\n"
                    + $"Cached messages being considered in user count: `{CachedMessagesBeingConsidered}`";
         }
-    }
-
-    public static int CalculateThreshold(
-        HighlightThreshold thresholdConfig,
-        IReadOnlyCollection<CachedMessage> messages,
-        DateTimeOffset messageSentAt,
-        out ThresholdInfo debugInfo
-    )
-    {
-        Dictionary<ulong, double> userWeights = [];
-
-        var orderedMessages = messages.OrderByDescending(x => x.Timestamp).ToArray();
-
-        var userWeightMessages = orderedMessages
-            .Where(x =>
-                x.Timestamp <= messageSentAt
-                && x.Timestamp
-                >= messageSentAt
-                - TimeSpan.FromSeconds(thresholdConfig.UniqueUserMessageMaxAgeSeconds)
-            )
-            .ToArray();
-
-        foreach (var message in userWeightMessages)
-        {
-            var userId = message.AuthorId;
-            if (userWeights.ContainsKey(userId))
-                continue;
-
-            var timeSinceLastMessage = messageSentAt - message.Timestamp;
-            double weight = 1f;
-
-            if (!(timeSinceLastMessage.TotalSeconds <= thresholdConfig.UniqueUserDecayDelaySeconds))
-            {
-                weight =
-                    1
-                    - (
-                        timeSinceLastMessage.TotalSeconds
-                        - thresholdConfig.UniqueUserDecayDelaySeconds
-                    )
-                    / (
-                        thresholdConfig.UniqueUserMessageMaxAgeSeconds
-                        - thresholdConfig.UniqueUserDecayDelaySeconds
-                    );
-            }
-
-            userWeights.TryAdd(userId, weight);
-        }
-
-        var highActivity =
-            orderedMessages.Length >= thresholdConfig.HighActivityMessageLookBack
-            && (
-                messageSentAt
-                - orderedMessages[thresholdConfig.HighActivityMessageLookBack - 1].Timestamp
-            ).TotalSeconds < thresholdConfig.HighActivityMessageMaxAgeSeconds;
-
-        var weightedUserCount = userWeights.Sum(kvp => kvp.Value);
-
-        var highActivityMultiplier = highActivity ? thresholdConfig.HighActivityMultiplier : 1f;
-
-        var rawThreshold =
-        (
-            thresholdConfig.BaseThreshold
-            + weightedUserCount * thresholdConfig.UniqueUserMultiplier
-        ) * highActivityMultiplier;
-
-        var thresholdDecimal = rawThreshold % 1;
-        var roundedThreshold = Math.Min(
-            thresholdConfig.MaxThreshold,
-            thresholdDecimal < thresholdConfig.RoundingThreshold
-                ? Math.Floor(rawThreshold)
-                : Math.Ceiling(rawThreshold)
-        );
-
-        debugInfo = new ThresholdInfo()
-        {
-            CurrentThreshold = roundedThreshold,
-            RawThreshold = rawThreshold,
-            WeightedUserCount = weightedUserCount,
-            UnweightedUserCount = userWeights.Count,
-            IsHighActivity = highActivity,
-            TotalCachedMessages = orderedMessages.Length,
-            CachedMessagesBeingConsidered = userWeightMessages.Length,
-        };
-
-        return (int)roundedThreshold;
     }
 
     public static ChannelPermissions PermissionsForRole(IGuildChannel channel)

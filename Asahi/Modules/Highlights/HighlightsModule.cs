@@ -1675,21 +1675,14 @@ public class HighlightsModule(
                 {
                     return new ConfigChangeResult(false, "Channel must be a text channel.");
                 }
-
-                var threshold = options.board.Thresholds.FirstOrDefault(x =>
-                    x.OverrideId == channel.Id
-                );
-                if (channel is SocketThreadChannel threadChannel)
-                    threshold ??= options.board.Thresholds.FirstOrDefault(x =>
-                        x.OverrideId == threadChannel.ParentChannel.Id
-                    );
-
-                threshold ??= options.board.Thresholds.FirstOrDefault(x =>
-                    x.OverrideId == textChannel.CategoryId
-                );
-                threshold ??= options.board.Thresholds.FirstOrDefault(x =>
-                    x.OverrideId == channel.Guild.Id
-                );
+                
+                ulong? parentId = null;
+                if (textChannel is SocketThreadChannel threadChannel)
+                {
+                    parentId = threadChannel.ParentChannel.Id;
+                }
+                
+                var threshold = ThresholdCalculator.ResolveThreshold(options.board, channel.Id, parentId, textChannel.CategoryId, textChannel.Guild.Id);
 
                 if (threshold == null)
                     return new ConfigChangeResult(
@@ -1748,7 +1741,7 @@ public class HighlightsModule(
                     }
                 }
 
-                HighlightsTrackingService.CalculateThreshold(
+                ThresholdCalculator.CalculateThreshold(
                     threshold,
                     hts.GetCachedMessages(channel.Id),
                     lookupDate,
@@ -1878,6 +1871,19 @@ public class HighlightsModule(
     )
     {
         loggingShouldStop = stopLogging;
+        
+        // do i need to do this? can i just change the type of IGuildChannel to ITextChannel and the channel types stay?
+        if (channel is not ITextChannel textChannel)
+        {
+            await RespondAsync("Channel must be a text channel.");
+            return;
+        }
+                
+        ulong? parentId = null;
+        if (textChannel is SocketThreadChannel threadChannel)
+        {
+            parentId = threadChannel.ParentChannel.Id;
+        }
 
         await RespondAsync("away we go");
 
@@ -1890,22 +1896,13 @@ public class HighlightsModule(
                 .HighlightBoards.Where(x => x.GuildId == Context.Guild.Id && x.Name == name)
                 .Include(highlightBoard => highlightBoard.Thresholds)
                 .FirstAsync();
-
-            var threshold = board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Id);
-            if (channel is SocketThreadChannel threadChannel)
-                threshold ??= board.Thresholds.FirstOrDefault(x =>
-                    x.OverrideId == threadChannel.ParentChannel.Id
-                );
-            if (channel is ITextChannel textChannel)
-                threshold ??= board.Thresholds.FirstOrDefault(x =>
-                    x.OverrideId == textChannel.CategoryId
-                );
-            threshold ??= board.Thresholds.FirstOrDefault(x => x.OverrideId == channel.Guild.Id);
+            
+            var threshold = ThresholdCalculator.ResolveThreshold(board, channel.Id, parentId, textChannel.CategoryId, textChannel.GuildId);
 
             if (threshold == null || loggingShouldStop)
                 return;
 
-            HighlightsTrackingService.CalculateThreshold(
+            ThresholdCalculator.CalculateThreshold(
                 threshold,
                 hts.GetCachedMessages(channel.Id),
                 DateTimeOffset.UtcNow,
