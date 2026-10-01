@@ -12,7 +12,7 @@ namespace Asahi.Modules.AnimeThemes;
 public class AnimeThemesModule(
     IAnimeThemesClient atClient,
     InteractiveService interactive,
-    BotConfig config,
+    AnimeThemesPaginatorGenerator animeThemesPaginatorGenerator,
     BotEmoteService emotes,
     ILogger<AnimeThemesModule> logger) : BotModule
 {
@@ -53,7 +53,7 @@ public class AnimeThemesModule(
             .WithUsers(Context.User)
             .WithPageCount(state.CurrentStep.TotalPages)
             .WithUserState(state)
-            .WithPageFactory(p => AnimeThemesPaginatorGenerator.GeneratePage(p, config, emotes))
+            .WithPageFactory(animeThemesPaginatorGenerator.GeneratePage)
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
             .Build();

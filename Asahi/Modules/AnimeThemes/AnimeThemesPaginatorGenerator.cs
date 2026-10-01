@@ -7,26 +7,26 @@ using JetBrains.Annotations;
 
 namespace Asahi.Modules.AnimeThemes;
 
-public static class AnimeThemesPaginatorGenerator
+[Inject(ServiceLifetime.Singleton)]
+public class AnimeThemesPaginatorGenerator(BotConfig config, BotEmoteService emotes)
 {
-    public static IPage GeneratePage(IComponentPaginator paginator, BotConfig config, BotEmoteService emoteService)
+    public IPage GeneratePage(IComponentPaginator paginator)
     {
         var state = paginator.GetUserState<AnimeThemesSelectionState>();
 
         return state.CurrentStep switch
         {
             AnimeThemesSelectionState.VideoDisplayState videoDisplayState =>
-                GenerateVideoDisplayPage(paginator, videoDisplayState, emoteService),
+                GenerateVideoDisplayPage(paginator, videoDisplayState),
 
             AnimeThemesSelectionState.ThemeSelectionState themeSelectionState =>
-                GenerateThemeSelectionPage(paginator, themeSelectionState, config),
+                GenerateThemeSelectionPage(paginator, themeSelectionState),
 
             _ => GenerateAnimeSelectionPage(paginator, state.CurrentStep)
         };
     }
 
-    private static Page GenerateAnimeSelectionPage(IComponentPaginator p,
-        AnimeThemesSelectionState.AnimeSelectionState state)
+    private Page GenerateAnimeSelectionPage(IComponentPaginator p, AnimeThemesSelectionState.AnimeSelectionState state)
     {
         var chunk = state.SearchResponse.AnimePagination.Data.Chunk(AnimeThemesSelectionState.MaxAnimePerPage)
             .ElementAt(p.CurrentPageIndex);
@@ -91,8 +91,8 @@ public static class AnimeThemesPaginatorGenerator
             .Build();
     }
 
-    private static Page GenerateThemeSelectionPage(IComponentPaginator p,
-        AnimeThemesSelectionState.ThemeSelectionState state, BotConfig config)
+    private Page GenerateThemeSelectionPage(IComponentPaginator p,
+        AnimeThemesSelectionState.ThemeSelectionState state)
     {
         var chunk = state.SelectedAnime.Animethemes.Order(AnimeThemeInfoComparer.Instance)
             .Cast<IAnimeThemeInfoWithEntries>()
@@ -108,7 +108,7 @@ public static class AnimeThemesPaginatorGenerator
             var titleText = ThemeToString(theme);
             var titleComponent = new TextDisplayBuilder(titleText);
 
-            if (!TryAddThumbnail(config, theme, titleComponent, container))
+            if (!TryAddThumbnail(theme, titleComponent, container))
             {
                 container.WithTextDisplay(titleComponent);
             }
@@ -158,8 +158,8 @@ public static class AnimeThemesPaginatorGenerator
             .Build();
     }
 
-    private static IPage GenerateVideoDisplayPage(IComponentPaginator p,
-        AnimeThemesSelectionState.VideoDisplayState state, BotEmoteService emoteService)
+    private IPage GenerateVideoDisplayPage(IComponentPaginator p,
+        AnimeThemesSelectionState.VideoDisplayState state)
     {
         var videoUrl = state.SelectedVideo.Link;
         if (state.CacheBustingId != Guid.Empty)
@@ -187,7 +187,7 @@ public static class AnimeThemesPaginatorGenerator
                     new ButtonBuilder("Back", ModulePrefixes.AnimeThemes.BackButtonId, ButtonStyle.Danger,
                         isDisabled: p.ShouldDisable()),
                     new ButtonBuilder("Refresh Video", ModulePrefixes.AnimeThemes.RefreshVideoId, ButtonStyle.Secondary,
-                        emote: emoteService.Refresh, isDisabled: p.ShouldDisable()),
+                        emote: emotes.Refresh, isDisabled: p.ShouldDisable()),
                 ])
                 // new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
                 // .WithAccessory(new ButtonBuilder("Back", BackButtonId, ButtonStyle.Danger,
@@ -204,8 +204,7 @@ public static class AnimeThemesPaginatorGenerator
 
     #region Utility methods
 
-    private static bool TryAddThumbnail(BotConfig config, IAnimeThemeInfoWithEntries theme,
-        TextDisplayBuilder titleComponent,
+    private bool TryAddThumbnail(IAnimeThemeInfoWithEntries theme, TextDisplayBuilder titleComponent,
         ContainerBuilder container)
     {
         // we only care about the first version so we can get the thumbnail
@@ -227,29 +226,28 @@ public static class AnimeThemesPaginatorGenerator
         var titleSectionComponent = new SectionBuilder().WithTextDisplay(titleComponent)
             .WithAccessory(
                 new ThumbnailBuilder(
-                    new UnfurledMediaItemProperties(GetAnimeVideoThumbnailUrl(thumbnailVideoLink,
-                        config))));
+                    new UnfurledMediaItemProperties(GetAnimeVideoThumbnailUrl(thumbnailVideoLink))));
 
         container.WithSection(titleSectionComponent);
 
         return true;
     }
 
-    private static string GetAnimeVideoThumbnailUrl(string url, BotConfig config)
+    private string GetAnimeVideoThumbnailUrl(string url)
     {
         var base64EncodedUrl = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(url));
 
         return $"{config.AsahiWebServicesBaseUrl}/api/thumb/{base64EncodedUrl}.png";
     }
 
-    private static string GetAnimeThumbnail(IAnimeInfo anime)
+    private string GetAnimeThumbnail(IAnimeInfo anime)
     {
         return anime.Images?.Edges.FirstOrDefault(x => x.Node.Facet is ImageFacet.LargeCover or ImageFacet.SmallCover)
                    ?.Node.Link ??
                "https://cubari.onk.moe/404.png";
     }
 
-    private static string ThemeToString(IAnimeThemeInfo theme, string entryInformation = "")
+    private string ThemeToString(IAnimeThemeInfo theme, string entryInformation = "")
     {
         var songInfo = "";
 
