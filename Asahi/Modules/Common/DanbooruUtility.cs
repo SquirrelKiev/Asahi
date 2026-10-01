@@ -430,8 +430,15 @@ namespace Asahi.Modules
             {
                 if (KnownVideoExtensions.Contains(originalVariant.FileExt))
                 {
-                    originalVariant.Url = config.VideoProxyUrl.Replace("{{URL}}",
-                        Base64Url.EncodeToString(System.Text.Encoding.UTF8.GetBytes(originalVariant.Url)));
+                    return new DanbooruVariant
+                    {
+                        Type = originalVariant.Type,
+                        Width = originalVariant.Width,
+                        Height = originalVariant.Height,
+                        FileExt = originalVariant.FileExt,
+                        Url = config.VideoProxyUrl.Replace("{{URL}}",
+                            Base64Url.EncodeToString(Encoding.UTF8.GetBytes(originalVariant.Url)))
+                    };
                 }
 
                 return originalVariant;
