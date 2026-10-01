@@ -14,7 +14,6 @@ public class AnimeThemesModule(
     InteractiveService interactive,
     BotConfig config,
     BotEmoteService emotes,
-    BotEmoteService emoteService,
     ILogger<AnimeThemesModule> logger) : BotModule
 {
     private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(5);
@@ -54,7 +53,7 @@ public class AnimeThemesModule(
             .WithUsers(Context.User)
             .WithPageCount(state.CurrentStep.TotalPages)
             .WithUserState(state)
-            .WithPageFactory(p => AnimeThemesPaginatorGenerator.GeneratePage(p, config, emoteService))
+            .WithPageFactory(p => AnimeThemesPaginatorGenerator.GeneratePage(p, config, emotes))
             .WithActionOnCancellation(ActionOnStop.DeleteMessage)
             .WithActionOnTimeout(ActionOnStop.DisableInput)
             .Build();
