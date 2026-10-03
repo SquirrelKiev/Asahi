@@ -57,20 +57,21 @@ public record BotConfig
     [YamlMember(Description = "Any users in this list are banned from ever making it to highlights.")]
     public HashSet<ulong> BannedHighlightsUsers { get; set; } = [];
 
-    // [YamlMember(Description = "The base url to use for magnet redirector links. Used for the Nyaa RSS feed.")]
-    // public string MagnetRedirectorBaseUrl { get; set; } = "https://redirector.onk.moe";
-
     [YamlMember(Description = "The URL pattern to use for proxying images (if necessary).\n{{URL}} will be replaced with the URL, encoded in base64.")]
     public string ProxyUrl { get; set; } = "https://services.f-ck.me/v1/image/{{URL}}?source=asahi_bot";
     
-    [YamlMember(Description = "The URL pattern to use for proxying videos (if necessary).\n{{URL}} will be replaced with the URL, encoded in base64.")]
-    public string VideoProxyUrl { get; set; } = "https://asahi-services.onk.moe/api/proxy/{{URL}}?source=asahi_bot";
+    [YamlMember(Description = "The URL pattern to use for proxying videos (if necessary).\n{{URL}} will be replaced with the URL, encoded in base64." +
+                              "Leave blank to use the configured Asahi.WebServices instead.")]
+    public string VideoProxyUrl { get; set; } = "";
 
-    [YamlMember(Description = "The fxtwitter API url to use as a base.")]
-    public string FxTwitterApiUrl { get; set; } = "https://api.fxtwitter.com";
+    [YamlMember(Description = "The Asahi web services url to use. Expects an instance of Asahi.WebServices.")]
+    public string AsahiWebServicesBaseUrl { get; set; } = "";
 
-    [YamlMember(Description = "The Asahi web services url to use as a base. Expects an instance of Asahi.WebServices.")]
-    public string AsahiWebServicesBaseUrl { get; set; } = "https://asahi-services.onk.moe";
+    [YamlMember(Description = "The signing key ID to use for signing web services urls. Leave blank to not sign URLs.")]
+    public string AsahiWebServicesSigningKeyId { get; set; } = "";
+
+    [YamlMember(Description = "The signing key to use for signing web services urls. Leave blank to not sign URLs.")]
+    public string AsahiWebServicesSigningKey { get; set; } = "";
 
     public const string DefaultBotToken = "BOT_TOKEN_HERE";
     
@@ -95,6 +96,39 @@ public record BotConfig
         {
             Log.Fatal(ex, "Supplied testing bot token is invalid. Set as {DefaultBotToken} if unwanted.", DefaultBotToken);
             return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(AsahiWebServicesBaseUrl))
+        {
+            Log.Fatal("An instance of Asahi.WebServices is required.");
+            return false;
+        }
+
+        bool hasSigningKeyId = !string.IsNullOrWhiteSpace(AsahiWebServicesSigningKeyId);
+        bool hasSigningKey = !string.IsNullOrWhiteSpace(AsahiWebServicesSigningKey);
+        if (hasSigningKeyId != hasSigningKey)
+        {
+            Log.Fatal("The web services signing key ID and signing key must either both be set or both be blank.");
+            return false;
+        }
+
+        if (hasSigningKeyId)
+        {
+            if (!UrlSignature.IsValidKeyId(AsahiWebServicesSigningKeyId))
+            {
+                Log.Fatal("Web services signing key ID {KeyId} is invalid. Key IDs must be URL safe.", AsahiWebServicesSigningKeyId);
+                return false;
+            }
+
+            try
+            {
+                _ = Convert.FromBase64String(AsahiWebServicesSigningKey);
+            }
+            catch (FormatException ex)
+            {
+                Log.Fatal(ex, "Web services signing key is not a valid base64 string.");
+                return false;
+            }
         }
 
         return true;

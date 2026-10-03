@@ -8,7 +8,7 @@ using JetBrains.Annotations;
 namespace Asahi.Modules.AnimeThemes;
 
 [Inject(ServiceLifetime.Singleton)]
-public class AnimeThemesPaginatorGenerator(BotConfig config, BotEmoteService emotes)
+public class AnimeThemesPaginatorGenerator(BotConfig config, BotEmoteService emotes, WebServicesUrlSignerService urlSigner)
 {
     public IPage GeneratePage(IComponentPaginator paginator)
     {
@@ -237,7 +237,8 @@ public class AnimeThemesPaginatorGenerator(BotConfig config, BotEmoteService emo
     {
         var base64EncodedUrl = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(url));
 
-        return $"{config.AsahiWebServicesBaseUrl}/api/thumb/{base64EncodedUrl}.png";
+        var sig = urlSigner.Sign(UrlSignature.UrlSignaturePurposes.Thumbnail, url);
+        return $"{config.AsahiWebServicesBaseUrl}/api/thumb/{base64EncodedUrl}.png?sig={sig}";
     }
 
     private string GetAnimeThumbnail(IAnimeInfo anime)

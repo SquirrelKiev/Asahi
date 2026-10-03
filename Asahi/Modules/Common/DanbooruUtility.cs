@@ -8,7 +8,11 @@ using JetBrains.Annotations;
 namespace Asahi.Modules
 {
     [Inject(ServiceLifetime.Singleton)]
-    public class DanbooruUtility(BotConfig config, BotEmoteService emotes, IDanbooruApi danbooruApi)
+    public class DanbooruUtility(
+        BotConfig config,
+        BotEmoteService emotes,
+        WebServicesUrlSignerService urlSigner,
+        IDanbooruApi danbooruApi)
     {
         private static readonly HashSet<string> KnownImageExtensions =
         [
@@ -430,14 +434,25 @@ namespace Asahi.Modules
             {
                 if (KnownVideoExtensions.Contains(originalVariant.FileExt))
                 {
+                    string base64Url = Base64Url.EncodeToString(Encoding.UTF8.GetBytes(originalVariant.Url));
+                    string proxiedUrl;
+                    if (!string.IsNullOrWhiteSpace(config.VideoProxyUrl))
+                    {
+                        proxiedUrl = config.VideoProxyUrl.Replace("{{URL}}", base64Url);
+                    }
+                    else
+                    {
+                        string sig = urlSigner.Sign(UrlSignature.UrlSignaturePurposes.Proxy, originalVariant.Url);
+                        proxiedUrl = $"{config.AsahiWebServicesBaseUrl}/api/proxy/{base64Url}?sig={sig}";
+                    }
+
                     return new DanbooruVariant
                     {
                         Type = originalVariant.Type,
                         Width = originalVariant.Width,
                         Height = originalVariant.Height,
                         FileExt = originalVariant.FileExt,
-                        Url = config.VideoProxyUrl.Replace("{{URL}}",
-                            Base64Url.EncodeToString(Encoding.UTF8.GetBytes(originalVariant.Url)))
+                        Url = proxiedUrl
                     };
                 }
 
