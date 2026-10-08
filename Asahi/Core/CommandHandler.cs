@@ -19,11 +19,11 @@ public class CommandHandler(
     ILogger<CommandHandler> logger
 )
 {
-    private bool runOnce = false;
+    private bool alreadyInitialized, alreadyAcceptingCommands = false;
 
-    public async Task OnReady(params Assembly[] assemblies)
+    public async Task InitializeAsync(params Assembly[] assemblies)
     {
-        if (runOnce)
+        if (alreadyInitialized)
             return;
 
         try
@@ -31,12 +31,22 @@ public class CommandHandler(
             await InitializeInteractionService(assemblies);
             // await InitializeCommandService(assemblies);
 
-            runOnce = true;
+            alreadyInitialized = true;
         }
         catch (Exception e)
         {
             logger.LogCritical(e, "Failed to register commands/interactions!");
         }
+    }
+    
+    public void StartAcceptingCommands()
+    {
+        // not quite sure if a method can be added to an event multiple times, but I'm not one to find out
+        if(alreadyAcceptingCommands) return;
+
+        client.InteractionCreated += InteractionCreated;
+        interactionService.InteractionExecuted += InteractionExecuted;
+        alreadyAcceptingCommands = true;
     }
 
     #region Prefix Command Handling - Temp disabled due to not being used
@@ -237,9 +247,6 @@ public class CommandHandler(
         }
 
         await interactionService.RegisterCommandsGloballyAsync();
-
-        client.InteractionCreated += InteractionCreated;
-        interactionService.InteractionExecuted += InteractionExecuted;
     }
 
     // private async Task InitializeCommandService(params Assembly[] assemblies)

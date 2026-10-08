@@ -150,7 +150,9 @@ public static class Startup
                                  GatewayIntents.DirectMessages |
                                  GatewayIntents.GuildMembers,
                 LogLevel = logLevel,
-                AlwaysDownloadUsers = true
+                AlwaysDownloadUsers = true,
+                // discord.net seems to wait this time no matter what because of the soft deleted discord servers
+                MaxWaitBetweenGuildAvailablesBeforeReady = 3000
             }))
             .AddTransient(_ => new DiscordRestConfig() { LogLevel = logLevel })
             .AddSingleton<IDiscordClient>(x => x.GetRequiredService<DiscordSocketClient>())

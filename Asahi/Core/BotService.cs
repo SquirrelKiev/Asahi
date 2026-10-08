@@ -41,6 +41,9 @@ public class BotService(
 
     private int readyHandled;
 
+    private readonly TaskCompletionSource gatewayReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource gatewayConnected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         CancellationToken = cancellationToken;
@@ -80,9 +83,9 @@ public class BotService(
 
         client.Log += Client_Log;
 
+        client.Connected += () => { gatewayConnected.TrySetResult(); return Task.CompletedTask; };
         client.Ready += Client_Ready;
 
-        // could make these dynamic (reflection or smth) but the need hasn't appeared yet
         // client.GuildMemberUpdated += Client_GuildMemberUpdated;
         // client.UserLeft += Client_UserLeft;
         client.UserJoined += Client_UserJoined;
@@ -96,6 +99,19 @@ public class BotService(
 
         await client.LoginAsync(TokenType.Bot, config.BotToken);
         await client.StartAsync();
+
+        await gatewayConnected.Task.WaitAsync(cancellationToken);
+        
+        await SyncEmotesAsync(cancellationToken);
+        await commandHandler.InitializeAsync(Assembly.GetExecutingAssembly());
+
+        await gatewayReady.Task.WaitAsync(cancellationToken);
+
+        commandHandler.StartAcceptingCommands();
+
+        readyGate.SignalReady();
+
+        logger.LogTrace("Ready!");
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
@@ -258,11 +274,11 @@ public class BotService(
         return Task.CompletedTask;
     }
 
-    private async Task Client_Ready()
+    private Task Client_Ready()
     {
         if (Interlocked.Exchange(ref readyHandled, 1) == 1)
-            return;
-        
+            return Task.CompletedTask;
+
         logger.LogInformation(
             "Logged in as {user}#{discriminator} ({id})",
             client.CurrentUser?.Username,
@@ -270,13 +286,9 @@ public class BotService(
             client.CurrentUser?.Id
         );
 
-        await SyncEmotesAsync(CancellationToken);
+        gatewayReady.TrySetResult();
 
-        await commandHandler.OnReady(Assembly.GetExecutingAssembly());
-
-        readyGate.SignalReady();
-
-        logger.LogTrace("Ready!");
+        return Task.CompletedTask;
     }
 
     private async Task SyncEmotesAsync(CancellationToken cancellationToken = default)
