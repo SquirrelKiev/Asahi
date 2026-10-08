@@ -26,6 +26,7 @@
         <LangVersion>default</LangVersion>
 
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <RefitRequireGeneratedRequests>true</RefitRequireGeneratedRequests>
     </PropertyGroup>
 
     <Target Name="SetSourceControlInfo" BeforeTargets="InitializeSourceControlInformation">
@@ -73,47 +74,47 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Discord.Net.Core" Version="3.20.1" />
-        <PackageReference Include="Discord.Net.Rest" Version="3.20.1" />
-        <PackageReference Include="Discord.Net.Webhook" Version="3.20.1" />
-        <PackageReference Include="Discord.Net.WebSocket" Version="3.20.1" />
-        <PackageReference Include="Discord.Net.Interactions" Version="3.20.1" />
+        <PackageReference Include="Discord.Net.Core" Version="3.20.2" />
+        <PackageReference Include="Discord.Net.Rest" Version="3.20.2" />
+        <PackageReference Include="Discord.Net.Webhook" Version="3.20.2" />
+        <PackageReference Include="Discord.Net.WebSocket" Version="3.20.2" />
+        <PackageReference Include="Discord.Net.Interactions" Version="3.20.2" />
         
         <PackageReference Include="CodeHollow.FeedReader" Version="1.2.6"/>
         <PackageReference Include="EntityFrameworkCore.Sqlite.NodaTime" Version="10.0.0" />
         <PackageReference Include="Fergun.Interactive" Version="1.9.2" />
-        <PackageReference Include="Fluid.Core" Version="2.31.0" />
+        <PackageReference Include="Fluid.Core" Version="2.40.0" />
         <PackageReference Include="Humanizer.Core" Version="3.0.10" />
         <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
-        <PackageReference Include="Markdig" Version="1.3.2" />
-        <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.6.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="5.6.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
-        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.6.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
+        <PackageReference Include="Markdig" Version="1.4.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.9.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="5.9.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.9.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.12" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.12">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.10" />
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.12" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
         <PackageReference Include="Npgsql" Version="10.0.3" />
-        <PackageReference Include="protobuf-net" Version="3.2.56"/>
-        <PackageReference Include="Refit" Version="13.1.0" />
-        <PackageReference Include="Refit.HttpClientFactory" Version="13.1.0" />
-        <PackageReference Include="Refit.Newtonsoft.Json" Version="13.1.0" />
+        <PackageReference Include="protobuf-net" Version="3.4.30" />
+        <PackageReference Include="Refit" Version="16.3.0" />
+        <PackageReference Include="Refit.HttpClientFactory" Version="16.3.0" />
+        <PackageReference Include="Refit.Newtonsoft.Json" Version="16.3.0" />
         <PackageReference Include="Scrutor" Version="7.0.0" />
         <PackageReference Include="Serilog" Version="4.4.0" />
         <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0"/>
-        <PackageReference Include="NodaTime" Version="3.3.3" />
+        <PackageReference Include="NodaTime" Version="3.3.5" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NodaTime" Version="10.0.3" />
         <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
         <PackageReference Include="Serilog.Sinks.Seq" Version="9.1.0" />
-        <PackageReference Include="StrawberryShake.Server" Version="16.5.1" />
-        <PackageReference Include="System.IO.Hashing" Version="10.0.10" />
+        <PackageReference Include="StrawberryShake.Server" Version="16.6.8" />
+        <PackageReference Include="System.IO.Hashing" Version="10.0.12" />
         <PackageReference Include="YamlDotNet" Version="18.1.0" />
     </ItemGroup>
 

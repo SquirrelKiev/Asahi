@@ -211,21 +211,21 @@ public static class Startup
 
         var settings = new RefitSettings(new NewtonsoftJsonContentSerializer());
 
-        serviceCollection.AddRefitClient<ITatsuClient>(settings)
+        serviceCollection.AddRefitGeneratedClient<ITatsuClient>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://api.tatsu.gg/v1"));
 
-        serviceCollection.AddRefitClient<IAnonymousRedditApi>(settings)
+        serviceCollection.AddRefitGeneratedClient<IAnonymousRedditApi>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://www.reddit.com"));
 
         serviceCollection
             .AddSingleton<IAuthTokenProvider<IRedditApi>, RedditAuthTokenProvider>()
             .AddTransient<RedditAuthHeaderHandler>();
 
-        serviceCollection.AddRefitClient<IRedditApi>(settings)
+        serviceCollection.AddRefitGeneratedClient<IRedditApi>(settings)
             .ConfigureHttpClient(x => x.BaseAddress = new Uri("https://oauth.reddit.com"))
             .AddHttpMessageHandler<RedditAuthHeaderHandler>();
 
-        serviceCollection.AddRefitClient<IDanbooruApi>(settings)
+        serviceCollection.AddRefitGeneratedClient<IDanbooruApi>(settings)
             .ConfigureHttpClient(x =>
             {
                 x.BaseAddress = new Uri("https://danbooru.donmai.us");
