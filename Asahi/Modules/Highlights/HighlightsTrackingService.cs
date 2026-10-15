@@ -324,6 +324,8 @@ public class HighlightsTrackingService(
         }
     }
 
+    private readonly record struct MessageToCheck(MessageIdInfo MessageIdInfo, PendingCheck PendingCheck);
+
     private async Task OnFinishWaitingForTick(CancellationToken cancellationToken)
     {
         Dictionary<MessageIdInfo, PendingCheck> messages;
@@ -345,45 +347,37 @@ public class HighlightsTrackingService(
             if (cancellationToken.IsCancellationRequested)
                 break;
 
-            guildTasks.Add(
-                Task.Run(
-                    async () =>
-                    {
-                        logger.LogDebug("Checking for Guild {guildId} has begun.", groupedMessages.Key);
+            var messagesToCheck = groupedMessages
+                .Select(x => new MessageToCheck(x.Key, x.Value))
+                .ToList();
 
-                        foreach (var (queuedMessage, pendingCheck) in groupedMessages)
-                        {
-                            try
-                            {
-                                var guild = await client.GetGuildAsync(queuedMessage.GuildId);
-                                var textChannel = await guild.GetTextChannelAsync(queuedMessage.ChannelId);
-
-                                await CheckMessageForHighlights(
-                                    queuedMessage.MessageId,
-                                    textChannel,
-                                    pendingCheck.ShouldSendHighlight,
-                                    [.. pendingCheck.ForcedBoards]
-                                );
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.LogError(
-                                    ex,
-                                    "Failed to check message {messageId} in channel {channel}!",
-                                    queuedMessage.MessageId,
-                                    queuedMessage.ChannelId
-                                );
-                            }
-                        }
-
-                        logger.LogDebug("Finished processing messages for Guild {guildId}.", groupedMessages.Key);
-                    },
-                    cancellationToken
-                )
-            );
+            guildTasks.Add(Task.Run(() => CheckMessagesForGuild(groupedMessages.Key, messagesToCheck), cancellationToken));
         }
 
         await Task.WhenAll(guildTasks);
+    }
+
+    async Task? CheckMessagesForGuild(ulong guildId, List<MessageToCheck> groupedMessages)
+    {
+        logger.LogDebug("Checking for Guild {guildId} has begun.", guildId);
+
+        foreach (var (queuedMessage, pendingCheck) in groupedMessages)
+        {
+            try
+            {
+                var guild = await client.GetGuildAsync(queuedMessage.GuildId);
+                var textChannel = await guild.GetTextChannelAsync(queuedMessage.ChannelId);
+
+                await CheckMessageForHighlights(queuedMessage.MessageId, textChannel, pendingCheck.ShouldSendHighlight,
+                    [.. pendingCheck.ForcedBoards]);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to check message {messageId} in channel {channel}!", queuedMessage.MessageId, queuedMessage.ChannelId);
+            }
+        }
+
+        logger.LogDebug("Finished processing messages for Guild {guildId}.", guildId);
     }
 
     /// <remarks>Not thread-safe.</remarks>
@@ -439,7 +433,6 @@ public class HighlightsTrackingService(
             )
             .ToListAsync();
 
-        // shared between both passes so the same reactions aren't fetched twice
         var reactionsCache = new Dictionary<int, IUser[]>();
 
         if (existingHighlights.Count != 0)
@@ -474,132 +467,120 @@ public class HighlightsTrackingService(
     {
         foreach (var cachedHighlightedMessage in existingHighlights)
         {
-            // board is already tracked by ef core from the boards request, so this should be valid
-            var board = cachedHighlightedMessage.HighlightBoard;
-
             try
             {
-                var originalMessage = await (
-                    await guild.GetTextChannelAsync(
-                        cachedHighlightedMessage.OriginalMessageChannelId
-                    )
-                ).GetMessageAsync(cachedHighlightedMessage.OriginalMessageId);
-
-                if (originalMessage == null)
-                    continue;
-
-                var loggingChannelId = ResolveLoggingChannelId(board, cachedHighlightedMessage.OriginalMessageChannelId
-                );
-                var loggingChannel = await guild.GetTextChannelAsync(loggingChannelId);
-
-                List<IMessage> highlightMessages = [];
-                bool bail = false;
-                foreach (var highlightMessageId in cachedHighlightedMessage.HighlightMessageIds)
-                {
-                    var message = await loggingChannel.GetMessageAsync(highlightMessageId);
-
-                    if (message == null)
-                    {
-                        bail = true;
-                        logger.LogWarning(
-                            "Could not find highlight message {messageId} in channel {channelId} (guild {guild}, board {board})",
-                            highlightMessageId,
-                            loggingChannel.Id,
-                            board.GuildId,
-                            board.Name
-                        );
-                        break;
-                    }
-
-                    highlightMessages.Add(message);
-                }
-
-                if (bail)
-                    continue;
-
-                var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap) =
-                    await GetReactions(
-                        [originalMessage, highlightMessages[^1]],
-                        [originalMessage],
-                        reactionsCache
-                    );
-
-                var reactions = uniqueReactionEmotes.Select(x => new ReactionInfo(x));
-
-                IMessage? reactorsMessage = null;
-                int reactorsEmbedIndex = -1;
-                foreach (var highlightMessage in highlightMessages)
-                {
-                    int i = 0;
-                    foreach (var x in highlightMessage.Embeds)
-                    {
-                        if (
-                            !(
-                                x.Author.HasValue
-                                && x.Author.Value.Name.StartsWith(QuotingHelpers.ReplyingTo)
-                            ) && x.Fields.Any(y => y.Name == QuotingHelpers.ReactionsFieldName)
-                        )
-                        {
-                            reactorsEmbedIndex = i;
-                            break;
-                        }
-
-                        i++;
-                    }
-
-                    if (reactorsEmbedIndex != -1)
-                    {
-                        reactorsMessage = highlightMessage;
-                        break;
-                    }
-                }
-
-                if (reactorsMessage == null)
-                    continue;
-
-                var webhook = await loggingChannel.GetOrCreateWebhookAsync(
-                    BotService.WebhookDefaultName
-                );
-
-                using var webhookClient = new DiscordWebhookClient(
-                    webhook.Id,
-                    webhook.Token,
-                    webhookRestConfig
-                );
-                webhookClient.Log += msg => BotService.Client_Log(logger, msg);
-
-                await webhookClient.ModifyMessageAsync(
-                    reactorsMessage.Id,
-                    messageProperties =>
-                    {
-                        var embeds = reactorsMessage
-                            .Embeds.Select(x => x.ToEmbedBuilder())
-                            .ToArray();
-
-                        var eb = embeds[reactorsEmbedIndex];
-
-                        AddReactionsFieldToQuote(
-                            eb,
-                            reactions,
-                            uniqueReactionUsersAutoReact.Count
-                        );
-
-                        messageProperties.Embeds = embeds.Select(x => x.Build()).ToArray();
-                    }
-                );
-
-                cachedHighlightedMessage.TotalUniqueReactions = uniqueReactionUsersAutoReact.Count;
-                cachedHighlightedMessage.UpdateReactions(emoteUserMap);
+                await RefreshExistingHighlight(cachedHighlightedMessage, guild, reactionsCache);
             }
             catch (Exception ex)
             {
                 logger.LogWarning(
                     ex,
                     "Failed to process message reaction update for board {board}.",
-                    board.Name
+                    cachedHighlightedMessage.HighlightBoard.Name
                 );
             }
         }
+    }
+
+    /// <remarks><see cref="CachedHighlightedMessage.HighlightBoard"/> on <paramref name="existingHighlight"/> is expected to be loaded.</remarks>
+    private async Task RefreshExistingHighlight(CachedHighlightedMessage existingHighlight, IGuild guild,
+        Dictionary<int, IUser[]> reactionsCache)
+    {
+        Debug.Assert(existingHighlight.HighlightBoard != null);
+        var board = existingHighlight.HighlightBoard;
+
+        var originalMessageChannel = await guild.GetTextChannelAsync(existingHighlight.OriginalMessageChannelId);
+        var originalMessage = await originalMessageChannel.GetMessageAsync(existingHighlight.OriginalMessageId);
+
+        if (originalMessage == null)
+            return;
+
+        var loggingChannelId = ResolveLoggingChannelId(board, existingHighlight.OriginalMessageChannelId);
+        var loggingChannel = await guild.GetTextChannelAsync(loggingChannelId);
+
+        List<IMessage> highlightMessages = [];
+        bool bail = false;
+        foreach (var highlightMessageId in existingHighlight.HighlightMessageIds)
+        {
+            var message = await loggingChannel.GetMessageAsync(highlightMessageId);
+
+            if (message == null)
+            {
+                bail = true;
+                logger.LogWarning("Could not find highlight message {messageId} in channel {channelId} (guild {guild}, board {board})",
+                    highlightMessageId, loggingChannel.Id, board.GuildId, board.Name);
+                break;
+            }
+
+            highlightMessages.Add(message);
+        }
+
+        if (bail)
+            return;
+
+        var (uniqueReactionUsersAutoReact, uniqueReactionEmotes, emoteUserMap) =
+            await GetReactions([originalMessage, highlightMessages[^1]], [originalMessage], reactionsCache);
+
+        var reactions = uniqueReactionEmotes.Select(x => new ReactionInfo(x));
+
+        IMessage? reactorsMessage = null;
+        int reactorsEmbedIndex = -1;
+        foreach (var highlightMessage in highlightMessages)
+        {
+            int i = 0;
+            foreach (var x in highlightMessage.Embeds)
+            {
+                if (
+                    !(
+                        x.Author.HasValue
+                        && x.Author.Value.Name.StartsWith(QuotingHelpers.ReplyingTo)
+                    ) && x.Fields.Any(y => y.Name == QuotingHelpers.ReactionsFieldName)
+                )
+                {
+                    reactorsEmbedIndex = i;
+                    break;
+                }
+
+                i++;
+            }
+
+            if (reactorsEmbedIndex != -1)
+            {
+                reactorsMessage = highlightMessage;
+                break;
+            }
+        }
+
+        if (reactorsMessage == null)
+            return;
+
+        var webhook = await loggingChannel.GetOrCreateWebhookAsync(
+            BotService.WebhookDefaultName
+        );
+
+        using var webhookClient = new DiscordWebhookClient(
+            webhook.Id,
+            webhook.Token,
+            webhookRestConfig
+        );
+        webhookClient.Log += msg => BotService.Client_Log(logger, msg);
+
+        await webhookClient.ModifyMessageAsync(
+            reactorsMessage.Id,
+            messageProperties =>
+            {
+                var embeds = reactorsMessage.Embeds.Select(x => x.ToEmbedBuilder()).ToArray();
+
+                var eb = embeds[reactorsEmbedIndex];
+
+                AddReactionsFieldToQuote(eb, reactions, uniqueReactionUsersAutoReact.Count);
+
+                messageProperties.Embeds = embeds.Select(x => x.Build()).ToArray();
+            }
+        );
+
+        existingHighlight.TotalUniqueReactions = uniqueReactionUsersAutoReact.Count;
+        existingHighlight.UpdateReactions(emoteUserMap);
     }
 
     private async Task CheckForNewHighlights(
@@ -731,12 +712,8 @@ public class HighlightsTrackingService(
                     return threshold
                            <= uniqueReactionUsers.Count(y =>
                            {
-                    logger.LogTrace(
-                                   "user {user}: filter self react: {fsr}, is self react: {isr}",
-                                   y,
-                        board.FilterSelfReactions,
-                                   y == msg.Author.Id
-                    );
+                               logger.LogTrace("user {user}: filter self react: {fsr}, is self react: {isr}",
+                                   y, board.FilterSelfReactions, y == msg.Author.Id);
 
                                return board.FilterSelfReactions == false || y != msg.Author.Id;
                            });
