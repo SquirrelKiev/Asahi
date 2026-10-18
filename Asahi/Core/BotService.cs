@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Asahi;
 
+[Inject(ServiceLifetime.Singleton)]
 public class BotService(
     DiscordSocketClient client,
     BotConfig config,

@@ -274,7 +274,7 @@ public static class Startup
         //    .As<ConfigPageBase<ConfigPage.Page>>()
         //    .WithTransientLifetime());
 
-        serviceCollection.AddHostedService<BotService>();
+        serviceCollection.AddHostedService(sp => sp.GetRequiredService<BotService>());
 
         serviceCollection.AddHostedService(sp => sp.GetRequiredService<HighlightsTrackingService>());
         serviceCollection.AddHostedService(sp => sp.GetRequiredService<CustomStatusService>());
