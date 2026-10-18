@@ -13,7 +13,7 @@ public class AnimeThemesPaginatorGenerator(BotConfig config, BotEmoteService emo
     public IPage GeneratePage(IComponentPaginator paginator)
     {
         var state = paginator.GetUserState<AnimeThemesSelectionState>();
-
+        
         return state.CurrentStep switch
         {
             AnimeThemesSelectionState.VideoDisplayState videoDisplayState =>
@@ -161,11 +161,7 @@ public class AnimeThemesPaginatorGenerator(BotConfig config, BotEmoteService emo
     private IPage GenerateVideoDisplayPage(IComponentPaginator p,
         AnimeThemesSelectionState.VideoDisplayState state)
     {
-        var videoUrl = state.SelectedVideo.Link;
-        if (state.CacheBustingId != Guid.Empty)
-        {
-            videoUrl += $"?cache-bust={state.CacheBustingId}";
-        }
+        var videoUrl = state.SelectedVideoUrl;
 
         var videoEmbedComponents = new ComponentBuilderV2().WithComponents([
             new ContainerBuilder().WithComponents([
@@ -186,8 +182,6 @@ public class AnimeThemesPaginatorGenerator(BotConfig config, BotEmoteService emo
                 new ActionRowBuilder().WithComponents([
                     new ButtonBuilder("Back", ModulePrefixes.AnimeThemes.BackButtonId, ButtonStyle.Danger,
                         isDisabled: p.ShouldDisable()),
-                    new ButtonBuilder("Refresh Video", ModulePrefixes.AnimeThemes.RefreshVideoId, ButtonStyle.Secondary,
-                        emote: emotes.Refresh, isDisabled: p.ShouldDisable()),
                 ])
                 // new SectionBuilder().WithComponents([new TextDisplayBuilder("\u200b")])
                 // .WithAccessory(new ButtonBuilder("Back", BackButtonId, ButtonStyle.Danger,
@@ -301,10 +295,9 @@ public class AnimeThemesSelectionState(IGetThemesWithDataResult searchResponse)
         IAnimeInfoWithThemes SelectedAnime,
         IAnimeThemeInfoWithEntries SelectedTheme,
         IAnimeThemeEntryInfoWithVideos SelectedThemeEntry,
-        IAnimeThemeVideoInfo SelectedVideo) : ThemeSelectionState(SearchResponse, SelectedAnime)
+        string SelectedVideoUrl) : ThemeSelectionState(SearchResponse, SelectedAnime)
     {
         public override int TotalPages => 1;
-        public Guid CacheBustingId = Guid.Empty;
     }
 }
 

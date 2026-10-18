@@ -67,6 +67,7 @@ fragment animeThemeEntryInfo on AnimeThemeEntry {
 
 fragment animeThemeVideoInfo on Video {
     id
+    filename
     lyrics
     nc
     overlap

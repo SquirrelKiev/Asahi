@@ -17,7 +17,6 @@ public static partial class ModulePrefixes
     [HashedId("AnimeChoiceButtonId")]
     [HashedId("ThemeChoiceButtonId")]
     [HashedId("BackButtonId")]
-    [HashedId("RefreshVideoId")]
     public static partial class AnimeThemes
     {
     }

@@ -14,6 +14,9 @@ public class AnimeThemesModule(
     InteractiveService interactive,
     AnimeThemesPaginatorGenerator animeThemesPaginatorGenerator,
     BotEmoteService emotes,
+    WebServicesUrlSignerService urlSigner,
+    HttpClient httpClient,
+    BotConfig config,
     ILogger<AnimeThemesModule> logger) : BotModule
 {
     private static readonly TimeSpan ThemeSlashExpiryTime = TimeSpan.FromMinutes(5);
@@ -38,7 +41,7 @@ public class AnimeThemesModule(
 
         searchRes.EnsureNoErrors();
         Debug.Assert(searchRes.Data != null);
-        
+
         if (searchRes.Data.AnimePagination.Data.Count == 0)
         {
             // not sure a good design for a ComponentsV2 version of this so
@@ -132,42 +135,20 @@ public class AnimeThemesModule(
             return;
         }
 
-        var newStep = new AnimeThemesSelectionState.VideoDisplayState(searchResponse, selectedAnime, selectedTheme,
-            selectedEntry,
-            selectedVideo);
+        var loadingComponents = new ComponentBuilderV2().WithTextDisplay($"{emotes.Loading} Please wait...").Build();
 
-        await ChangeStep(state, paginator, interaction, newStep);
-    }
+        var respond = interaction.UpdateAsync(x => x.Components = loadingComponents);
+        var sig = urlSigner.Sign(UrlSignature.UrlSignaturePurposes.ThemeProxy, selectedVideo.Filename);
 
-    [ComponentInteraction(ModulePrefixes.AnimeThemes.RefreshVideoId)]
-    public async Task RefreshVideoButton()
-    {
-        var interaction = (IComponentInteraction)Context.Interaction;
-        if (!interactive.TryGetComponentPaginator(interaction.Message, out var paginator) ||
-            !paginator.CanInteract(interaction.User))
-        {
-            await DeferAsync();
-            return;
-        }
+        var videoUrl = $"{config.AsahiWebServicesBaseUrl}/api/theme/{selectedVideo.Filename}.webm?sig={sig}";
+        // firing this off to make sure the cache is warm
+        await httpClient.GetAsync(videoUrl, HttpCompletionOption.ResponseHeadersRead);
 
-        var state = paginator.GetUserState<AnimeThemesSelectionState>();
+        await respond;
 
-        if (state.CurrentStep is not AnimeThemesSelectionState.VideoDisplayState videoDisplayState)
-        {
-            logger.LogWarning(
-                "RefreshVideoButton called when not in video display state, falling back to anime selection.");
+        var newStep = new AnimeThemesSelectionState.VideoDisplayState(searchResponse, selectedAnime, selectedTheme, selectedEntry, videoUrl);
 
-            state.CurrentStep = new AnimeThemesSelectionState.AnimeSelectionState(state.CurrentStep.SearchResponse);
-
-            paginator.PageCount = state.CurrentStep.TotalPages;
-            paginator.SetPage(0);
-
-            await paginator.RenderPageAsync(interaction);
-            return;
-        }
-
-        videoDisplayState.CacheBustingId = Guid.NewGuid();
-        await paginator.RenderPageAsync(interaction);
+        await ChangeStep(state, paginator, interaction, newStep, InteractionResponseType.DeferredUpdateMessage);
     }
 
     [ComponentInteraction(ModulePrefixes.AnimeThemes.BackButtonId)]
@@ -202,14 +183,14 @@ public class AnimeThemesModule(
     }
 
     private static async Task ChangeStep(AnimeThemesSelectionState state, IComponentPaginator paginator,
-        IComponentInteraction interaction, AnimeThemesSelectionState.AnimeSelectionState newStep)
+        IComponentInteraction interaction, AnimeThemesSelectionState.AnimeSelectionState newStep, InteractionResponseType responseType = InteractionResponseType.UpdateMessage)
     {
         state.CurrentStep = newStep;
 
         paginator.PageCount = state.CurrentStep.TotalPages;
         paginator.SetPage(0);
 
-        await paginator.RenderPageAsync(interaction);
+        await paginator.RenderPageAsync(interaction, responseType, false);
     }
 
     public static IAnimeThemeVideoInfo? SelectBestVideoSource(IVideosQueryInfo videos)

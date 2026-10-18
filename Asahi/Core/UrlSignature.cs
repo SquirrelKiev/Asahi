@@ -32,12 +32,16 @@ public static partial class UrlSignature
         /// <summary>
         /// The generic proxy API.
         /// </summary>
-        Proxy
+        Proxy,
+        /// <summary>
+        /// The theme proxy API.
+        /// </summary>
+        ThemeProxy
     }
 
     /// <summary>
     /// Converts a specified <see cref="UrlSignaturePurposes"/> value to its corresponding string representation.
-    /// Intended for generating URL signatures.
+    /// Intended for use in generated URL signatures.
     /// </summary>
     /// <param name="purpose">The purpose to convert.</param>
     /// <returns>A string representation of the specified <see cref="UrlSignaturePurposes"/> value.</returns>
@@ -48,6 +52,7 @@ public static partial class UrlSignature
         {
             UrlSignaturePurposes.Thumbnail => "thumbnail",
             UrlSignaturePurposes.Proxy => "proxy",
+            UrlSignaturePurposes.ThemeProxy => "theme_proxy",
             _ => throw new ArgumentOutOfRangeException(nameof(purpose), purpose, null)
         };
 
