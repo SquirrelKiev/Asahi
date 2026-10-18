@@ -142,6 +142,7 @@ public class AnimeThemesModule(
 
         var videoUrl = $"{config.AsahiWebServicesBaseUrl}/api/theme/{selectedVideo.Filename}.webm?sig={sig}";
         // firing this off to make sure the cache is warm
+        httpClient.Timeout = TimeSpan.FromSeconds(60);
         await httpClient.GetAsync(videoUrl, HttpCompletionOption.ResponseHeadersRead);
 
         await respond;
