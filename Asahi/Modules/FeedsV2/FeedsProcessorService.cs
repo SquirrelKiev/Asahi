@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Asahi.Database.Models.Rss;
 using Microsoft.Extensions.Logging;
 
@@ -79,7 +79,7 @@ public class FeedsProcessorService(
         }
 
         var scopeIncludesChannel = (feedProvider.ArticleIdScope & ArticleIdScope.ChannelForPoll) != 0;
-        foreach (var articleId in feedProvider.ListArticleIds())
+        foreach (var articleId in feedProvider.ListArticleIds().Reverse())
         {
             cancellationToken.ThrowIfCancellationRequested();
 
