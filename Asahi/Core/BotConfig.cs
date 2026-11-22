@@ -15,10 +15,12 @@ public record BotConfig
                               "Options are \"Sqlite\" and \"Postgresql\".")]
     public DatabaseType Database { get; set; } = DatabaseType.Sqlite;
 
+    public const string DefaultSqliteDataSource = "data/BotDb.db";
+    
     [YamlMember(Description = "The connection string for the database specified above.\n" +
                               "Example Postgres string: Host=127.0.0.1;Username=postgres;Password=;Database=botdb\n" +
-                              "Example Sqlite string: Data Source=data/BotDb.db")]
-    public string DatabaseConnectionString { get; set; } = "Data Source=data/BotDb.db";
+                              "Example Sqlite string: Data Source=" + DefaultSqliteDataSource)]
+    public string DatabaseConnectionString { get; set; } = "Data Source=" + DefaultSqliteDataSource;
 
     [YamlMember(Description = "The folders to search for emote images. Descending priority order.")]
     public string[] InternalEmoteImagesDirectories { get; set; } = [Path.Combine("%DataDir%", "InternalEmotes")];

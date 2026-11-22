@@ -16,13 +16,11 @@ COPY Asahi.Database.Migrations.Sqlite/*.csproj Asahi.Database.Migrations.Sqlite/
 
 ARG TARGETARCH
 
-RUN dotnet restore Asahi/ -a $TARGETARCH
+RUN dotnet restore Asahi/ -a "$TARGETARCH" -p:Configuration=Release -p:UseAppHost=false
 
 COPY . .
 
-RUN set -xe; \
-dotnet publish Asahi/ -c Release -a $TARGETARCH -o /app; \
-chmod +x /app/Asahi
+RUN dotnet publish Asahi/ -c Release -a "$TARGETARCH" --no-restore -p:UseAppHost=false -o /app
 
 FROM mcr.microsoft.com/dotnet/runtime:11.0 AS runtime
 
@@ -30,8 +28,13 @@ WORKDIR /app
 
 COPY --from=build-env /app .
 
+RUN install -d -o "$APP_UID" -g "$APP_UID" /data
+
 VOLUME [ "/data" ]
 
-ENV BOT_CONFIG_LOCATION="/data/botconfig.yaml"
+ENV BOT_CONFIG_LOCATION="/data/botconfig.yaml" \
+    BOT_SQLITE_LOCATION="/data/BotDb.db"
+
+USER $APP_UID
 
 ENTRYPOINT [ "dotnet", "Asahi.dll" ]

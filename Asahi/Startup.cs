@@ -118,6 +118,12 @@ public static class Startup
                     var botConfig = provider.GetRequiredService<BotConfig>();
 
                     var builder = new SqliteConnectionStringBuilder(botConfig.DatabaseConnectionString);
+                    if (builder.DataSource == BotConfig.DefaultSqliteDataSource &&
+                        Environment.GetEnvironmentVariable("BOT_SQLITE_LOCATION") is { Length: > 0 } sqliteLocation)
+                    {
+                        builder.DataSource = sqliteLocation;
+                    }
+
                     builder.DataSource = Path.Combine(AppContext.BaseDirectory, builder.DataSource);
 
                     options.UseSqlite(builder.ToString(),
