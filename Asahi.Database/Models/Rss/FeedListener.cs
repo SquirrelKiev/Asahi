@@ -14,6 +14,8 @@ public class FeedListener : DbModel
     public required ulong GuildId { get; init; }
 
     public required ulong ChannelId { get; set; }
+    
+    public ulong? OwnerUserId { get; set; }
 
     [MaxLength(80)]
     public string? WebhookName { get; set; }

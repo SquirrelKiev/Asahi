@@ -72,7 +72,8 @@ public class FeedsModule(
             {
                 GuildId = Context.Guild.Id,
                 ChannelId = channel.Id,
-                FeedUrl = normalizedFeedSource
+                FeedUrl = normalizedFeedSource,
+                OwnerUserId = Context.User.Id
             });
 
             eb.WithTitle(feedProvider.DefaultFeedTitle);
